@@ -6,7 +6,7 @@ from collections import namedtuple
 import time
 import random
 import config
-
+import chess
 Message = namedtuple(
     'Message',
     'prefix user channel irc_command irc_args text text_command text_args',
@@ -17,7 +17,6 @@ def remove_prefix(string, prefix):
     if not string.startswith(prefix):
         return string
     return string[len(prefix):]
-
 
 class Bot:
     def __init__(self):
@@ -32,11 +31,20 @@ class Bot:
         self.custom_commands = {
             'date': self.reply_with_date,
             'ping': self.reply_to_ping,
-            'commands': self.list_commands,
-            'play_chess': self.play_chess,
+            'help': self.list_commands,
             'help_chess': self.reply_with_chesshelp,
-            'chess_code': self.reply_with_source_code
+            'chess_code': self.reply_with_source_code,
+            'play_chess': self.play_chess
         }
+
+        self.private_commands = {
+            'leave': self.leave
+        }
+
+        self.chess_commands = {
+            
+        }
+
 
     def init(self):
         self.connect()
@@ -169,6 +177,9 @@ class Bot:
             if message.text_command in self.custom_commands:
                 self.custom_commands[message.text_command](message)
 
+            if message.text_command in self.private_commands:
+                self.private_commands[message.text_command](message)
+
     def loop_for_messages(self):
         while True:
             received_msgs = self.irc.recv(2048).decode()
@@ -176,13 +187,17 @@ class Bot:
                 self.handle_message(received_msg)
 
     def play_chess(self,message):
-        text = f'@{message.user}, The code has not been implemented yet Jebaited'
+        text = "Work in progress, come back soon."
         self.send_privmsg(message.channel, text)
         
+    def leave (self, message):
+        text = 'forsenLeave'
+        if message.user == "bluepigman5000":
+            self.send_privmsg(message.channel, text)       
+    
 def main():
     bot = Bot()
     bot.init()
-
 
 if __name__ == '__main__':
     main()
