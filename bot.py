@@ -1,4 +1,5 @@
 import socket
+import sys
 import ssl
 import datetime
 import json
@@ -193,7 +194,8 @@ class Bot:
     def leave (self, message):
         text = 'forsenLeave'
         if message.user == "bluepigman5000":
-            self.send_privmsg(message.channel, text)       
+            self.send_privmsg(message.channel, text)  
+            sys.exit()
     
 def main():
     bot = Bot()
