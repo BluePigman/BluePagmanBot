@@ -1,2 +1,2 @@
 # BluePagmanBot
-Stolen code
+PagMan
