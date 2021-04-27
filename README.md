@@ -7,7 +7,7 @@ python-chess (in command prompt type pip install chess)
 
 How to install: 
 
-1. Download bot.py, and config.py. Make sure both are in the same folder.
+1. Download bot.py, config.py, and chessCommands.py. Make sure all are in the same folder.
 2. Make a Twitch account if you do not already have one.
 3. Get the OAuth token of the account to be used as the bot here https://twitchapps.com/tmi/
 4. Put the OAuth token in the config file, and edit the rest of the config file.
