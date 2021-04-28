@@ -32,7 +32,8 @@ def remove_prefix(string, prefix):
 board = chess.Board()
 board.reset()
 
-    
+chessGameActive = False
+chessGamePending = False
 player1 = None
 player2 = None
 pgn = " "
@@ -242,11 +243,10 @@ class Bot:
     """ Chess commands and game"""
 
     def reply_with_chesshelp(self, message):
-        text = (f'@{message.user}, Work in progress. Chess game made by \
-        @Bluepigman5000. To make a move, type the piece you want to move\
-        followed by the square you want to go to, same applies for captures. \
-        For example, if you want to move the pawn from e2 to e4, you type \
-        #move e2e4.')
+        text = (f'@{message.user}, to make a move, type the piece you want \
+        to move followed by the square you want to go to, same applies for \
+        captures. For example, if you want to move the pawn from e2 to e4, \
+        you type #move e2e4.')
          
         self.send_privmsg(message.channel, text)
         time.sleep(1)
@@ -254,18 +254,22 @@ class Bot:
         of the piece you would like to promote to at the end \
         (e.g. #move g7h8q). To resign type #move resign.') 
 
-    #Global Variables
-    global chessGameActive
-    chessGameActive = False
+
+    """Global Variables"""
+        
     global player2Joined
-    player2Joined = False
     global choseSide
+    player2Joined = False
     choseSide = False
+
+
+    """Functions for chess"""
+    
     # First user to start the initial game, return player
     def getPlayer1(self, message):
-        global chessGameActive
-        if not chessGameActive:
-            chessGameActive = True
+        global chessGamePending
+        if not chessGamePending:
+            chessGamePending  = True
             text = f'@{message.user} has started a chess game. Type #join to join \
                 the game.'
             self.send_privmsg(message.channel, text)
@@ -283,15 +287,12 @@ class Bot:
         pgn = ''
         moveCount = 0
         increment = 0
-        self.getPlayer1(message)
-        global userQuit
-        userQuit = False
-                    
+        self.getPlayer1(message)                   
 
     #Player 2 that joins the game.
-    def getPlayer2(self, message, chessGameActive):
+    def getPlayer2(self, message, chessGamePending):
         global player2Joined
-        if (chessGameActive == True and player2Joined == False):
+        if chessGamePending and not player2Joined:
             player2Joined = True
             text = f'@{message.user} has joined the game.'
             self.send_privmsg(message.channel, text)
@@ -303,30 +304,38 @@ class Bot:
 
     # Do this when someone types #join
     def join(self,message):
-        if chessGameActive:
-            self.getPlayer2(message, chessGameActive)
+        if chessGamePending:
+            self.getPlayer2(message, chessGamePending)
             
 
     #Player who started game chooses side first. (#black or #white)
     def chooseSidePlayer1(self, message):
         global choseSide
+        global chessGamePending
+        global player2Joined
+        global chessGameActive 
+         
 
-        if chessGameActive and not choseSide:
+        if chessGamePending and not choseSide and player2Joined:
             if message.user == player1:
-                
-                if message.text_command.lower() == "white":
+
+                global player1Side
+                global player2Side
+        
+                if message.text_command == "white":
                     choseSide = True
                     text = f"@{player1}, you will play as white"
                     self.send_privmsg(message.channel, text)
                     text = f"@{player1}, you are starting, enter start move."
                     time.sleep(1)
                     self.send_privmsg(message.channel, text)
-                    global player1Side
-                    global player2Side  
+                     
                     player1Side = "w"
-                    player2Side = "b"                
+                    player2Side = "b"
+                    chessGamePending = False
+                    chessGameActive = True
         
-                elif message.text_command.lower() == "black":
+                elif message.text_command == "black":
                     choseSide = True
                     text = f"@{player1}, you will play as black"
                     self.send_privmsg(message.channel, text)
@@ -335,6 +344,8 @@ class Bot:
                     self.send_privmsg(message.channel, text)
                     player1Side = "b"
                     player2Side = "w"
+                    chessGamePending = False
+                    chessGameActive = True
                 
                 else:
                     text = "Invalid input, please enter \
@@ -345,13 +356,13 @@ class Bot:
     
     def move(self, message):
         global currentSide
-        global userQuit
         global pgn
         global chessGameActive
         global choseSide
         global player2Joined
         global result
-        if chessGameActive and not userQuit: # Play moves
+        global chessGamePending
+        if chessGameActive and not chessGamePending: # Play moves
             
             #White to play
             if currentSide == 'w':
@@ -364,7 +375,6 @@ class Bot:
                             
 
                     if move == "resign":
-                        userQuit = True
                         text = f"@{player1} resigned. @{player2} wins."
                         self.send_privmsg(message.channel, text)
                         chessGameActive = False
@@ -385,7 +395,7 @@ class Bot:
                                 
                                 if increment % 2 == 0:
                                     moveCount += 1
-                                    pgn += str(moveCount) + "." +  \
+                                    pgn += str(moveCount) + ". " +  \
                                     get_san(move) + " " 
                                 else:
                                     pgn += get_san(move) + " "
@@ -416,7 +426,8 @@ class Bot:
                                 self.send_privmsg(message.channel, text)
                    
                     else:
-                        text = "Move does not exist, please try again"
+                        text = "Move does not exist, please try again. \
+                        For help refer to #help_chess."
                         self.send_privmsg(message.channel, text)
 
 
@@ -446,7 +457,7 @@ class Bot:
                                 
                                 if increment % 2 == 0:
                                     moveCount += 1
-                                    pgn += str(moveCount) + "." +  get_san(move) + " " 
+                                    pgn += str(moveCount) + ". " +  get_san(move) + " " 
                                 else:
                                     pgn += get_san(move) + " "
                                 board.push(move)
@@ -473,7 +484,8 @@ class Bot:
                             self.send_privmsg(message.channel, text)
                             
                     else:
-                        text = "Move does not exist, please try again"
+                        text = "Move does not exist, please try again. \
+                        For help refer to #help_chess."
                         self.send_privmsg(message.channel, text)
 
             elif currentSide == 'b':
@@ -502,7 +514,7 @@ class Bot:
                                 
                                 if increment % 2 == 0:
                                     moveCount += 1
-                                    pgn += str(moveCount) + "." +  get_san(move) + " " 
+                                    pgn += str(moveCount) + ". " +  get_san(move) + " " 
                                 else:
                                     pgn += get_san(move) + " "
                                 board.push(move)
@@ -528,7 +540,8 @@ class Bot:
                             self.send_privmsg(message.channel, text)
                            
                     else:
-                        text = "Move does not exist, please try again"
+                        text = "Move does not exist, please try again. \
+                        For help refer to #help_chess."
                         self.send_privmsg(message.channel, text)
 
 
@@ -558,7 +571,7 @@ class Bot:
                                 
                                 if increment % 2 == 0:
                                     moveCount += 1
-                                    pgn += str(moveCount) + "." +  get_san(move) + " " 
+                                    pgn += str(moveCount) + ". " +  get_san(move) + " " 
                                 else:
                                     pgn += get_san(move) + " "
                                 board.push(move)
@@ -586,7 +599,8 @@ class Bot:
                             self.send_privmsg(message.channel, text)
                            
                     else:
-                        text = "Move does not exist, please try again"
+                        text = "Move does not exist, please try again. \
+                        For help refer to #help_chess."
                         self.send_privmsg(message.channel, text)
 
 
@@ -658,7 +672,7 @@ def result():
                 return result
 
     elif (board.is_stalemate()): #Check for stalemate
-        result = "Stalemate"
+        result = "Stalemate LUL"
         chessGameActive = False
         choseSide = False
         player2Joined = False
