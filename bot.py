@@ -382,7 +382,11 @@ class Bot:
                         player2Joined = False
                         time.sleep(1)
                         finalPGN = pgn + " 0-1"
-                        self.send_privmsg(message.channel, finalPGN)
+                        pgnMessages = split_pgn(finalPGN)
+                        for i in range(0, len(pgnMessages)):
+                            self.send_privmsg(message.channel, pgnMessages[i])
+                            time.sleep(1)
+                        
                             
                     elif chessCommands.checkInput(move):
                         
@@ -401,7 +405,11 @@ class Bot:
                                     pgn += get_san(move) + " "
                                 board.push(move)
                                 increment += 1
-                                self.send_privmsg(message.channel, pgn)
+                                pgnMessages = split_pgn(pgn)
+                                for i in range(0, len(pgnMessages)):
+                                    self.send_privmsg(message.channel, \
+                                        pgnMessages[i])
+                                    time.sleep(1)
                                 
                                 time.sleep(1)
 
@@ -410,8 +418,12 @@ class Bot:
                                     self.send_privmsg(message.channel, \
                                     result)
                                     time.sleep(1)
-                                    self.send_privmsg(message.channel, pgn)
-                                
+                                    pgnMessages = split_pgn(pgn)
+                                    for i in range(0, len(pgnMessages)):
+                                        self.send_privmsg(message.channel, \
+                                            pgnMessages[i])
+                                        time.sleep(1)
+                                                                
                                 else:
                                     txt = f"@{player2}, it is your turn."
                                     self.send_privmsg(message.channel, txt)
@@ -446,7 +458,10 @@ class Bot:
                         player2Joined = False
                         time.sleep(1)
                         finalPGN = pgn + " 0-1"
-                        self.send_privmsg(message.channel, finalPGN)
+                        pgnMessages = split_pgn(finalPGN)
+                        for i in range(0, len(pgnMessages)):
+                            self.send_privmsg(message.channel, pgnMessages[i])
+                            time.sleep(1)
                         
                     elif chessCommands.checkInput(move):
                         # Convert to uci
@@ -462,16 +477,24 @@ class Bot:
                                     pgn += get_san(move) + " "
                                 board.push(move)
                                 increment += 1
-                                self.send_privmsg(message.channel, pgn)
-                                time.sleep(1)
                                 
                                 if gameOver():
                                     result = result()
                                     self.send_privmsg(message.channel, result)
                                     time.sleep(1)
-                                    self.send_privmsg(message.channel, pgn)
+                                    pgnMessages = split_pgn(pgn)
+                                    for i in range(0, len(pgnMessages)):
+                                        self.send_privmsg(message.channel, \
+                                            pgnMessages[i])
+                                        time.sleep(1)
                                     
                                 else:
+                                    pgnMessages = split_pgn(pgn)
+                                    for i in range(0, len(pgnMessages)):
+                                        self.send_privmsg(message.channel, \
+                                            pgnMessages[i])
+                                        time.sleep(1)
+                                        
                                     text = f"@{player1}, it is your turn."
                                     self.send_privmsg(message.channel, text)
                                     currentSide = 'b'
@@ -504,8 +527,11 @@ class Bot:
                         text = f"@{player1} resigned. @{player2} wins."
                         self.send_privmsg(message.channel, text)
                         finalPGN = pgn + " 1-0"
-                        time.sleep(1)
-                        self.send_privmsg(message.channel, finalPGN)   
+                        pgnMessages = split_pgn(finalPGN)
+                        for i in range(0, len(pgnMessages)):
+                            self.send_privmsg(message.channel, pgnMessages[i])
+                            time.sleep(1)
+                            
                     elif chessCommands.checkInput(move):
                         try:
                             # Convert to uci
@@ -519,15 +545,24 @@ class Bot:
                                     pgn += get_san(move) + " "
                                 board.push(move)
                                 increment += 1
-                                self.send_privmsg(message.channel, pgn)
-                                time.sleep(1)
+                                 
                                 if gameOver():
                                     result = result()
                                     self.send_privmsg(message.channel, result)
                                     time.sleep(1)
-                                    self.send_privmsg(message.channel, pgn)
+                                    pgnMessages = split_pgn(pgn)
+                                    for i in range(0, len(pgnMessages)):
+                                        self.send_privmsg(message.channel, \
+                                            pgnMessages[i])
+                                        time.sleep(1)
                                     
                                 else:
+                                    pgnMessages = split_pgn(pgn)
+                                    for i in range(0, len(pgnMessages)):
+                                        self.send_privmsg(message.channel, \
+                                            pgnMessages[i])
+                                        time.sleep(1)
+                                        
                                     text = f"@{player2}, it is your turn."
                                     self.send_privmsg(message.channel, text)
                                     currentSide = 'w' 
@@ -560,8 +595,10 @@ class Bot:
                         text = f"@{player2} resigned. @{player1} wins."
                         self.send_privmsg(message.channel, text)
                         finalPGN = pgn + " 1-0"
-                        time.sleep(1)
-                        self.send_privmsg(message.channel, finalPGN)
+                        pgnMessages = split_pgn(finalPGN)
+                        for i in range(0, len(pgnMessages)):
+                            self.send_privmsg(message.channel, pgnMessages[i])
+                            time.sleep(1)
                         
                     elif chessCommands.checkInput(move):
                         try:
@@ -576,17 +613,24 @@ class Bot:
                                     pgn += get_san(move) + " "
                                 board.push(move)
                                 increment += 1
-                                self.send_privmsg(message.channel, pgn)
-                                time.sleep(1)
 
                                 if gameOver():
                                     result = result()
                                     self.send_privmsg(message.channel, result)
                                     time.sleep(1)
-                                    self.send_privmsg(message.channel, pgn)
+                                    pgnMessages = split_pgn(pgn)
+                                    for i in range(0, len(pgnMessages)):
+                                        self.send_privmsg(message.channel, \
+                                            pgnMessages[i])
+                                        time.sleep(1)
                                     
 
                                 else:
+                                    pgnMessages = split_pgn(pgn)
+                                    for i in range(0, len(pgnMessages)):
+                                        self.send_privmsg(message.channel, \
+                                            pgnMessages[i])
+                                        time.sleep(1)
                                     text = f"@{player1}, it is your turn."
                                     self.send_privmsg(message.channel, text)
                                     currentSide = 'w'
@@ -690,7 +734,15 @@ move is a uci representation of move.
 """
 def get_san(move):
     return board.san(move)
-           
+
+# Split the long message into a list of under 500 character messages.
+# pgn is a string
+def split_pgn(pgn):
+    n = 500
+    """ Get substrings from i to specified length n, put into list.
+    For loop from 0 to length of pgn, increase by n.
+    """
+    return [pgn[i:i+n] for i in range(0, len(pgn), n)]
               
 def main():
     bot = Bot()
