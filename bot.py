@@ -18,6 +18,7 @@ import random
 import config
 import chess
 import chessCommands
+
 Message = namedtuple(
     'Message',
     'prefix user channel irc_command irc_args text text_command text_args',
@@ -62,7 +63,6 @@ class Bot:
             'date': self.reply_with_date,
             'ping': self.reply_to_ping,
             'help': self.list_commands,
-            'commands' : self.list_commands,
             'help_chess': self.reply_with_chesshelp,
             'source_code': self.reply_with_source_code,
             'play_chess': self.play_chess,
@@ -89,7 +89,7 @@ class Bot:
         self.connect()
 
     def send_privmsg(self, channel, text):
-        self.send_command(f'PRIVMSG #{channel} :{text}')
+        self.send_command(f'PRIVMSG #{channel} : {text}')
 
     def send_command(self, command):
         if 'PASS' not in command:       
@@ -180,14 +180,28 @@ class Bot:
             self.send_command('PONG :tmi.twitch.tv')
 
         if message.irc_command == 'PRIVMSG':
-            if message.text_command in self.custom_commands:
-                self.custom_commands[message.text_command](message)
-
-            if message.text_command in self.private_commands:
-                self.private_commands[message.text_command](message)
+            """Using try catch block because every message sent in the channel is
+            a "PRIVMSG". Any message that isn't a command for the bot will be
+            checked in those if statements, which would lead to AttributeError:
+            'NoneType' object has no attribute 'lower'. the except pass simply
+            ignores any message in chat that isn't a command.
+            """
+            try:
                 
-            if message.text_command in self.chess_commands:
-                self.chess_commands[message.text_command](message)
+                if message.text_command.lower() in self.custom_commands:
+                    self.custom_commands[message.text_command.lower()](message)
+
+                if message.text_command.lower() in self.private_commands:
+                    self.private_commands[message.text_command.lower()](message)
+                    
+                if message.text_command.lower() in self.chess_commands:
+                    self.chess_commands[message.text_command.lower()](message)
+
+                #Alias for #help.
+                if message.text_command.lower() == "commands":
+                    self.custom_commands["help"](message)
+            except:
+                pass
 
     def loop_for_messages(self):
         while True:
@@ -235,11 +249,13 @@ class Bot:
         if message.user == config.bot_owner:
             self.send_privmsg(message.channel, text)
             sys.exit()
+        else:
+            self.send_privmsg(message.channel, "NOIDONTTHINKSO")
             
     def say (self, message):
         if message.user == config.bot_owner:
             self.send_privmsg(message.channel, " ".join(message.text_args))
-
+            
     """ Chess commands and game"""
 
     def reply_with_chesshelp(self, message):
