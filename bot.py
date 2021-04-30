@@ -179,33 +179,26 @@ class Bot:
         if message.irc_command == 'PING':
             self.send_command('PONG :tmi.twitch.tv')
 
-        if message.irc_command == 'PRIVMSG':
-            """Using try catch block because every message sent in the channel is
-            a "PRIVMSG". Any message that isn't a command for the bot will be
-            checked in those if statements, which would lead to AttributeError:
-            'NoneType' object has no attribute 'lower'. the except pass simply
-            ignores any message in chat that isn't a command.
-            """
-            try:
-                
-                if message.text_command.lower() in self.custom_commands:
-                    self.custom_commands[message.text_command.lower()](message)
+        #If message starts with the prefix
+        if message.irc_command == 'PRIVMSG' and \
+            message.text.startswith(self.command_prefix):
 
-                if message.text_command.lower() in self.private_commands:
-                    self.private_commands[message.text_command.lower()](message)
+            if message.text_command.lower() in self.custom_commands:
+                self.custom_commands[message.text_command.lower()](message)
+
+            if message.text_command.lower() in self.private_commands:
+                self.private_commands[message.text_command.lower()](message)
                     
-                if message.text_command.lower() in self.chess_commands:
-                    self.chess_commands[message.text_command.lower()](message)
+            if message.text_command.lower() in self.chess_commands:
+                self.chess_commands[message.text_command.lower()](message)
 
-                #Alias for #help.
-                if message.text_command.lower() == "commands":
-                    self.custom_commands["help"](message)
-            except:
-                pass
+            #Alias for #help.
+            if message.text_command.lower() == "commands":
+                self.custom_commands["help"](message)
 
     def loop_for_messages(self):
         while True:
-            received_msgs = self.irc.recv(2048).decode()
+            received_msgs = self.irc.recv(4096).decode()
             for received_msg in received_msgs.split('\r\n'):
                 self.handle_message(received_msg)
         
@@ -259,10 +252,11 @@ class Bot:
     """ Chess commands and game"""
 
     def reply_with_chesshelp(self, message):
-        text = (f'@{message.user}, to make a move, type the piece you want \
-        to move followed by the square you want to go to, same applies for \
-        captures. For example, if you want to move the pawn from e2 to e4, \
-        you type #move e2e4.')
+        text = (f'@{message.user}, to make a move, type the square of the \
+            piece you want to move followed by the square you want to go to, \
+            same applies for captures. For example, if you want to move the  \
+            pawn from e2 to e4, you type #move e2e4. Input must be in \
+            lowercase.')
          
         self.send_privmsg(message.channel, text)
         time.sleep(1)
@@ -338,7 +332,7 @@ class Bot:
                 global player1Side
                 global player2Side
         
-                if message.text_command == "white":
+                if message.text_command.lower() == "white":
                     choseSide = True
                     text = f"@{player1}, you will play as white"
                     self.send_privmsg(message.channel, text)
@@ -351,7 +345,7 @@ class Bot:
                     chessGamePending = False
                     chessGameActive = True
         
-                elif message.text_command == "black":
+                elif message.text_command.lower() == "black":
                     choseSide = True
                     text = f"@{player1}, you will play as black"
                     self.send_privmsg(message.channel, text)
