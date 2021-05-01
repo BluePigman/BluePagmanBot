@@ -6,7 +6,6 @@ April 27, 2021
 @Bluepigman5000
 """
 
-
 import socket
 import sys
 import ssl
@@ -47,6 +46,7 @@ increment = 0
         
 userQuit = False
 
+
 class Bot:
     
     def __init__(self):
@@ -56,8 +56,9 @@ class Bot:
         self.username = config.username
         self.channels = config.channels
         self.command_prefix = config.prefix
-        self.state = {}
-
+        self.state = {} #dictionary for cooldown
+        self.cooldown = 5 #default cooldown for commands
+        
         #anyone can use these
         self.custom_commands = {
             'date': self.reply_with_date,
@@ -207,17 +208,26 @@ class Bot:
     """ General Commands here"""
         
     def reply_with_date(self, message):
-        formatted_date = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
-        text = f'{message.user}, the date is {formatted_date} EST.'
-        self.send_privmsg(message.channel, text)
+        if ("date" not in self.state or time.time() - self.state["date"] > 
+            self.cooldown):
+            self.state["date"] = time.time()
+            formatted_date = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+            text = f'{message.user}, the date is {formatted_date} EST.'
+            self.send_privmsg(message.channel, text)
 
     def reply_to_ping(self, message):
-        text = f'@{message.user}, forsenEnter'
-        self.send_privmsg(message.channel, text)
+        if ("ping" not in self.state or time.time() - self.state["ping"] > 
+            self.cooldown):
+            self.state["ping"] = time.time()
+            text = f'@{message.user}, forsenEnter'
+            self.send_privmsg(message.channel, text)
     
     def reply_with_source_code(self, message):
-        self.send_privmsg(message.channel, 'Source code: \
-                          https://github.com/BluePigman/BluePagmanBot') 
+        if ("sc" not in self.state or time.time() - self.state["sc"] > 
+            self.cooldown):
+            self.state["sc"] = time.time()
+            text = 'Source code: https://github.com/BluePigman/BluePagmanBot'
+            self.send_privmsg(message.channel, text) 
         
 
     def list_commands(self, message):
@@ -227,13 +237,21 @@ class Bot:
             for cmd in custom_cmd_names
         ]
         text = "" f'@{message.user}, Commands: ' + ' '.join(all_cmd_names)
-        self.send_privmsg(message.channel, text)
+        if ("lc" not in self.state or time.time() - self.state["lc"] > 
+            self.cooldown):
+            self.state["lc"] = time.time()       
+            self.send_privmsg(message.channel, text)
 
     def reply_with_bot(self, message):
+        
         text = 'BluePAGMANBot is a bot made by @Bluepigman5000 in Python. \
         It has some basic commands, and can run a game of chess in chat \
         between two different players.'
-        self.send_privmsg(message.channel,text)
+        
+        if ("bot" not in self.state or time.time() - self.state["bot"] > 
+            self.cooldown):
+            self.state["bot"] = time.time()
+            self.send_privmsg(message.channel,text)
 
     """Private commands"""
     
@@ -257,12 +275,16 @@ class Bot:
             same applies for captures. For example, if you want to move the  \
             pawn from e2 to e4, you type #move e2e4. Input must be in \
             lowercase.')
-         
-        self.send_privmsg(message.channel, text)
-        time.sleep(1)
-        self.send_privmsg(message.channel, 'For promotions, add the letter \
+        text2 = 'For promotions, add the letter \
         of the piece you would like to promote to at the end \
-        (e.g. #move g7h8q). To resign type #move resign.') 
+        (e.g. #move g7h8q). To resign type #move resign.'
+
+        if ("help" not in self.state or time.time() - self.state["help"] > 
+            10):
+            self.state["help"] = time.time()
+            self.send_privmsg(message.channel, text)
+            time.sleep(1)
+            self.send_privmsg(message.channel, text2) 
 
 
     """Global Variables"""
