@@ -2,7 +2,7 @@
 This is a chat bot for Twitch with some basic commands, and allows you
 to play a game of chess against another chatter.
 
-April 27, 2021
+May 1, 2021
 @Bluepigman5000
 """
 
@@ -73,7 +73,8 @@ class Bot:
         #only bot owner can use these commands
         self.private_commands = {
             'leave': self.leave,
-            'say': self.say
+            'say': self.say,
+            'echo': self.echo
         }
         
         #commands for playing chess
@@ -261,12 +262,23 @@ class Bot:
             self.send_privmsg(message.channel, text)
             sys.exit()
         else:
-            self.send_privmsg(message.channel, "NOIDONTTHINKSO")
+            if ("leave" not in self.state or time.time() - self.state["leave"] > 
+            self.cooldown):
+                self.state["leave"] = time.time()
+                self.send_privmsg(message.channel, "NOIDONTTHINKSO")
             
     def say (self, message):
         if message.user == config.bot_owner:
             self.send_privmsg(message.channel, " ".join(message.text_args))
-            
+
+    # Use: #echo CHANNEL text, will send message text in specified channel.
+    def echo(self, message):
+        if len(message.text_args) > 1:
+            channel = " ".join(message.text_args[0:1])
+            text = " ".join(message.text_args[1:])
+            if message.user == config.bot_owner and channel in self.channels:
+                self.send_privmsg(channel, text)
+           
     """ Chess commands and game"""
 
     def reply_with_chesshelp(self, message):
@@ -394,7 +406,11 @@ class Bot:
         global player2Joined
         global result
         global chessGamePending
-        if chessGameActive and not chessGamePending: # Play moves
+        if chessGameActive and not chessGamePending and \
+           ("move" not in self.state or time.time() - self.state["move"] > 
+            2):
+            
+            self.state["move"] = time.time()
             
             #White to play
             if currentSide == 'w':
