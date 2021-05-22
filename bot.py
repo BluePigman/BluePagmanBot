@@ -2,8 +2,10 @@
 This is a chat bot for Twitch with some basic commands, and allows you
 to play a game of chess against another chatter.
 
-May 1, 2021
+May 21, 2021
 @Bluepigman5000
+
+https://github.com/niklasf/eco for random openings.
 """
 
 import socket
@@ -32,6 +34,8 @@ def remove_prefix(string, prefix):
 board = chess.Board()
 board.reset()
 
+
+
 chessGameActive = False
 chessGamePending = False
 player1 = None
@@ -58,6 +62,7 @@ class Bot:
         self.command_prefix = config.prefix
         self.state = {} #dictionary for cooldown
         self.cooldown = 5 #default cooldown for commands
+        self.joke = random.randint(0,84)
         
         #anyone can use these
         self.custom_commands = {
@@ -67,7 +72,9 @@ class Bot:
             'help_chess': self.reply_with_chesshelp,
             'source_code': self.reply_with_source_code,
             'play_chess': self.play_chess,
-            'bot': self.reply_with_bot
+            'bot': self.reply_with_bot,
+            'random_opening': self.reply_with_random_opening,
+            'joke': self.reply_with_joke
         }
         
         #only bot owner can use these commands
@@ -197,6 +204,8 @@ class Bot:
             #Alias for #help.
             if message.text_command.lower() == "commands":
                 self.custom_commands["help"](message)
+            if message.text_command.lower() == "ro":
+                self.custom_commands["random_opening"](message)
 
     def loop_for_messages(self):
         while True:
@@ -254,6 +263,34 @@ class Bot:
             self.state["bot"] = time.time()
             self.send_privmsg(message.channel,text)
 
+    def reply_with_random_opening(self,message):
+
+        text = f'@{message.user}, '
+
+        if ("ro" not in self.state or time.time() - self.state["ro"] > 
+            self.cooldown):
+            self.state["ro"] = time.time()
+            opening = chessCommands.getRandomOpening()
+            
+            self.send_privmsg(message.channel, text + opening)
+
+    def reply_with_joke(self,message):
+        if ("joke" not in self.state or time.time() - self.state["joke"] > 
+            self.cooldown):
+            setup, punchline = chessCommands.getJoke(self.joke)
+            self.send_privmsg(message.channel, setup)
+            punchline = punchline.strip('\n')
+            x = random.randint(0,10)
+            if x > 1:
+                response = f'{punchline} haHAA'
+            else:
+                response = f'{punchline} Pepepains'
+            time.sleep(3)
+            self.send_privmsg(message.channel, response)
+            self.joke += 1
+            if self.joke > 84:
+                self.joke = 0
+        
     """Private commands"""
     
     def leave (self, message):
