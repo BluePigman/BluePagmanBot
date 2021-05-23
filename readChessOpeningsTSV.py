@@ -1,4 +1,6 @@
 """Get the important parts out of TSV, put into text file
+
+https://github.com/niklasf/eco for TSV's
 """
 import csv
 import chess
