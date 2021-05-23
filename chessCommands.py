@@ -27,7 +27,7 @@ def checkPromotion(move): # Check if a promotion move is valid.
 
 
 def getRandomOpening(): # Get random opening in list of openings
-    lines = open('Chess Openings.txt').read().splitlines()
+    lines = open('Chess Openings.txt', encoding = "utf-8").read().splitlines()
     myline =random.choice(lines)
     return myline
 
