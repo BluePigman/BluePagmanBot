@@ -1,9 +1,11 @@
 import random
+import string
 """
 This module contains functions that check if a chess
 move makes sense, and if a promotion move is valid.
 
-stackoverflow.com/questions/3540288/how-do-i-read-a-random-line-from-one-file
+https://stackoverflow.com/a/3540346
+https://stackoverflow.com/a/26112713
 """
 
 
@@ -27,9 +29,48 @@ def checkPromotion(move): # Check if a promotion move is valid.
 
 
 def getRandomOpening(): # Get random opening in list of openings
-    lines = open('Chess Openings.txt', encoding = "utf-8").read().splitlines()
-    myline =random.choice(lines)
+    lines = open('Chess Openings.txt').read().splitlines() #list
+    myline = random.choice(lines)
     return myline
+
+def getRandomOpeningSpecific(name, side = None):
+    # Get random opening with specified name and/or side
+    with open('Chess Openings.txt', 'r') as f:
+        if side == 'w':
+            whiteOpenings = [line for line in f if " - w " in line]
+            targets = [line for line in whiteOpenings \
+                       if string.capwords(name) in line]
+            
+            if not targets:
+                return "No openings found."
+            
+            result = random.choice(targets)
+            return result
+        
+        elif side == 'b':
+            blackOpenings = [line for line in f if " - b " in line]
+            targets = [line for line in blackOpenings if \
+                       string.capwords(name) in line]
+            
+            if not targets:
+                return "No openings found."
+            
+            result = random.choice(targets)
+            return result
+        
+        else:
+            
+        
+            targets = [line for line in f if string.capwords(name) in line]
+            if not targets:
+                return "No openings found."
+            result = random.choice(targets)
+            return result
+
+"""targets = [line for line in f if name in line]
+        result = random.choice(targets)
+        return result
+"""
 
 def getJoke(x): #return setup and punchline.
     setups = open('Joke Setup.txt')
@@ -41,4 +82,8 @@ def getJoke(x): #return setup and punchline.
     punchline = punchlines.readlines()
 
     return (setup[x], punchline[x])
-    
+
+def getRandom960(): # Get random 960 position.
+    lines = open('chess960 FENS.txt').read().splitlines()
+    myline =random.choice(lines)
+    return myline

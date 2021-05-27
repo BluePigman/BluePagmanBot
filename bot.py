@@ -74,14 +74,18 @@ class Bot:
             'play_chess': self.play_chess,
             'bot': self.reply_with_bot,
             'random_opening': self.reply_with_random_opening,
-            'joke': self.reply_with_joke
+            'joke': self.reply_with_joke,
+            'r960': self.reply_with_random960,
+            'help_ro': self.reply_with_help_ro
         }
         
         #only bot owner can use these commands
         self.private_commands = {
             'leave': self.leave,
             'say': self.say,
-            'echo': self.echo
+            'echo': self.echo,
+            'join_channel': self.join_channel,
+            'leave_channel': self.part_channel
         }
         
         #commands for playing chess
@@ -182,7 +186,8 @@ class Bot:
             return
 
         message = self.parse_message(received_msg)
-        # print(f'> {message}')
+        #can uncomment these for information on every message
+        #print(f'> {message}')
         #print(f'> {received_msg}')
 
         if message.irc_command == 'PING':
@@ -201,7 +206,7 @@ class Bot:
             if message.text_command.lower() in self.chess_commands:
                 self.chess_commands[message.text_command.lower()](message)
 
-            #Alias for #help.
+            #Aliases.
             if message.text_command.lower() == "commands":
                 self.custom_commands["help"](message)
             if message.text_command.lower() == "ro":
@@ -266,13 +271,45 @@ class Bot:
     def reply_with_random_opening(self,message):
 
         text = f'@{message.user}, '
-
+        
         if ("ro" not in self.state or time.time() - self.state["ro"] > 
             self.cooldown):
             self.state["ro"] = time.time()
-            opening = chessCommands.getRandomOpening()
             
-            self.send_privmsg(message.channel, text + opening)
+            #if args present
+            if (message.text_args):
+                
+                if '-w' in message.text_args:
+                    #get opening for white
+                    side = 'w'
+                    message.text_args.remove('-w')
+                    name = " ".join(message.text_args)
+                    opening = chessCommands.getRandomOpeningSpecific(name,side)
+                    self.send_privmsg(message.channel, text + opening)
+                    
+                elif '-b' in message.text_args:
+                    #get opening for black
+                    side = 'b'
+                    message.text_args.remove('-b')
+                    name = " ".join(message.text_args)
+                    opening = chessCommands.getRandomOpeningSpecific(name, side)
+                    self.send_privmsg(message.channel, text + opening)
+
+                else: # get opening for specified search term   
+                    name = " ".join(message.text_args)
+                    opening = chessCommands.getRandomOpeningSpecific(name)
+                    self.send_privmsg(message.channel, text + opening)
+
+            else: #No arguments
+                opening = chessCommands.getRandomOpening()
+                self.send_privmsg(message.channel, text + opening)
+
+    def reply_with_random960(self,message):
+        if ("960" not in self.state or time.time() - self.state["960"] > 
+            self.cooldown):
+            self.state["960"] = time.time()
+            opening = chessCommands.getRandom960()
+            self.send_privmsg(message.channel, opening)
 
     def reply_with_joke(self,message):
         if ("joke" not in self.state or time.time() - self.state["joke"] > 
@@ -313,9 +350,25 @@ class Bot:
         if len(message.text_args) > 1:
             channel = " ".join(message.text_args[0:1])
             text = " ".join(message.text_args[1:])
-            if message.user == config.bot_owner and channel in self.channels:
+            if message.user == config.bot_owner:
                 self.send_privmsg(channel, text)
-           
+
+    #Work in progress.
+    def join_channel(self,message):
+        if message.user == config.bot_owner:
+            newChannel = " ".join(message.text_args[0:1])
+            self.send_command(f'JOIN #{newChannel}')
+            #self.send_privmsg(newChannel, "forsenEnter")
+            self.send_privmsg(message.channel, "Success")
+
+    def part_channel(self,message):
+        if message.user == config.bot_owner:
+            newChannel = " ".join(message.text_args[0:1])
+            self.send_privmsg(newChannel, "forsenLeave")
+            self.send_command(f'PART #{newChannel}')
+            
+            self.send_privmsg(message.channel, "Success")
+                
     """ Chess commands and game"""
 
     def reply_with_chesshelp(self, message):
@@ -329,13 +382,22 @@ class Bot:
         (e.g. #move g7h8q). To resign type #move resign.'
 
         if ("help" not in self.state or time.time() - self.state["help"] > 
-            10):
+            self.cooldown):
             self.state["help"] = time.time()
             self.send_privmsg(message.channel, text)
             time.sleep(1)
             self.send_privmsg(message.channel, text2) 
 
+    def reply_with_help_ro(self, message):
+        text = (f"@{message.user}, Gets a random opening. You can add -b or -w \
+for a specific side, and/or add a name for search. e.g. #ro King's Indian \
+                Defense -w")
+        if ("help_ro" not in self.state or time.time() - self.state["help_ro"] > 
+            self.cooldown):
+            self.state["help_ro"] = time.time()
+            self.send_privmsg(message.channel, text)
 
+            
     """Global Variables"""
         
     global player2Joined
