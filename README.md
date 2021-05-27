@@ -1,11 +1,12 @@
 # BluePagmanBot
 A Twitch chatbot running in Python. 
 
-Prerequisites: 
+## Prerequisites: 
 Python 3+
+
 python-chess (in command prompt type pip install chess)
 
-How to install: 
+## How to install: 
 
 1. Download the latest release and extract into folder. Make sure all files are in the same folder.
 2. Make a Twitch account if you do not already have one.
