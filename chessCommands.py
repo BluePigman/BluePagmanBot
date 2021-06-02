@@ -39,7 +39,7 @@ def getRandomOpeningSpecific(name, side = None):
         if side == 'w':
             whiteOpenings = [line for line in f if " - w " in line]
             targets = [line for line in whiteOpenings \
-                       if string.capwords(name) in line]
+                       if name.lower() in line.lower()]
             
             if not targets:
                 return "No openings found."
@@ -50,7 +50,7 @@ def getRandomOpeningSpecific(name, side = None):
         elif side == 'b':
             blackOpenings = [line for line in f if " - b " in line]
             targets = [line for line in blackOpenings if \
-                       string.capwords(name) in line]
+                       name.lower() in line.lower()]
             
             if not targets:
                 return "No openings found."
@@ -61,7 +61,7 @@ def getRandomOpeningSpecific(name, side = None):
         else:
             
         
-            targets = [line for line in f if string.capwords(name) in line]
+            targets = [line for line in f if name.lower() in line.lower()]
             if not targets:
                 return "No openings found."
             result = random.choice(targets)
