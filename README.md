@@ -5,7 +5,7 @@ A Twitch chatbot running in Python.
 [Python 3+](https://www.python.org/downloads/)
 
 [python-chess](https://pypi.org/project/chess/)
-
+## NOTE: PLEASE ADD Chess 960 FENS.txt to the bot directory, or else the r960 command will not work.
 ## How to install: 
 
 1. Download the latest release and extract into a folder. Make sure all files are in the same folder.
