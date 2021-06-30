@@ -2,10 +2,9 @@
 This is a chat bot for Twitch with some basic commands, and allows you
 to play a game of chess against another chatter.
 
-May 21, 2021
+June 30, 2021
 @Bluepigman5000
 
-https://github.com/niklasf/eco for random openings.
 """
 
 import socket
@@ -54,6 +53,7 @@ userQuit = False
 class Bot:
     
     def __init__(self):
+        # Parameters
         self.irc_server = 'irc.chat.twitch.tv'
         self.irc_port = 6697
         self.oauth_token = config.OAUTH_TOKEN
@@ -63,6 +63,8 @@ class Bot:
         self.state = {} #dictionary for cooldown
         self.cooldown = 5 #default cooldown for commands
         self.joke = random.randint(0,84)
+        self.time = time.time()
+        # self.messageCounter = 0
         
         #anyone can use these
         self.custom_commands = {
@@ -193,24 +195,30 @@ class Bot:
         if message.irc_command == 'PING':
             self.send_command('PONG :tmi.twitch.tv')
 
-        #If message starts with the prefix
+        #If message starts with the prefix, follows 1s cooldown
         if message.irc_command == 'PRIVMSG' and \
-            message.text.startswith(self.command_prefix):
+            message.text.startswith(self.command_prefix) \
+            and time.time() - self.time > 1:
 
             if message.text_command.lower() in self.custom_commands:
                 self.custom_commands[message.text_command.lower()](message)
+                self.time = time.time()
 
             if message.text_command.lower() in self.private_commands:
                 self.private_commands[message.text_command.lower()](message)
+                self.time = time.time()
                     
             if message.text_command.lower() in self.chess_commands:
                 self.chess_commands[message.text_command.lower()](message)
+                self.time = time.time()
 
             #Aliases.
             if message.text_command.lower() == "commands":
                 self.custom_commands["help"](message)
+                self.time = time.time()
             if message.text_command.lower() == "ro":
                 self.custom_commands["random_opening"](message)
+                self.time = time.time()
 
     def loop_for_messages(self):
         while True:
@@ -223,24 +231,24 @@ class Bot:
     """ General Commands here"""
         
     def reply_with_date(self, message):
-        if ("date" not in self.state or time.time() - self.state["date"] > 
+        if (message.user not in self.state or time.time() - self.state[message.user] > 
             self.cooldown):
-            self.state["date"] = time.time()
+            self.state[message.user] = time.time()
             formatted_date = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
             text = f'{message.user}, the date is {formatted_date} EST.'
             self.send_privmsg(message.channel, text)
 
     def reply_to_ping(self, message):
-        if ("ping" not in self.state or time.time() - self.state["ping"] > 
+        if (message.user not in self.state or time.time() - self.state[message.user] > 
             self.cooldown):
-            self.state["ping"] = time.time()
+            self.state[message.user] = time.time()
             text = f'@{message.user}, forsenEnter'
             self.send_privmsg(message.channel, text)
     
     def reply_with_source_code(self, message):
-        if ("sc" not in self.state or time.time() - self.state["sc"] > 
+        if (message.user not in self.state or time.time() - self.state[message.user] > 
             self.cooldown):
-            self.state["sc"] = time.time()
+            self.state[message.user] = time.time()
             text = 'Source code: https://github.com/BluePigman/BluePagmanBot'
             self.send_privmsg(message.channel, text) 
         
@@ -252,9 +260,9 @@ class Bot:
             for cmd in custom_cmd_names
         ]
         text = "" f'@{message.user}, Commands: ' + ' '.join(all_cmd_names)
-        if ("lc" not in self.state or time.time() - self.state["lc"] > 
+        if (message.user not in self.state or time.time() - self.state[message.user] > 
             self.cooldown):
-            self.state["lc"] = time.time()       
+            self.state[message.user] = time.time()       
             self.send_privmsg(message.channel, text)
 
     def reply_with_bot(self, message):
@@ -263,18 +271,18 @@ class Bot:
         It has some basic commands, and can run a game of chess in chat \
         between two different players.'
         
-        if ("bot" not in self.state or time.time() - self.state["bot"] > 
+        if (message.user not in self.state or time.time() - self.state[message.user] > 
             self.cooldown):
-            self.state["bot"] = time.time()
+            self.state[message.user] = time.time()
             self.send_privmsg(message.channel,text)
 
     def reply_with_random_opening(self,message):
 
         text = f'@{message.user}, '
         
-        if ("ro" not in self.state or time.time() - self.state["ro"] > 
+        if (message.user not in self.state or time.time() - self.state[message.user] > 
             self.cooldown):
-            self.state["ro"] = time.time()
+            self.state[message.user] = time.time()
             
             #if args present
             if (message.text_args):
@@ -305,15 +313,16 @@ class Bot:
                 self.send_privmsg(message.channel, text + opening)
 
     def reply_with_random960(self,message):
-        if ("960" not in self.state or time.time() - self.state["960"] > 
+        if (message.user not in self.state or time.time() - self.state[message.user] > 
             self.cooldown):
-            self.state["960"] = time.time()
+            self.state[message.user] = time.time()
             opening = chessCommands.getRandom960()
             self.send_privmsg(message.channel, opening)
 
     def reply_with_joke(self,message):
-        if ("joke" not in self.state or time.time() - self.state["joke"] > 
+        if (message.user not in self.state or time.time() - self.state[message.user] > 
             self.cooldown):
+            self.state[message.user] = time.time()
             setup, punchline = chessCommands.getJoke(self.joke)
             self.send_privmsg(message.channel, setup)
             punchline = punchline.strip('\n')
@@ -358,7 +367,7 @@ class Bot:
         if message.user == config.bot_owner:
             newChannel = " ".join(message.text_args[0:1])
             self.send_command(f'JOIN #{newChannel}')
-            #self.send_privmsg(newChannel, "forsenEnter")
+            self.send_privmsg(newChannel, "forsenEnter")
             self.send_privmsg(message.channel, "Success")
 
     def part_channel(self,message):
@@ -381,9 +390,9 @@ class Bot:
         of the piece you would like to promote to at the end \
         (e.g. #move g7h8q). To resign type #move resign.'
 
-        if ("help" not in self.state or time.time() - self.state["help"] > 
+        if (message.user not in self.state or time.time() - self.state[message.user] > 
             self.cooldown):
-            self.state["help"] = time.time()
+            self.state[message.user] = time.time()
             self.send_privmsg(message.channel, text)
             time.sleep(1)
             self.send_privmsg(message.channel, text2) 
@@ -392,9 +401,9 @@ class Bot:
         text = (f"@{message.user}, Gets a random opening. You can add -b or -w \
 for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                 Defense -w")
-        if ("help_ro" not in self.state or time.time() - self.state["help_ro"] > 
+        if (message.user not in self.state or time.time() - self.state[message.user] > 
             self.cooldown):
-            self.state["help_ro"] = time.time()
+            self.state[message.user] = time.time()
             self.send_privmsg(message.channel, text)
 
             
