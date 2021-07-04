@@ -351,7 +351,7 @@ class Bot:
             self.cooldown):
             self.state[message.user] = time.time()
             self.send_privmsg(message.channel, text)
-            time.sleep(1)
+            time.sleep(2)
             self.send_privmsg(message.channel, text2) 
 
     def reply_with_help_ro(self, message):
@@ -771,7 +771,7 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                                 if gameOver():
                                     result = result()
                                     self.send_privmsg(message.channel, result)
-                                    time.sleep(1)
+                                    time.sleep(2)
                                     pgnMessages = split_pgn(pgn)
                                     for i in range(0, len(pgnMessages)):
                                         self.send_privmsg(message.channel, \
