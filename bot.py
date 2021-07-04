@@ -49,7 +49,6 @@ increment = 0
         
 userQuit = False
 
-
 class Bot:
     
     def __init__(self):
@@ -98,8 +97,6 @@ class Bot:
             'move': self.move
         }
         
-        
-
     def init(self):
         self.connect()
 
@@ -182,7 +179,6 @@ class Bot:
 
         return message
 
-                
     def handle_message(self, received_msg):
         if len(received_msg) == 0:
             return
@@ -225,9 +221,9 @@ class Bot:
             received_msgs = self.irc.recv(4096).decode()
             for received_msg in received_msgs.split('\r\n'):
                 self.handle_message(received_msg)
+
+
         
-
-
     """ General Commands here"""
         
     def reply_with_date(self, message):
@@ -286,7 +282,7 @@ class Bot:
             
             #if args present
             if (message.text_args):
-                
+
                 if '-w' in message.text_args:
                     #get opening for white
                     side = 'w'
@@ -337,6 +333,37 @@ class Bot:
             if self.joke > 84:
                 self.joke = 0
         
+   
+                
+    """ Chess commands """
+
+    def reply_with_chesshelp(self, message):
+        text = (f'@{message.user}, to make a move, type the square of the \
+            piece you want to move followed by the square you want to go to, \
+            same applies for captures. For example, if you want to move the  \
+            pawn from e2 to e4, you type #move e2e4. Input must be in \
+            lowercase.')
+        text2 = 'For promotions, add the letter \
+        of the piece you would like to promote to at the end \
+        (e.g. #move g7h8q). To resign type #move resign.'
+
+        if (message.user not in self.state or time.time() - self.state[message.user] > 
+            self.cooldown):
+            self.state[message.user] = time.time()
+            self.send_privmsg(message.channel, text)
+            time.sleep(1)
+            self.send_privmsg(message.channel, text2) 
+
+    def reply_with_help_ro(self, message):
+        text = (f"@{message.user}, Gets a random opening. You can add -b or -w \
+for a specific side, and/or add a name for search. e.g. #ro King's Indian \
+                Defense -w")
+        if (message.user not in self.state or time.time() - self.state[message.user] > 
+            self.cooldown):
+            self.state[message.user] = time.time()
+            self.send_privmsg(message.channel, text)
+
+
     """Private commands"""
     
     def leave (self, message):
@@ -377,36 +404,7 @@ class Bot:
             self.send_command(f'PART #{newChannel}')
             
             self.send_privmsg(message.channel, "Success")
-                
-    """ Chess commands and game"""
-
-    def reply_with_chesshelp(self, message):
-        text = (f'@{message.user}, to make a move, type the square of the \
-            piece you want to move followed by the square you want to go to, \
-            same applies for captures. For example, if you want to move the  \
-            pawn from e2 to e4, you type #move e2e4. Input must be in \
-            lowercase.')
-        text2 = 'For promotions, add the letter \
-        of the piece you would like to promote to at the end \
-        (e.g. #move g7h8q). To resign type #move resign.'
-
-        if (message.user not in self.state or time.time() - self.state[message.user] > 
-            self.cooldown):
-            self.state[message.user] = time.time()
-            self.send_privmsg(message.channel, text)
-            time.sleep(1)
-            self.send_privmsg(message.channel, text2) 
-
-    def reply_with_help_ro(self, message):
-        text = (f"@{message.user}, Gets a random opening. You can add -b or -w \
-for a specific side, and/or add a name for search. e.g. #ro King's Indian \
-                Defense -w")
-        if (message.user not in self.state or time.time() - self.state[message.user] > 
-            self.cooldown):
-            self.state[message.user] = time.time()
-            self.send_privmsg(message.channel, text)
-
-            
+       
     """Global Variables"""
         
     global player2Joined
@@ -450,7 +448,7 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
             self.send_privmsg(message.channel, text)
             global player2
             player2 =  message.user
-            time.sleep(1)
+            time.sleep(2)
             text = f"@{player1}, Choose a side: #white (white), #black (black)"
             self.send_privmsg(message.channel, text)
 
@@ -479,7 +477,7 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                     text = f"@{player1}, you will play as white"
                     self.send_privmsg(message.channel, text)
                     text = f"@{player1}, you are starting, enter start move."
-                    time.sleep(1)
+                    time.sleep(2)
                     self.send_privmsg(message.channel, text)
                      
                     player1Side = "w"
@@ -492,7 +490,7 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                     text = f"@{player1}, you will play as black"
                     self.send_privmsg(message.channel, text)
                     text = f"@{player2}, you are starting, enter start move."
-                    time.sleep(1)
+                    time.sleep(2)
                     self.send_privmsg(message.channel, text)
                     player1Side = "b"
                     player2Side = "w"
@@ -536,12 +534,12 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                         chessGameActive = False
                         choseSide = False
                         player2Joined = False
-                        time.sleep(1)
+                        time.sleep(2)
                         finalPGN = pgn + " 0-1"
                         pgnMessages = split_pgn(finalPGN)
                         for i in range(0, len(pgnMessages)):
                             self.send_privmsg(message.channel, pgnMessages[i])
-                            time.sleep(1)
+                            time.sleep(2)
                         
                             
                     elif chessCommands.checkInput(move):
@@ -565,9 +563,9 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                                 for i in range(0, len(pgnMessages)):
                                     self.send_privmsg(message.channel, \
                                         pgnMessages[i])
-                                    time.sleep(1)
+                                    time.sleep(2)
                                 
-                                time.sleep(1)
+                                time.sleep(2)
 
                                 if gameOver():
                                     result = result()
@@ -578,7 +576,7 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                                     for i in range(0, len(pgnMessages)):
                                         self.send_privmsg(message.channel, \
                                             pgnMessages[i])
-                                        time.sleep(1)
+                                        time.sleep(2)
                                                                 
                                 else:
                                     txt = f"@{player2}, it is your turn."
@@ -612,7 +610,7 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                         chessGameActive = False
                         choseSide = False
                         player2Joined = False
-                        time.sleep(1)
+                        time.sleep(2)
                         finalPGN = pgn + " 0-1"
                         pgnMessages = split_pgn(finalPGN)
                         for i in range(0, len(pgnMessages)):
@@ -637,19 +635,19 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                                 if gameOver():
                                     result = result()
                                     self.send_privmsg(message.channel, result)
-                                    time.sleep(1)
+                                    time.sleep(2)
                                     pgnMessages = split_pgn(pgn)
                                     for i in range(0, len(pgnMessages)):
                                         self.send_privmsg(message.channel, \
                                             pgnMessages[i])
-                                        time.sleep(1)
+                                        time.sleep(2)
                                     
                                 else:
                                     pgnMessages = split_pgn(pgn)
                                     for i in range(0, len(pgnMessages)):
                                         self.send_privmsg(message.channel, \
                                             pgnMessages[i])
-                                        time.sleep(1)
+                                        time.sleep(2)
                                         
                                     text = f"@{player1}, it is your turn."
                                     self.send_privmsg(message.channel, text)
@@ -686,7 +684,7 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                         pgnMessages = split_pgn(finalPGN)
                         for i in range(0, len(pgnMessages)):
                             self.send_privmsg(message.channel, pgnMessages[i])
-                            time.sleep(1)
+                            time.sleep(2)
                             
                     elif chessCommands.checkInput(move):
                         try:
@@ -705,19 +703,19 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                                 if gameOver():
                                     result = result()
                                     self.send_privmsg(message.channel, result)
-                                    time.sleep(1)
+                                    time.sleep(2)
                                     pgnMessages = split_pgn(pgn)
                                     for i in range(0, len(pgnMessages)):
                                         self.send_privmsg(message.channel, \
                                             pgnMessages[i])
-                                        time.sleep(1)
+                                        time.sleep(2)
                                     
                                 else:
                                     pgnMessages = split_pgn(pgn)
                                     for i in range(0, len(pgnMessages)):
                                         self.send_privmsg(message.channel, \
                                             pgnMessages[i])
-                                        time.sleep(1)
+                                        time.sleep(2)
                                         
                                     text = f"@{player2}, it is your turn."
                                     self.send_privmsg(message.channel, text)
@@ -754,7 +752,7 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                         pgnMessages = split_pgn(finalPGN)
                         for i in range(0, len(pgnMessages)):
                             self.send_privmsg(message.channel, pgnMessages[i])
-                            time.sleep(1)
+                            time.sleep(2)
                         
                     elif chessCommands.checkInput(move):
                         try:
@@ -778,7 +776,7 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                                     for i in range(0, len(pgnMessages)):
                                         self.send_privmsg(message.channel, \
                                             pgnMessages[i])
-                                        time.sleep(1)
+                                        time.sleep(2)
                                     
 
                                 else:
@@ -786,7 +784,7 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                                     for i in range(0, len(pgnMessages)):
                                         self.send_privmsg(message.channel, \
                                             pgnMessages[i])
-                                        time.sleep(1)
+                                        time.sleep(2)
                                     text = f"@{player1}, it is your turn."
                                     self.send_privmsg(message.channel, text)
                                     currentSide = 'w'
