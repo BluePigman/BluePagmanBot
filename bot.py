@@ -218,7 +218,7 @@ class Bot:
 
     def loop_for_messages(self):
         while True:
-            received_msgs = self.irc.recv(4096).decode()
+            received_msgs = self.irc.recv(4096).decode(errors='ignore')
             for received_msg in received_msgs.split('\r\n'):
                 self.handle_message(received_msg)
 
