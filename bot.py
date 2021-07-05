@@ -275,6 +275,9 @@ class Bot:
     def reply_with_random_opening(self,message):
 
         text = f'@{message.user}, '
+
+        if "󠀀" in message.text_args:         
+            message.text_args.remove('󠀀')        
         
         if (message.user not in self.state or time.time() - self.state[message.user] > 
             self.cooldown):
