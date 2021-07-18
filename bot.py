@@ -1,8 +1,6 @@
 """
 This is a chat bot for Twitch with some basic commands, and allows you
 to play a game of chess against another chatter.
-
-June 30, 2021
 @Bluepigman5000
 
 """
@@ -273,9 +271,6 @@ class Bot:
 
         text = f'@{message.user}, '
 
-        if "󠀀" in message.text_args:         
-            message.text_args.remove('󠀀')        
-        
         if (message.user not in self.state or time.time() - self.state[message.user] > 
             self.cooldown):
             self.state[message.user] = time.time()
@@ -288,6 +283,9 @@ class Bot:
                     side = 'w'
                     message.text_args.remove('-w')
                     name = " ".join(message.text_args)
+                    if "󠀀" in name:         
+                        name = name.replace('󠀀', '')
+            
                     opening = chessCommands.getRandomOpeningSpecific(name,side)
                     self.send_privmsg(message.channel, text + opening)
                     
@@ -296,11 +294,17 @@ class Bot:
                     side = 'b'
                     message.text_args.remove('-b')
                     name = " ".join(message.text_args)
+                    if "󠀀" in name:         
+                        name = name.replace('󠀀', '')
+            
                     opening = chessCommands.getRandomOpeningSpecific(name, side)
                     self.send_privmsg(message.channel, text + opening)
 
                 else: # get opening for specified search term   
                     name = " ".join(message.text_args)
+                    if "󠀀" in name:         
+                        name = name.replace('󠀀', '')
+            
                     opening = chessCommands.getRandomOpeningSpecific(name)
                     self.send_privmsg(message.channel, text + opening)
 
