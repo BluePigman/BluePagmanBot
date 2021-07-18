@@ -74,7 +74,7 @@ class Bot:
             'source_code': self.reply_with_source_code,
             'play_chess': self.play_chess,
             'bot': self.reply_with_bot,
-            'random_opening': self.reply_with_random_opening,
+            'ro': self.reply_with_random_opening,
             'joke': self.reply_with_joke,
             'r960': self.reply_with_random960,
             'help_ro': self.reply_with_help_ro
@@ -211,9 +211,6 @@ class Bot:
             #Aliases.
             if message.text_command.lower() == "commands":
                 self.custom_commands["help"](message)
-                self.time = time.time()
-            if message.text_command.lower() == "ro":
-                self.custom_commands["random_opening"](message)
                 self.time = time.time()
 
     def loop_for_messages(self):
