@@ -283,8 +283,8 @@ class Bot:
                     side = 'w'
                     message.text_args.remove('-w')
                     name = " ".join(message.text_args)
-                    if "󠀀" in name:         
-                        name = name.replace('󠀀', '')
+                    if '\U000e0000' in name:         
+                        name = name.replace('\U000e0000', '')
             
                     opening = chessCommands.getRandomOpeningSpecific(name,side)
                     self.send_privmsg(message.channel, text + opening)
@@ -294,16 +294,16 @@ class Bot:
                     side = 'b'
                     message.text_args.remove('-b')
                     name = " ".join(message.text_args)
-                    if "󠀀" in name:         
-                        name = name.replace('󠀀', '')
+                    if '\U000e0000' in name:         
+                        name = name.replace('\U000e0000', '')
             
                     opening = chessCommands.getRandomOpeningSpecific(name, side)
                     self.send_privmsg(message.channel, text + opening)
 
                 else: # get opening for specified search term   
                     name = " ".join(message.text_args)
-                    if "󠀀" in name:         
-                        name = name.replace('󠀀', '')
+                    if '\U000e0000' in name:         
+                        name = name.replace('\U000e0000', '')
             
                     opening = chessCommands.getRandomOpeningSpecific(name)
                     self.send_privmsg(message.channel, text + opening)
