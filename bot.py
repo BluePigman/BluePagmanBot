@@ -61,7 +61,8 @@ class Bot:
         self.cooldown = 5 #default cooldown for commands
         self.joke = random.randint(0,84)
         self.time = time.time()
-        # self.messageCounter = 0
+        self.last_msg = ''
+        self.last_msg_time = time.time()
         
         #anyone can use these
         self.custom_commands = {
@@ -99,7 +100,13 @@ class Bot:
         self.connect()
 
     def send_privmsg(self, channel, text):
-        self.send_command(f'PRIVMSG #{channel} : {text}')
+        if text == self.last_msg and (time.time() - self.last_msg_time) < 30:
+            text = text + '\U000e0000'
+            self.send_command(f'PRIVMSG #{channel} : {text}')
+            self.last_msg_time = time.time()
+            self.last_msg = text
+        else:
+            self.send_command(f'PRIVMSG #{channel} : {text}')
 
     def send_command(self, command):
         if 'PASS' not in command:       
