@@ -99,14 +99,16 @@ class Bot:
     def init(self):
         self.connect()
 
-    def send_privmsg(self, channel, text):
+    def send_privmsg(self, channel, text):        
         if text == self.last_msg and (time.time() - self.last_msg_time) < 30:
-            text = text + '\U000e0000'
+            text += ' \U000e0000'
             self.send_command(f'PRIVMSG #{channel} : {text}')
             self.last_msg_time = time.time()
             self.last_msg = text
         else:
             self.send_command(f'PRIVMSG #{channel} : {text}')
+            self.last_msg_time = time.time()
+            self.last_msg = text
 
     def send_command(self, command):
         if 'PASS' not in command:       
