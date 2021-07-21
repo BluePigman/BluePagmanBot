@@ -31,7 +31,7 @@ def checkPromotion(move): # Check if a promotion move is valid.
 def getRandomOpening(): # Get random opening in list of openings
     lines = open('Chess Openings.txt').read().splitlines() #list
     myline = random.choice(lines)
-    return myline
+    return myline.rstrip()
 
 def getRandomOpeningSpecific(name, side = None):
     # Get random opening with specified name and/or side
@@ -45,7 +45,7 @@ def getRandomOpeningSpecific(name, side = None):
                 return "No openings found."
             
             result = random.choice(targets)
-            return result
+            return result.rstrip()
         
         elif side == 'b':
             blackOpenings = [line for line in f if " - b " in line]
@@ -56,7 +56,7 @@ def getRandomOpeningSpecific(name, side = None):
                 return "No openings found."
             
             result = random.choice(targets)
-            return result
+            return result.rstrip()
         
         else:
             
@@ -65,7 +65,7 @@ def getRandomOpeningSpecific(name, side = None):
             if not targets:
                 return "No openings found."
             result = random.choice(targets)
-            return result
+            return result.rstrip()
 
 """targets = [line for line in f if name in line]
         result = random.choice(targets)
@@ -86,4 +86,4 @@ def getJoke(x): #return setup and punchline.
 def getRandom960(): # Get random 960 position.
     lines = open('chess960 FENS.txt').read().splitlines()
     myline =random.choice(lines)
-    return myline
+    return myline.rstrip()
