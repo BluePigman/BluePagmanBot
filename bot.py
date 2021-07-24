@@ -356,13 +356,13 @@ class Bot:
             if len(message.text_args) > 1 and message.text_args[1].isnumeric():
                 emote = message.text_args[0]
                 width = int(message.text_args[1])
-                if len(emote) * length + length - 1 < 500:
+                if len(emote) * width + width - 1 < 500:
                     text = ''
-                    for x in range(length): # go up
+                    for x in range(width): # go up
                         text += (emote + ' ')
                         self.send_privmsg(message.channel, text)
                         time.sleep(0.1)
-                    for y in range(length): #go down
+                    for y in range(width): #go down
                         text = text.rsplit(emote, 1)[0]
                         self.send_privmsg(message.channel, text)
                         time.sleep(0.1)
@@ -381,14 +381,14 @@ class Bot:
             self.state[message.user] = time.time()
             if len(message.text_args) > 1 and message.text_args[1].isnumeric():
                 emote = message.text_args[0]
-                length = int(message.text_args[1])
-                if len(emote) * length + length - 1 < 500:
+                width = int(message.text_args[1])
+                if len(emote) * width + width - 1 < 500:
                     text = ''
-                    for x in range(length): # go up
+                    for x in range(width): # go up
                         text += (emote + ' ')
                         self.send_privmsg(message.channel, text)
                         time.sleep(1.6)
-                    for y in range(length): #go down
+                    for y in range(width): #go down
                         text = text.rsplit(emote, 1)[0]
                         self.send_privmsg(message.channel, text)
                         time.sleep(1.6)
