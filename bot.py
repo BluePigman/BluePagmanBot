@@ -638,7 +638,7 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                                     result = result()
                                     self.send_privmsg(message.channel, \
                                     result)
-                                    time.sleep(1)
+                                    time.sleep(2)
                                     pgnMessages = split_pgn(pgn)
                                     for i in range(0, len(pgnMessages)):
                                         self.send_privmsg(message.channel, \
@@ -682,7 +682,7 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                         pgnMessages = split_pgn(finalPGN)
                         for i in range(0, len(pgnMessages)):
                             self.send_privmsg(message.channel, pgnMessages[i])
-                            time.sleep(1)
+                            time.sleep(2)
                         
                     elif chessCommands.checkInput(move):
                         # Convert to uci
@@ -747,6 +747,7 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                         chessGameActive = False
                         text = f"@{player1} resigned. @{player2} wins."
                         self.send_privmsg(message.channel, text)
+                        time.sleep(2)
                         finalPGN = pgn + " 1-0"
                         pgnMessages = split_pgn(finalPGN)
                         for i in range(0, len(pgnMessages)):
@@ -815,6 +816,7 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
                         chessGameActive = False
                         text = f"@{player2} resigned. @{player1} wins."
                         self.send_privmsg(message.channel, text)
+                        time.sleep(2)
                         finalPGN = pgn + " 1-0"
                         pgnMessages = split_pgn(finalPGN)
                         for i in range(0, len(pgnMessages)):
