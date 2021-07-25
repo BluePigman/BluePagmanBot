@@ -502,7 +502,9 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
         pgn = ''
         moveCount = 0
         increment = 0
-        self.getPlayer1(message)                   
+        global chessGameActive
+        if not chessGameActive:
+            self.getPlayer1(message)                   
 
     #Player 2 that joins the game.
     def getPlayer2(self, message, chessGamePending):
