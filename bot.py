@@ -892,14 +892,16 @@ def result():
     global choseSide
     global player2Joined
     global player1Side
+    global pgn
     
     if board.is_checkmate():
         result = str(board.outcome())
         winner = result[55:]
         
         if winner[:len(winner) - 1] == "True": #White wins.
-            
+            pgn += ' { White wins by checkmate. } 1-0'
             if player1Side == "w":
+                
                 # send player1 wins, then print PGN.
                 result = (f"Checkmate, {player1} wins! PogChamp")
                 
@@ -918,6 +920,7 @@ def result():
                 return result
 
         else: #Black wins
+            pgn += ' { Black wins by checkmate. } 0-1'
             if player1Side == "b":
                 #Send player 1 wins as black
                 result = (f"Checkmate, {player1} wins! PogChamp")
@@ -935,6 +938,7 @@ def result():
                 return result
 
     elif board.is_stalemate(): #Check for stalemate
+        pgn += ' { Draw by stalemate. } 1/2-1/2'
         result = "Stalemate LUL"
         chessGameActive = False
         choseSide = False
@@ -942,6 +946,7 @@ def result():
         return result
 
     elif board.is_insufficient_material(): # Check for draw by insufficient material
+        pgn += ' { The game is a draw. } 1/2-1/2'
         result = "Draw by insufficient material."
         chessGameActive = False
         choseSide = False
@@ -949,6 +954,7 @@ def result():
         return result
     
     else: # Fivefold repetition
+        pgn += ' { The game is a draw. } 1/2-1/2'
         result = "Draw by fivefold repetition."
         chessGameActive = False
         choseSide = False
