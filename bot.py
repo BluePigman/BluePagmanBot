@@ -880,10 +880,10 @@ def getRandomMove():
     return random.choice(legal_moves)
 
 # Check if the game is over (by checkmate, stalemate,
-# or draw by insufficient material
+# draw by insufficient material, or draw by fivefold repetition)
 def gameOver():
     return board.is_checkmate() or board.is_stalemate() or \
-           board.is_insufficient_material()
+           board.is_insufficient_material() or board.is_fivefold_repetition()
 
 # Return the result of the game in a string. (Player1 wins/Player2 wins/
 # stalemate/draw by insufficient material
@@ -893,7 +893,7 @@ def result():
     global player2Joined
     global player1Side
     
-    if (board.is_checkmate()):
+    if board.is_checkmate():
         result = str(board.outcome())
         winner = result[55:]
         
@@ -934,19 +934,27 @@ def result():
                 player2Joined = False
                 return result
 
-    elif (board.is_stalemate()): #Check for stalemate
+    elif board.is_stalemate(): #Check for stalemate
         result = "Stalemate LUL"
         chessGameActive = False
         choseSide = False
         player2Joined = False
         return result
 
-    else: # Check for draw by insufficient material
-        result = "Draw by insufficient material"
+    elif board.is_insufficient_material(): # Check for draw by insufficient material
+        result = "Draw by insufficient material."
         chessGameActive = False
         choseSide = False
         player2Joined = False
         return result
+    
+    else: # Fivefold repetition
+        result = "Draw by fivefold repetition."
+        chessGameActive = False
+        choseSide = False
+        player2Joined = False
+        return result
+        
 """
 Get standard algebraic notation of move (e2e4 becomes e4).
 move is a uci representation of move.
