@@ -87,7 +87,8 @@ class Bot:
             'say': self.say,
             'echo': self.echo,
             'join_channel': self.join_channel,
-            'leave_channel': self.part_channel
+            'leave_channel': self.part_channel,
+            'reset_chess': self.reset_chess
         }
         
         #commands for playing chess
@@ -469,7 +470,28 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
             self.send_command(f'PART #{newChannel}')
             
             self.send_privmsg(message.channel, "Success")
-       
+    
+    def reset_chess(self, message):
+        global choseSide
+        global chessGamePending
+        global player2Joined
+        global chessGameActive
+        global pgn
+        global pgn
+        global moveCount
+        global increment
+        global currentSide
+        choseSide = False
+        chessGamePending = False
+        player2Joined = False
+        chessGameActive = False
+        currentSide = 'w'
+        board.reset()
+        pgn = ''
+        moveCount = 0
+        increment = 0
+        self.send_privmsg(message.channel, "Chess game has been ended.")
+  
     """Global Variables"""
         
     global player2Joined
