@@ -9,7 +9,6 @@ import socket
 import sys
 import ssl
 import datetime
-import json
 from collections import namedtuple
 import time
 import random
