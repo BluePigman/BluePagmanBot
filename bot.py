@@ -28,25 +28,6 @@ def remove_prefix(string, prefix):
     return string[len(prefix):]
 
 
-board = chess.Board()
-board.reset()
-
-
-chessGameActive = False
-chessGamePending = False
-player1 = None
-player2 = None
-pgn = " "
-
-currentSide = "w"
-
-moveCount = 0
-
-increment = 0
-
-userQuit = False
-
-
 class Bot:
 
     def __init__(self):
@@ -63,7 +44,13 @@ class Bot:
         self.time = time.time()
         self.last_msg = ''
         self.last_msg_time = time.time()
-
+        # chess params
+        self.chessGameActive = False
+        self.gameAccepted = False
+        self.player1 = ''
+        self.player2 = ''
+        self.choseSidePlayer1 = False
+        self.currentGame = None  # hold the chess game
         # anyone can use these
         self.custom_commands = {
             'date': self.reply_with_date,
@@ -93,14 +80,10 @@ class Bot:
 
         # commands for playing chess
         self.chess_commands = {
-            'join': self.join,
             'white': self.chooseSidePlayer1,
             'black': self.chooseSidePlayer1,
             'move': self.move
         }
-
-    def init(self):
-        self.connect()
 
     def send_privmsg(self, channel, text):
         if text == self.last_msg and (time.time() - self.last_msg_time) < 30:
@@ -197,8 +180,8 @@ class Bot:
 
         message = self.parse_message(received_msg)
         # can uncomment these for information on every message
-        #print(f'> {message}')
-        #print(f'> {received_msg}')
+        print(f'> {message}')
+        print(f'> {received_msg}')
 
         if message.irc_command == 'PING':
             self.send_command('PONG :tmi.twitch.tv')
@@ -374,7 +357,7 @@ class Bot:
                     self.send_privmsg(message.channel, text)
 
             else:
-                text = 'Width must be an integer. Usage: #pyramid {name} {width}'
+                text = f'Width must be an integer. Usage: {self.command_prefix}pyramid {{name}} {{width}}'
                 self.send_privmsg(message.channel, text)
 
     def reply_with_slow_pyramid(self, message):
@@ -400,7 +383,7 @@ class Bot:
                     self.send_privmsg(message.channel, text)
 
             else:
-                text = 'Width must be an integer. Usage: #pyramid {name} {width}'
+                text = f'Width must be an integer. Usage: {self.command_prefix}pyramid {{name}} {{width}}'
                 self.send_privmsg(message.channel, text)
 
     """ Chess commands """
@@ -409,11 +392,11 @@ class Bot:
         text = (f'@{message.user}, to make a move, type the square of the \
             piece you want to move followed by the square you want to go to, \
             same applies for captures. For example, if you want to move the  \
-            pawn from e2 to e4, you type #move e2e4. Input must be in \
+            pawn from e2 to e4, you type {self.command_prefix}move e2e4. Input must be in \
             lowercase.')
-        text2 = 'For promotions, add the letter \
+        text2 = f'For promotions, add the letter \
         of the piece you would like to promote to at the end \
-        (e.g. #move g7h8q). To resign type #move resign.'
+        (e.g. {self.command_prefix}move g7h8q). To resign type {self.command_prefix}move resign.'
 
         if (message.user not in self.state or time.time() - self.state[message.user] >
                 self.cooldown):
@@ -424,7 +407,7 @@ class Bot:
 
     def reply_with_help_ro(self, message):
         text = (f"@{message.user}, Gets a random opening. You can add -b or -w \
-for a specific side, and/or add a name for search. e.g. #ro King's Indian \
+for a specific side, and/or add a name for search. e.g. {self.command_prefix}ro King's Indian \
                 Defense -w")
         if (message.user not in self.state or time.time() - self.state[message.user] >
                 self.cooldown):
@@ -473,546 +456,349 @@ for a specific side, and/or add a name for search. e.g. #ro King's Indian \
             self.send_privmsg(message.channel, "Success")
 
     def reset_chess(self, message):
-        global choseSide
-        global chessGamePending
-        global player2Joined
-        global chessGameActive
-        global pgn
-        global pgn
-        global moveCount
-        global increment
-        global currentSide
-        choseSide = False
-        chessGamePending = False
-        player2Joined = False
-        chessGameActive = False
-        currentSide = 'w'
-        board.reset()
-        pgn = ''
-        moveCount = 0
-        increment = 0
-        self.send_privmsg(message.channel, "Chess game has been ended.")
-
-    """Global Variables"""
-
-    global player2Joined
-    global choseSide
-    player2Joined = False
-    choseSide = False
+        if message.user == self.player1 or message.user == self.player2:
+            self.chessGameActive = False
+            self.gameAccepted = False
+            # self.send_privmsg(message.channel, "Chess game has been ended.")
+            self.player1 = ""
+            self.player2 = ""
+            self.chessGameActive = False
+            self.choseSidePlayer1 = False
+            self.currentGame = None
+            time.sleep(2)
 
     """Functions for chess"""
 
-    # First user to start the initial game, return player
-    def getPlayer1(self, message):
-        global chessGamePending
-        if not chessGamePending:
-            chessGamePending = True
-            text = f'@{message.user} has started a chess game. Type #join to join \
+    def play_chess(self, message):  # start a game of chess
+
+        if not self.chessGameActive:
+            self.chessGameActive = True
+            self.player1 = message.user
+            text = f'@{self.player1} has started a chess game. Type {self.command_prefix}join to join \
                 the game.'
             self.send_privmsg(message.channel, text)
-            global player1
-            player1 = message.user
-
-    # Command for when someone types #play, reset variables.
-    def play_chess(self, message):
-        global pgn
-        global moveCount
-        global increment
-        global currentSide
-        currentSide = 'w'
-        board.reset()
-        pgn = ''
-        moveCount = 0
-        increment = 0
-        global chessGameActive
-        if not chessGameActive:
-            self.getPlayer1(message)
-
-    # Player 2 that joins the game.
-    def getPlayer2(self, message, chessGamePending):
-        global player2Joined
-        if chessGamePending and not player2Joined:
-            player2Joined = True
-            text = f'@{message.user} has joined the game.'
-            self.send_privmsg(message.channel, text)
-            global player2
-            player2 = message.user
             time.sleep(2)
-            text = f"@{player1}, Choose a side: #white (white), #black (black)"
-            self.send_privmsg(message.channel, text)
-
-    # Do this when someone types #join
-    def join(self, message):
-        if chessGamePending:
-            self.getPlayer2(message, chessGamePending)
-
-    # Player who started game chooses side first. (#black or #white)
+            time_end = time.time() + 30
+            self.irc.settimeout(30)
+            try:
+                while not self.gameAccepted:
+                    received_msgs = self.irc.recv(4096).decode(errors='ignore')
+                    for received_msg in received_msgs.split('\r\n'):
+                        msg = self.parse_message(received_msg)
+                        if msg.irc_command == 'PRIVMSG' and \
+                                msg.text.startswith(self.command_prefix) \
+                                and msg.text_command.lower() == "join" and msg.user != self.player1:
+                            text = f'@{msg.user} has joined the game.'
+                            self.send_privmsg(msg.channel, text)
+                            time.sleep(2)
+                            # side
+                            self.player2 = msg.user
+                            self.gameAccepted = True
+            except TimeoutError:
+                self.send_privmsg(
+                    message.channel, 'No one accepted the challenge. :(')
+                time.sleep(2)
+                self.chessGameActive = False
+                self.gameAccepted = False
+                self.player1 = ""
+            if self.player2:
+                time.sleep(2)
+                text = f"@{self.player1}, Choose a side: {self.command_prefix}white (white), {self.command_prefix}black (black)"
+                self.send_privmsg(message.channel, text)
+                time.sleep(2)
+            self.irc.settimeout(None)
 
     def chooseSidePlayer1(self, message):
-        global choseSide
-        global chessGamePending
-        global player2Joined
-        global chessGameActive
+        # Player who started game chooses side first.
+        if self.chessGameActive and self.player2 and message.user == self.player1 and not self.choseSidePlayer1:
 
-        if chessGamePending and not choseSide and player2Joined:
-            if message.user == player1:
+            if message.text_command.lower() == "white":
+                self.choseSidePlayer1 = True
+                text = f"@{self.player1}, you will play as white"
+                self.send_privmsg(message.channel, text)
+                time.sleep(2)
+                text = f"@{self.player1}, you are starting, enter start move."
+                self.send_privmsg(message.channel, text)
+                # instantiate new chess game
+                self.currentGame = chessGame(self.player1, self.player2)
+                time.sleep(2)
 
-                global player1Side
-                global player2Side
-
-                if message.text_command.lower() == "white":
-                    choseSide = True
-                    text = f"@{player1}, you will play as white"
-                    self.send_privmsg(message.channel, text)
-                    text = f"@{player1}, you are starting, enter start move."
-                    time.sleep(2)
-                    self.send_privmsg(message.channel, text)
-
-                    player1Side = "w"
-                    player2Side = "b"
-                    chessGamePending = False
-                    chessGameActive = True
-
-                elif message.text_command.lower() == "black":
-                    choseSide = True
-                    text = f"@{player1}, you will play as black"
-                    self.send_privmsg(message.channel, text)
-                    text = f"@{player2}, you are starting, enter start move."
-                    time.sleep(2)
-                    self.send_privmsg(message.channel, text)
-                    player1Side = "b"
-                    player2Side = "w"
-                    chessGamePending = False
-                    chessGameActive = True
-
-                else:
-                    text = "Invalid input, please enter \
-                    either w for white or b for black."
-                    self.send_privmsg(message.channel, text)
+            elif message.text_command.lower() == "black":
+                text = f"@{self.player1}, you will play as black"
+                self.send_privmsg(message.channel, text)
+                time.sleep(2)
+                text = f"@{self.player2}, you are starting, enter start move."
+                self.send_privmsg(message.channel, text)
+                self.currentGame = chessGame(self.player2, self.player1)
+                time.sleep(2)
+            else:
+                text = f"Invalid input, please enter \
+                either {self.command_prefix}white or {self.command_prefix}black."
+                self.send_privmsg(message.channel, text)
+                time.sleep(2)
 
     # Start the game
 
     def move(self, message):
-        global currentSide
-        global pgn
-        global chessGameActive
-        global choseSide
-        global player2Joined
-        global result
-        global chessGamePending
-        if chessGameActive and not chessGamePending and \
-           ("move" not in self.state or time.time() - self.state["move"] >
-                2):
+        if self.currentGame and \
+           ("move" not in self.state or time.time() - self.state["move"] > 2):
 
             self.state["move"] = time.time()
 
             # White to play
-            if currentSide == 'w':
+            if self.currentGame.currentSide == 'w':
+                # print('white: ', self.currentGame.player1)
 
-                if currentSide == player1Side and message.user == player1 \
-                        and message.text_command == "move" and \
-                        message.text_args:
-                    # if list empty (blank text after #move) this wont run
-                    move = message.text_args[0]
-
-                    if move == "resign":
-                        text = f"@{player1} resigned. @{player2} wins."
-                        self.send_privmsg(message.channel, text)
-                        chessGameActive = False
-                        choseSide = False
-                        player2Joined = False
-                        time.sleep(2)
-                        finalPGN = pgn + " 0-1"
-                        pgnMessages = split_pgn(finalPGN)
-                        for i in range(0, len(pgnMessages)):
-                            self.send_privmsg(message.channel, pgnMessages[i])
+                if message.user == self.currentGame.player1:
+                    if not message.text_args:
+                        self.send_privmsg(
+                            message.channel, f'@{self.currentGame.player1}, please enter a move!')
+                    else:
+                        move = message.text_args[0]
+                        if move == "resign":
+                            self.currentGame.resign(
+                                message.user)  # will update pgn
+                            text = f"@{message.user} resigned. @{self.currentGame.player2} wins."
+                            self.send_privmsg(message.channel, text)
                             time.sleep(2)
-
-                    elif chessCommands.checkInput(move):
-
-                        try:
-                            # Convert to uci
-                            move = chess.Move.from_uci(move)
-                            if isLegalMove(move):
-                                global moveCount
-                                global increment
-
-                                if increment % 2 == 0:
-                                    moveCount += 1
-                                    pgn += str(moveCount) + ". " +  \
-                                        get_san(move) + " "
-                                else:
-                                    pgn += get_san(move) + " "
-                                board.push(move)
-                                increment += 1
-                                pgnMessages = split_pgn(pgn)
-                                for i in range(0, len(pgnMessages)):
-                                    self.send_privmsg(message.channel,
-                                                      pgnMessages[i])
-                                    time.sleep(2)
-
+                            # get pgn
+                            pgn = self.currentGame.getPGN()
+                            for m in pgn:
+                                self.send_privmsg(message.channel, m)
                                 time.sleep(2)
-
-                                if gameOver():
-                                    result = result()
-                                    self.send_privmsg(message.channel,
-                                                      result)
+                            # reset chess vars.
+                            self.chessGameActive = False
+                            self.gameAccepted = False
+                            self.choseSidePlayer1 = False
+                            self.currentGame = None
+                            self.player1 = ""
+                            self.player2 = ""
+                            return
+                        moveSuccesful = self.currentGame.move(move)
+                        # do the move
+                        if moveSuccesful:
+                            if self.currentGame.gameOver():
+                                result = self.currentGame.result()
+                                self.send_privmsg(message.channel, result)
+                                time.sleep(2)
+                                for m in self.currentGame.getPGN():  # print PGN
+                                    self.send_privmsg(message.channel, m)
                                     time.sleep(2)
-                                    pgnMessages = split_pgn(pgn)
-                                    for i in range(0, len(pgnMessages)):
-                                        self.send_privmsg(message.channel,
-                                                          pgnMessages[i])
-                                        time.sleep(2)
+                                self.chessGameActive = False
+                                self.choseSidePlayer1 = False
+                                self.gameAccepted = False
+                                self.currentGame = None
+                                self.player1 = ""
+                                self.player2 = ""
+                                return
+                            # if game not over, print PGN, black to play.
+                            for m in self.currentGame.getPGN():
+                                self.send_privmsg(message.channel, m)
+                                time.sleep(2)
+                            self.send_privmsg(
+                                message.channel, f"@{self.currentGame.player2} it is your turn.")
 
-                                else:
-                                    txt = f"@{player2}, it is your turn."
-                                    self.send_privmsg(message.channel, txt)
-                                    currentSide = 'b'
-
-                            else:
-                                text = "Illegal move, try again"
-                                self.send_privmsg(message.channel, text)
-
-                        except:
-                            text = "Invalid move, try again."
+                        else:  # move was unsuccessful
+                            text = f"Invalid/illegal move, please try again. \
+                            For help refer to {self.command_prefix}help_chess."
                             self.send_privmsg(message.channel, text)
-
-                    else:
-                        text = "Move does not exist, please try again. \
-                        For help refer to #help_chess."
-                        self.send_privmsg(message.channel, text)
-
-                elif currentSide == player2Side and message.user == \
-                        player2 and message.text_command == "move" and \
-                        message.text_args:
-                    # if list empty (blank text after #move) this wont run:
-
-                    move = message.text_args[0]
-                    if move == "resign":
-                        userQuit = True
-                        text = f"@{player2} resigned. @{player1} wins."
-                        self.send_privmsg(message.channel, text)
-                        chessGameActive = False
-                        choseSide = False
-                        player2Joined = False
-                        time.sleep(2)
-                        finalPGN = pgn + " 0-1"
-                        pgnMessages = split_pgn(finalPGN)
-                        for i in range(0, len(pgnMessages)):
-                            self.send_privmsg(message.channel, pgnMessages[i])
                             time.sleep(2)
 
-                    elif chessCommands.checkInput(move):
-                        # Convert to uci
-                        try:
+            elif self.currentGame.currentSide == 'b':
 
-                            move = chess.Move.from_uci(move)
-                            if isLegalMove(move):
-
-                                if increment % 2 == 0:
-                                    moveCount += 1
-                                    pgn += str(moveCount) + ". " + \
-                                        get_san(move) + " "
-                                else:
-                                    pgn += get_san(move) + " "
-                                board.push(move)
-                                increment += 1
-
-                                if gameOver():
-                                    result = result()
-                                    self.send_privmsg(message.channel, result)
-                                    time.sleep(2)
-                                    pgnMessages = split_pgn(pgn)
-                                    for i in range(0, len(pgnMessages)):
-                                        self.send_privmsg(message.channel,
-                                                          pgnMessages[i])
-                                        time.sleep(2)
-
-                                else:
-                                    pgnMessages = split_pgn(pgn)
-                                    for i in range(0, len(pgnMessages)):
-                                        self.send_privmsg(message.channel,
-                                                          pgnMessages[i])
-                                        time.sleep(2)
-
-                                    text = f"@{player1}, it is your turn."
-                                    self.send_privmsg(message.channel, text)
-                                    currentSide = 'b'
-
-                            else:
-                                text = "Illegal move, try again"
-                                self.send_privmsg(message.channel, text)
-                        except:
-                            text = "Invalid move, try again"
-                            self.send_privmsg(message.channel, text)
-
+                if message.user == self.currentGame.player2:
+                    if not message.text_args:
+                        self.send_privmsg(
+                            message.channel, f'@{self.currentGame.player2}, please enter a move!')
                     else:
-                        text = "Move does not exist, please try again. \
-                        For help refer to #help_chess."
-                        self.send_privmsg(message.channel, text)
+                        move = message.text_args[0]
+                        if move == "resign":
+                            self.currentGame.resign(
+                                message.user)  # will update pgn
+                            text = f"@{message.user} resigned. @{self.currentGame.player1} wins! PogChamp"
+                            self.send_privmsg(message.channel, text)
+                            time.sleep(2)
+                            # get pgn
+                            pgn = self.currentGame.getPGN()
+                            for m in pgn:
+                                self.send_privmsg(message.channel, m)
+                                time.sleep(2)
+                            # reset chess vars.
+                            self.chessGameActive = False
+                            self.choseSidePlayer1 = False
+                            self.gameAccepted = False
+                            self.currentGame = None
+                            self.player1 = ""
+                            self.player2 = ""
+                            return
+                        moveSuccesful = self.currentGame.move(move)
+                        # do the move
+                        if moveSuccesful:
+                            if self.currentGame.gameOver():
+                                result = self.currentGame.result()
+                                self.send_privmsg(message.channel, result)
+                                for m in self.currentGame.getPGN():  # print PGN
+                                    self.send_privmsg(message.channel, m)
+                                    time.sleep(2)
+                                # reset chess vars.
+                                self.chessGameActive = False
+                                self.gameAccepted = False
+                                self.choseSidePlayer1 = False
+                                self.currentGame = None
+                                self.player1 = ""
+                                self.player2 = ""
+                                return
+                            # if game not over, print PGN, white to play.
+                            for m in self.currentGame.getPGN():
+                                self.send_privmsg(message.channel, m)
+                                time.sleep(2)
+                            self.send_privmsg(
+                                message.channel, f"@{self.currentGame.player1} it is your turn.")
 
-            elif currentSide == 'b':
-
-                if currentSide == player1Side and message.user == player1 \
-                        and message.text_command == "move" and \
-                        message.text_args:
-                    # if list empty (blank text after #move) this wont run
-
-                    move = message.text_args[0]
-                    if move == "resign":
-                        userQuit = True
-                        player2Joined = False
-                        choseSide = False
-                        chessGameActive = False
-                        text = f"@{player1} resigned. @{player2} wins."
-                        self.send_privmsg(message.channel, text)
-                        time.sleep(2)
-                        finalPGN = pgn + " 1-0"
-                        pgnMessages = split_pgn(finalPGN)
-                        for i in range(0, len(pgnMessages)):
-                            self.send_privmsg(message.channel, pgnMessages[i])
+                        else:  # move was unsuccessful
+                            text = f"Invalid/illegal move, please try again. \
+                            For help refer to {self.command_prefix}help_chess."
+                            self.send_privmsg(message.channel, text)
                             time.sleep(2)
 
-                    elif chessCommands.checkInput(move):
-                        try:
-                            # Convert to uci
-                            move = chess.Move.from_uci(move)
-                            if isLegalMove(move):
 
-                                if increment % 2 == 0:
-                                    moveCount += 1
-                                    pgn += str(moveCount) + ". " + \
-                                        get_san(move) + " "
-                                else:
-                                    pgn += get_san(move) + " "
-                                board.push(move)
-                                increment += 1
+class chessGame:
+    def __init__(self, player1, player2):
+        # params
 
-                                if gameOver():
-                                    result = result()
-                                    self.send_privmsg(message.channel, result)
-                                    time.sleep(2)
-                                    pgnMessages = split_pgn(pgn)
-                                    for i in range(0, len(pgnMessages)):
-                                        self.send_privmsg(message.channel,
-                                                          pgnMessages[i])
-                                        time.sleep(2)
+        self.board = chess.Board()
+        # self.board.reset()
+        self.player1 = player1  # player 1 is white, player 2 is black
+        self.player2 = player2
+        self.pgn = ""
+        self.currentSide = "w"
+        self.moveCount = 0
+        self.increment = 0
+        self.userQuit = False
 
-                                else:
-                                    pgnMessages = split_pgn(pgn)
-                                    for i in range(0, len(pgnMessages)):
-                                        self.send_privmsg(message.channel,
-                                                          pgnMessages[i])
-                                        time.sleep(2)
+    def getLegalMoves(self):
+        return list(self.board.legal_moves)
 
-                                    text = f"@{player2}, it is your turn."
-                                    self.send_privmsg(message.channel, text)
-                                    currentSide = 'w'
+    def isLegalMove(self, move):
+        return move in list(self.board.legal_moves)
 
-                            else:
-                                text = "Illegal move, try again"
-                                self.send_privmsg(message.channel, text)
-                        except:
-                            text = "Invalid move, try again"
-                            self.send_privmsg(message.channel, text)
+    def switchSide(self):
+        if self.currentSide == "w":
+            self.currentSide = "b"
+            return
+        self.currentSide = "w"
 
+    def move(self, move):  # return True if move was success, false otehrwise
+        """Attempt to do a move on the board, return 's' for success,
+        'r' for resign, and 'f' for unsuccesful move (error)"""
+        if chessCommands.checkInput(move):
+
+            try:
+                # Convert to uci
+                move = chess.Move.from_uci(move)
+                if self.isLegalMove(move):
+                    if self.increment % 2 == 0:
+                        self.moveCount += 1
+                        self.pgn += str(self.moveCount) + ". " +  \
+                            self.get_san(move) + " "
                     else:
-                        text = "Move does not exist, please try again. \
-                        For help refer to #help_chess."
-                        self.send_privmsg(message.channel, text)
+                        self.pgn += self.get_san(move) + " "
+                    self.board.push(move)
+                    self.increment += 1
+                    self.switchSide()
+                    return True
 
-                elif currentSide == player2Side and message.user == \
-                        player2 and message.text_command == "move" and \
-                        message.text_args:
-                    # if list empty (blank text after #move) this wont run
+            except:
+                return False
+        else:
+            return False
 
-                    move = message.text_args[0]
+    def getPGN(self):
+        return self.split_pgn()
 
-                    if move == "resign":
-                        userQuit = True
-                        player2Joined = False
-                        choseSide = False
-                        chessGameActive = False
-                        text = f"@{player2} resigned. @{player1} wins."
-                        self.send_privmsg(message.channel, text)
-                        time.sleep(2)
-                        finalPGN = pgn + " 1-0"
-                        pgnMessages = split_pgn(finalPGN)
-                        for i in range(0, len(pgnMessages)):
-                            self.send_privmsg(message.channel, pgnMessages[i])
-                            time.sleep(2)
+    def resign(self, player):  # player resigns
+        if player == self.player1:
+            self.pgn = self.pgn + "{ White resigns. } 0-1"
+        else:
+            self.pgn = self.pgn + " { Black resigns. } 1-0"
 
-                    elif chessCommands.checkInput(move):
-                        try:
-                            # Convert to uci
-                            move = chess.Move.from_uci(move)
-                            if isLegalMove(move):
+    def reset(self):
+        self.player1 = ""
+        self.player2 = ""
+        self.board.reset()
+        self.pgn = ""
 
-                                if increment % 2 == 0:
-                                    moveCount += 1
-                                    pgn += str(moveCount) + ". " + \
-                                        get_san(move) + " "
-                                else:
-                                    pgn += get_san(move) + " "
-                                board.push(move)
-                                increment += 1
+        self.currentSide = "w"
 
-                                if gameOver():
-                                    result = result()
-                                    self.send_privmsg(message.channel, result)
-                                    time.sleep(2)
-                                    pgnMessages = split_pgn(pgn)
-                                    for i in range(0, len(pgnMessages)):
-                                        self.send_privmsg(message.channel,
-                                                          pgnMessages[i])
-                                        time.sleep(2)
+        self.moveCount = 0
 
-                                else:
-                                    pgnMessages = split_pgn(pgn)
-                                    for i in range(0, len(pgnMessages)):
-                                        self.send_privmsg(message.channel,
-                                                          pgnMessages[i])
-                                        time.sleep(2)
-                                    text = f"@{player1}, it is your turn."
-                                    self.send_privmsg(message.channel, text)
-                                    currentSide = 'w'
+        self.increment = 0
 
-                            else:
-                                text = "Illegal move, try again"
-                                self.send_privmsg(message.channel, text)
-                        except:
-                            text = "Invalid move, try again"
-                            self.send_privmsg(message.channel, text)
+    def updatePGN(self, move):
+        pass
 
-                    else:
-                        text = "Move does not exist, please try again. \
-                        For help refer to #help_chess."
-                        self.send_privmsg(message.channel, text)
+    def gameOver(self):
+        # Check if the game is over (by checkmate, stalemate,
+        # draw by insufficient material, or draw by fivefold repetition)
+        return self.board.is_checkmate() or self.board.is_stalemate() or \
+            self.board.is_insufficient_material() or self.board.is_fivefold_repetition()
 
+    # Return the result of the game in a string. (Player1 wins/Player2 wins/
+    # stalemate/draw by insufficient material
 
-def getLegalMoves():
-    return list(board.legal_moves)
+    def result(self):
+        if self.board.is_checkmate():
+            result = str(self.board.outcome())
+            winner = result[55:]
 
-
-def isLegalMove(move):
-    return (move in list(board.legal_moves))
-
-
-def getRandomMove():
-    legal_moves = list(board.legal_moves)
-    return random.choice(legal_moves)
-
-# Check if the game is over (by checkmate, stalemate,
-# draw by insufficient material, or draw by fivefold repetition)
-
-
-def gameOver():
-    return board.is_checkmate() or board.is_stalemate() or \
-        board.is_insufficient_material() or board.is_fivefold_repetition()
-
-# Return the result of the game in a string. (Player1 wins/Player2 wins/
-# stalemate/draw by insufficient material
-
-
-def result():
-    global chessGameActive
-    global choseSide
-    global player2Joined
-    global player1Side
-    global pgn
-
-    if board.is_checkmate():
-        result = str(board.outcome())
-        winner = result[55:]
-
-        if winner[:len(winner) - 1] == "True":  # White wins.
-            pgn += ' { White wins by checkmate. } 1-0'
-            if player1Side == "w":
-
-                # send player1 wins, then print PGN.
-                result = (f"Checkmate, {player1} wins! PogChamp")
-
-                chessGameActive = False
-                choseSide = False
-                player2Joined = False
+            if winner[:len(winner) - 1] == "True":  # White wins.
+                self.pgn += ' { White wins by checkmate. } 1-0'
+                result = (f"Checkmate, {self.player1} wins! PogChamp")
                 return result
 
-            else:
-                # send player2 wins, then print PGN.
-                result = (f"Checkmate, {player2} wins! PogChamp")
+            else:  # Black wins
+                self.pgn += ' { Black wins by checkmate. } 0-1'
 
-                chessGameActive = False
-                choseSide = False
-                player2Joined = False
+                result = (f"Checkmate, {self.player2} wins! PogChamp")
                 return result
 
-        else:  # Black wins
-            pgn += ' { Black wins by checkmate. } 0-1'
-            if player1Side == "b":
-                # Send player 1 wins as black
-                result = (f"Checkmate, {player1} wins! PogChamp")
-                chessGameActive = False
-                choseSide = False
-                player2Joined = False
-                return result
+        elif self.board.is_stalemate():  # Check for stalemate
+            self.pgn += ' { Draw by stalemate. } 1/2-1/2'
+            result = "Stalemate LUL"
+            return result
 
-            else:
-                # player 2 wins as black.
-                result = (f"Checkmate, {player2} wins! PogChamp")
-                chessGameActive = False
-                choseSide = False
-                player2Joined = False
-                return result
+        elif self.board.is_insufficient_material():  # Check for draw by insufficient material
+            pgn += ' { The game is a draw. } 1/2-1/2'
+            result = "Draw by insufficient material."
+            return result
 
-    elif board.is_stalemate():  # Check for stalemate
-        pgn += ' { Draw by stalemate. } 1/2-1/2'
-        result = "Stalemate LUL"
-        chessGameActive = False
-        choseSide = False
-        player2Joined = False
-        return result
+        else:  # Fivefold repetition
+            pgn += ' { The game is a draw. } 1/2-1/2'
+            result = "Draw by fivefold repetition."
+            return result
 
-    elif board.is_insufficient_material():  # Check for draw by insufficient material
-        pgn += ' { The game is a draw. } 1/2-1/2'
-        result = "Draw by insufficient material."
-        chessGameActive = False
-        choseSide = False
-        player2Joined = False
-        return result
-
-    else:  # Fivefold repetition
-        pgn += ' { The game is a draw. } 1/2-1/2'
-        result = "Draw by fivefold repetition."
-        chessGameActive = False
-        choseSide = False
-        player2Joined = False
-        return result
-
-
-"""
-Get standard algebraic notation of move (e2e4 becomes e4).
-move is a uci representation of move.
-"""
-
-
-def get_san(move):
-    return board.san(move)
-
-# Split the long message into a list of under 500 character messages.
-# pgn is a string
-
-
-def split_pgn(pgn):
-    n = 500
-    """ Get substrings from i to specified length n, put into list.
-    For loop from 0 to length of pgn, increase by n.
     """
-    return [pgn[i:i+n] for i in range(0, len(pgn), n)]
+    Get standard algebraic notation of move (e2e4 becomes e4).
+    move is a uci representation of move.
+    """
+
+    def get_san(self, move):
+        return self.board.san(move)
+
+    # Split the long message into a list of under 500 character messages.
+    # pgn is a string
+
+    def split_pgn(self):
+        n = 500
+        """ Get substrings from i to specified length n, put into list.
+        For loop from 0 to length of pgn, increase by n.
+        """
+        return [self.pgn[i:i+n] for i in range(0, len(self.pgn), n)]
 
 
 def main():
     bot = Bot()
-    bot.init()
+    bot.connect()
 
 
 if __name__ == '__main__':
