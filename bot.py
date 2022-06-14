@@ -15,6 +15,7 @@ import random
 import config
 import chess
 import chessCommands
+from threading import Timer
 
 Message = namedtuple(
     'Message',
@@ -51,6 +52,7 @@ class Bot:
         self.player2 = ''
         self.choseSidePlayer1 = False
         self.currentGame = None  # hold the chess game
+        self.chessTimer = None  # chess game pending timer
         # anyone can use these
         self.custom_commands = {
             'date': self.reply_with_date,
@@ -82,7 +84,8 @@ class Bot:
         self.chess_commands = {
             'white': self.chooseSidePlayer1,
             'black': self.chooseSidePlayer1,
-            'move': self.move
+            'move': self.move,
+            'join': self.join
         }
 
     def send_privmsg(self, channel, text):
@@ -467,7 +470,28 @@ for a specific side, and/or add a name for search. e.g. {self.command_prefix}ro 
             self.currentGame = None
             time.sleep(2)
 
+    # Runs if no one accepts chess challenge after 30s.
+    def gameTimeout(self, channel):
+        text = "No one accepted the challenge. :("
+        self.send_privmsg(channel, text)
+        self.chessGameActive = False
+        self.player1 = ""
+
     """Functions for chess"""
+
+    def join(self, message):  # join game
+        if message.user != self.player1 and self.chessGameActive and not self.gameAccepted:
+            self.chessTimer.cancel()
+            text = f'@{message.user} has joined the game.'
+            self.send_privmsg(message.channel, text)
+            time.sleep(2)
+            # side
+            self.player2 = message.user
+            self.gameAccepted = True
+            text = f"@{self.player1}, Choose a side: {self.command_prefix}white (white), {self.command_prefix}black (black)"
+            self.send_privmsg(message.channel, text)
+            time.sleep(2)
+        pass
 
     def play_chess(self, message):  # start a game of chess
 
@@ -477,36 +501,8 @@ for a specific side, and/or add a name for search. e.g. {self.command_prefix}ro 
             text = f'@{self.player1} has started a chess game. Type {self.command_prefix}join to join \
                 the game.'
             self.send_privmsg(message.channel, text)
-            time.sleep(2)
-            time_end = time.time() + 30
-            self.irc.settimeout(30)
-            try:
-                while not self.gameAccepted:
-                    received_msgs = self.irc.recv(4096).decode(errors='ignore')
-                    for received_msg in received_msgs.split('\r\n'):
-                        msg = self.parse_message(received_msg)
-                        if msg.irc_command == 'PRIVMSG' and \
-                                msg.text.startswith(self.command_prefix) \
-                                and msg.text_command.lower() == "join" and msg.user != self.player1:
-                            text = f'@{msg.user} has joined the game.'
-                            self.send_privmsg(msg.channel, text)
-                            time.sleep(2)
-                            # side
-                            self.player2 = msg.user
-                            self.gameAccepted = True
-            except TimeoutError:
-                self.send_privmsg(
-                    message.channel, 'No one accepted the challenge. :(')
-                time.sleep(2)
-                self.chessGameActive = False
-                self.gameAccepted = False
-                self.player1 = ""
-            if self.player2:
-                time.sleep(2)
-                text = f"@{self.player1}, Choose a side: {self.command_prefix}white (white), {self.command_prefix}black (black)"
-                self.send_privmsg(message.channel, text)
-                time.sleep(2)
-            self.irc.settimeout(None)
+            self.chessTimer = Timer(30, self.gameTimeout, (message.channel,))
+            self.chessTimer.start()  # start a timer of 30s.
 
     def chooseSidePlayer1(self, message):
         # Player who started game chooses side first.
