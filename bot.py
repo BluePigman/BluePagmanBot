@@ -182,14 +182,13 @@ class Bot:
             return
 
         message = self.parse_message(received_msg)
-        # can uncomment these for information on every message
         print(f'> {message}')
         print(f'> {received_msg}')
 
         if message.irc_command == 'PING':
             self.send_command('PONG :tmi.twitch.tv')
 
-        # If message starts with the prefix, follows 1s cooldown
+        # Follow 1s cooldown
         if message.irc_command == 'PRIVMSG' and \
                 message.text.startswith(self.command_prefix) \
                 and time.time() - self.time > 1:
@@ -392,14 +391,22 @@ class Bot:
     """ Chess commands """
 
     def reply_with_chesshelp(self, message):
-        text = (f'@{message.user}, to make a move, type the square of the \
-            piece you want to move followed by the square you want to go to, \
-            same applies for captures. For example, if you want to move the  \
-            pawn from e2 to e4, you type {self.command_prefix}move e2e4. Input must be in \
-            lowercase.')
-        text2 = f'For promotions, add the letter \
-        of the piece you would like to promote to at the end \
-        (e.g. {self.command_prefix}move g7h8q). To resign type {self.command_prefix}move resign.'
+
+        text = (f"""@{message.user}, moves should be entered in either SAN or UCI notation. SAN moves \
+            follow the format: letter of piece (except for pawn moves), x if there is a capture, \
+            and the coordinate of the square the piece moves to. \
+            For pawn promotions add = followed by the letter of the piece. \
+            Examples: f6, Nxg5, <Ke2, a1=Q, bxc8=R, Bh8.""")
+
+        text2 = "Sometimes you need to indicate the exact \
+            piece that is moving if there is ambiguity. Examples include Nge2, Rhxe1. To castle, enter O-O or O-O-O. \
+            Refer to https://en.wikipedia.org/wiki/Portable_Game_Notation#Movetext for more detailed information. "
+
+        text3 = f"""UCI moves follow the format: original coordinate of piece, new coordinate of piece. \
+            For castling, use the king's coordinates. UCI Input must be in lowercase and contain no spaces.\
+            For example, if you want to start by moving the e pawn to e4, \
+            you type {self.command_prefix}move e4 OR {self.command_prefix}move e2e4 \
+            To resign type {self.command_prefix}move resign"""
 
         if (message.user not in self.state or time.time() - self.state[message.user] >
                 self.cooldown):
@@ -407,6 +414,8 @@ class Bot:
             self.send_privmsg(message.channel, text)
             time.sleep(2)
             self.send_privmsg(message.channel, text2)
+            time.sleep(2)
+            self.send_privmsg(message.channel, text3)
 
     def reply_with_help_ro(self, message):
         text = (f"@{message.user}, Gets a random opening. You can add -b or -w \
@@ -660,10 +669,7 @@ for a specific side, and/or add a name for search. e.g. {self.command_prefix}ro 
 
 class chessGame:
     def __init__(self, player1, player2):
-        # params
-
         self.board = chess.Board()
-        # self.board.reset()
         self.player1 = player1  # player 1 is white, player 2 is black
         self.player2 = player2
         self.pgn = ""
@@ -671,12 +677,6 @@ class chessGame:
         self.moveCount = 0
         self.increment = 0
         self.userQuit = False
-
-    def getLegalMoves(self):
-        return list(self.board.legal_moves)
-
-    def isLegalMove(self, move):
-        return move in list(self.board.legal_moves)
 
     def switchSide(self):
         if self.currentSide == "w":
@@ -714,7 +714,7 @@ class chessGame:
     def getPGN(self):
         return self.split_pgn()
 
-    def resign(self, player):  # player resigns
+    def resign(self, player):
         if player == self.player1:
             self.pgn = self.pgn + "{ White resigns. } 0-1"
         else:
@@ -732,19 +732,15 @@ class chessGame:
 
         self.increment = 0
 
-    def updatePGN(self, move):
-        pass
-
     def gameOver(self):
-        # Check if the game is over (by checkmate, stalemate,
-        # draw by insufficient material, or draw by fivefold repetition)
+        """Return if the game is over (by checkmate, stalemate,
+        draw by insufficient material, or draw by fivefold repetition)"""
         return self.board.is_checkmate() or self.board.is_stalemate() or \
             self.board.is_insufficient_material() or self.board.is_fivefold_repetition()
 
-    # Return the result of the game in a string. (Player1 wins/Player2 wins/
-    # stalemate/draw by insufficient material
-
     def result(self):
+        """ Return the result of the game in a string. (Player1 wins/Player2 wins/
+        stalemate/draw by insufficient material"""
         if self.board.is_checkmate():
             result = str(self.board.outcome())
             winner = result[55:]
@@ -775,18 +771,17 @@ class chessGame:
             result = "Draw by fivefold repetition."
             return result
 
-    """
-    Get standard algebraic notation of move (e2e4 becomes e4).
-    move is a uci representation of move.
-    """
-
     def get_san(self, move):
+        """
+        Get standard algebraic notation of move (e2e4 becomes e4).
+        move is a uci representation of move.
+        """
+
         return self.board.san(move)
 
-    # Split the long message into a list of under 500 character messages.
-    # pgn is a string
-
     def split_pgn(self):
+        """Split the long PGN message into a list of under 500 character messages.
+        """
         n = 500
         """ Get substrings from i to specified length n, put into list.
         For loop from 0 to length of pgn, increase by n.
