@@ -684,29 +684,31 @@ class chessGame:
             return
         self.currentSide = "w"
 
-    def move(self, move):  # return True if move was success, false otehrwise
-        """Attempt to do a move on the board, return 's' for success,
-        'r' for resign, and 'f' for unsuccesful move (error)"""
-        if chessCommands.checkInput(move):
+    def move(self, move: str):
+        """ Make the move on the chess board.
+        First convert the SAN move (e.g. "e4") into UCI (e2e4)
+        Then use this UCI to convert back to SAN, in order to 
+        add symbols representing check or checkmate, if they were missing.
+        return True if move was success, False otherwise.
+        """
 
-            try:
-                # Convert to uci
-                move = chess.Move.from_uci(move)
-                if self.isLegalMove(move):
-                    if self.increment % 2 == 0:
-                        self.moveCount += 1
-                        self.pgn += str(self.moveCount) + ". " +  \
-                            self.get_san(move) + " "
-                    else:
-                        self.pgn += self.get_san(move) + " "
-                    self.board.push(move)
-                    self.increment += 1
-                    self.switchSide()
-                    return True
+        if '\U000e0000' in move:
+            move = move.replace('\U000e0000', '')
 
-            except:
-                return False
-        else:
+        try:
+            uci = self.board.parse_san(move)  # convert SAN to UCI
+
+            if self.increment % 2 == 0:
+                self.moveCount += 1
+                self.pgn += str(self.moveCount) + ". " +  \
+                    self.get_san(uci) + " "
+            else:
+                self.pgn += self.get_san(uci) + " "
+            self.board.push_san(move)
+            self.increment += 1
+            self.switchSide()
+            return True
+        except:
             return False
 
     def getPGN(self):
