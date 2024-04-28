@@ -3,12 +3,15 @@ A Twitch chatbot running in Python.
 
 ##  Major Features:
 - Get a random chess opening name, can add specific keywords, and/or indicate the side.
-- Play a chess game through sending messages, with a dynamically updated PGN of the ongoing game. 
+- Play a chess game through sending messages, with a dynamically updated PGN of the ongoing game.
+- Get a random news headline from Google News. 
 
 ## Prerequisites: 
 [Python 3.7+](https://www.python.org/downloads/)
 
 [python-chess](https://pypi.org/project/chess/)
+
+[feedparser](https://pypi.org/project/feedparser/)
 
 ## How to use: 
 
