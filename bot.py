@@ -16,6 +16,7 @@ import config
 import chess
 import chessCommands
 from threading import Timer
+import newsCommands
 
 Message = namedtuple(
     'Message',
@@ -67,7 +68,9 @@ class Bot:
             'r960': self.reply_with_random960,
             'help_ro': self.reply_with_help_ro,
             'pyramid': self.reply_with_pyramid,
-            'slow_pyramid': self.reply_with_slow_pyramid
+            'slow_pyramid': self.reply_with_slow_pyramid,
+            'news': self.reply_with_news,
+            'help_news': self.reply_with_help_news
         }
 
         # only bot owner can use these commands
@@ -388,6 +391,29 @@ class Bot:
                 text = f'Width must be an integer. Usage: {self.command_prefix}pyramid {{name}} {{width}}'
                 self.send_privmsg(message.channel, text)
 
+
+    def reply_with_news(self, message):
+        if (message.user not in self.state or time.time() - self.state[message.user] >
+                self.cooldown):
+            self.state[message.user] = time.time()
+            try:
+                m = newsCommands.get_random_news_item()
+                if (message.text_args):
+                    keywords = ' '.join(message.text_args)
+                    if '\U000e0000' in keywords:
+                        keywords = keywords.replace('\U000e0000', '')
+                    m = newsCommands.get_random_news_item(keywords)
+                self.send_privmsg(message.channel, m)
+            except Exception as e:
+                print(e)
+                self.send_privmsg(message.channel, f"@{message.user}, No news found for the given query.")
+
+    def reply_with_help_news(self, message):
+        if (message.user not in self.state or time.time() - self.state[message.user] >
+                self.cooldown):
+            self.state[message.user] = time.time()
+            self.send_privmsg(message.channel, newsCommands.get_help_text())
+                
     """ Chess commands """
 
     def reply_with_chesshelp(self, message):
