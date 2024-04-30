@@ -17,6 +17,7 @@ import chess
 import chessCommands
 from threading import Timer
 import newsCommands
+from pymongo.mongo_client import MongoClient
 
 Message = namedtuple(
     'Message',
@@ -70,7 +71,11 @@ class Bot:
             'pyramid': self.reply_with_pyramid,
             'slow_pyramid': self.reply_with_slow_pyramid,
             'news': self.reply_with_news,
-            'help_news': self.reply_with_help_news
+            'help_news': self.reply_with_help_news,
+            'daily': self.reply_with_daily,
+            'roulette': self.reply_with_roulette,
+            'balance': self.reply_with_balance,
+            'leaderboard': self.reply_with_leaderboard
         }
 
         # only bot owner can use these commands
@@ -90,6 +95,9 @@ class Bot:
             'move': self.move,
             'join': self.join
         }
+        self.dbClient = MongoClient(config.db_uri)
+        self.db = self.dbClient['test']
+        self.users = self.db['Users']
 
     def send_privmsg(self, channel, text):
         if text == self.last_msg and (time.time() - self.last_msg_time) < 30:
@@ -259,7 +267,7 @@ class Bot:
 
         text = 'BluePAGMANBot is a bot made by @Bluepigman5000 in Python. \
         It has some basic commands, and can run a game of chess in chat \
-        between two different players.'
+        between two different players. It is currently running on a VM on Google Cloud Compute Engine.'
 
         if (message.user not in self.state or time.time() - self.state[message.user] >
                 self.cooldown):
@@ -413,7 +421,101 @@ class Bot:
                 self.cooldown):
             self.state[message.user] = time.time()
             self.send_privmsg(message.channel, newsCommands.get_help_text())
-                
+
+    def reply_with_daily(self, message):
+        if (message.user not in self.state or time.time() - self.state[message.user] >
+                self.cooldown):
+            self.state[message.user] = time.time()
+            user_data = self.users.find_one({'user': message.user})
+            if not user_data: # add new user
+                self.users.insert_one({'user': message.user , 'last_claimed':datetime.datetime.now(), 'points': 100 })
+                self.send_privmsg(message.channel, f'@{message.user}, your daily reward is 100 Pigga Coins. Come back tomorrow for more!')
+            else: # check time
+                last_claimed = user_data['last_claimed']
+                time_diff = datetime.datetime.now() - last_claimed
+                if time_diff.days >= 1: # give reward
+                    self.users.update_one({'user': message.user}, {'$set': {'last_claimed': datetime.datetime.now()}, '$inc': {'points': 100}})
+                    self.send_privmsg(message.channel, f'@{message.user}, your daily reward is 100 Pigga Coins. Come back tomorrow for more!')
+                else:
+                    remaining_time = datetime.timedelta(days=1) - time_diff
+                    t = "You have already collected your dailies today. Come back in {}.".format(remaining_time)
+                    self.send_privmsg(message.channel, t)
+
+    def reply_with_roulette(self, message):
+        if (message.user not in self.state or time.time() - self.state[message.user] >
+                self.cooldown):
+            self.state[message.user] = time.time()
+            user_data = self.users.find_one({'user': message.user})
+
+            if not user_data: 
+                m = f"@{message.user}, you do not have any Pigga Coins. Use the daily command."
+                self.send_privmsg(message.channel, m)
+            else:
+                user_points = user_data['points']
+                amount = message.text_args[0]
+
+                if user_points == 0:
+                    m = f"@{message.user}, you don't have any Pigga Coins. PoroSad"
+                    self.send_privmsg(message.channel, m)
+                else:
+                    if amount == 'all':
+                        amount = user_points
+                    elif not amount.isdigit() or int(amount) <= 0:
+                        m = f"@{message.user}, please enter a positive number or 'all'."
+                        self.send_privmsg(message.channel, m)
+                        return  # Exit the function early if the input is invalid
+
+                    amount = int(amount)  # Convert the amount to an integer
+
+                    if amount > user_points:
+                        m = f"@{message.user}, you don't have enough Pigga Coins."
+                        self.send_privmsg(message.channel, m)
+                    else:
+                        gamba = random.randint(1, 2)
+                        if gamba == 1:
+                            self.users.update_one({'user': message.user}, {'$inc': {'points': amount}})
+                            new_balance = user_points + amount
+                            m = f'@{message.user}, you won {amount} Pigga Coins in roulette and now have {new_balance} Pigga Coins!'
+                            self.send_privmsg(message.channel, m)
+                        else:
+                            amountDec = -amount
+                            self.users.update_one({'user': message.user}, {'$inc': {'points': amountDec}})   
+                            new_balance = user_points - amount
+                            m =  f'@{message.user}, you lost {amount} Pigga Coins in roulette and now have {new_balance} Pigga Coins! Saj'
+                            self.send_privmsg(message.channel, m)
+
+
+    def reply_with_balance(self, message):
+        if (message.user not in self.state or time.time() - self.state[message.user] >
+                self.cooldown):
+            self.state[message.user] = time.time()
+            if message.text_args:
+                searchUser = message.text_args[0]
+                if '\U000e0000' in searchUser:
+                    searchUser = searchUser.replace('\U000e0000', '')
+                if '@' in searchUser:
+                    searchUser = searchUser.replace('@', '')
+                user_data = self.users.find_one({'user': searchUser})
+                if not user_data:
+                    self.send_privmsg(message.channel, f'@{message.user}, That user is not in the database.')
+                else:
+                    self.send_privmsg(message.channel, f'@{message.user}, {searchUser} has {user_data["points"]} Pigga Coins.')
+
+
+            else:
+                user_data = self.users.find_one({'user': message.user})
+                if not user_data:
+                    self.send_privmsg(message.channel, f'@{message.user}, you do not have any Pigga Coins. Use the daily command.')
+                else:
+                    self.send_privmsg(message.channel, f'@{message.user}, you have {user_data["points"]} Pigga Coins.')        
+
+    def reply_with_leaderboard(self, message):
+        top_users = self.users.find().sort([('points', -1)]).limit(5)
+        leaderboard_message = "Leaderboard: "
+        for idx, user in enumerate(top_users, start=1):
+            leaderboard_message += f"{idx}. @{user['user']} - {user['points']}   "
+        self.send_privmsg(message.channel, leaderboard_message)
+
     """ Chess commands """
 
     def reply_with_chesshelp(self, message):

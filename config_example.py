@@ -3,4 +3,4 @@ username = 'BOT NAME'
 channels = ['Channel List']
 prefix = '<' #Desired Prefix.
 bot_owner = "Bot Owner" # For private commands.
-
+db_uri = "Your MongoDB URI"
