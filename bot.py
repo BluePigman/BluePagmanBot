@@ -495,7 +495,7 @@ class Bot:
                     searchUser = searchUser.replace('\U000e0000', '')
                 if '@' in searchUser:
                     searchUser = searchUser.replace('@', '')
-                user_data = self.users.find_one({'user': searchUser})
+                user_data = self.users.find_one({'user': searchUser.lower()})
                 if not user_data:
                     self.send_privmsg(message.channel, f'@{message.user}, That user is not in the database.')
                 else:
