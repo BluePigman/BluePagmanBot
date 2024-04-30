@@ -4,7 +4,8 @@ A Twitch chatbot running in Python.
 ##  Major Features:
 - Get a random chess opening name, can add specific keywords, and/or indicate the side.
 - Play a chess game through sending messages, with a dynamically updated PGN of the ongoing game.
-- Get a random news headline from Google News. 
+- Get a random news headline from Google News.
+- Gambling with points.
 
 ## Prerequisites: 
 [Python 3.7+](https://www.python.org/downloads/)
@@ -13,13 +14,19 @@ A Twitch chatbot running in Python.
 
 [feedparser](https://pypi.org/project/feedparser/)
 
+For versions 1.3 and higher:
+[pymongo](https://pypi.org/project/pymongo/)
+
 ## How to use: 
+
+IMPORTANT: If you don't want to set up a MongoDB, then use v1.2 in releases.
 
 1. Download the latest release and extract.
 2. Make a Twitch account if you do not already have one.
 3. Get the OAuth token of the Twitch account to be used as the bot [here](https://twitchapps.com/tmi/).
 4. Rename `config_example.py` to `config.py`, and fill in the details.
-5. Run `bot.py`. The bot will now join the channels you put in `config.py`.
+5. Set up a Mongo database, add a database named "test" and a collection named "Users". Then add the connection string into `config.py` in db_uri.
+6. Run `bot.py`. The bot will now join the channels you put in `config.py`.
 
 ## Screenshots: 
 
