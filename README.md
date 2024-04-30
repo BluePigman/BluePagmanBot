@@ -14,6 +14,9 @@ A Twitch chatbot running in Python.
 
 [feedparser](https://pypi.org/project/feedparser/)
 
+For versions 1.3 and higher:
+[pymongo](https://pypi.org/project/pymongo/)
+
 ## How to use: 
 
 IMPORTANT: If you don't want to set up a MongoDB, then use v1.2 in releases.
