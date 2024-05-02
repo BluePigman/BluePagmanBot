@@ -410,6 +410,9 @@ class Bot:
                     keywords = ' '.join(message.text_args)
                     if '\U000e0000' in keywords:
                         keywords = keywords.replace('\U000e0000', '')
+                    keywords = keywords.replace(" ", "+")
+                    keywords = keywords.replace("#", "'#'")
+                    keywords = keywords.replace("&", "'&'")
                     m = newsCommands.get_random_news_item(keywords)
                 self.send_privmsg(message.channel, m)
             except Exception as e:
