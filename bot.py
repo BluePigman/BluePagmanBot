@@ -42,7 +42,7 @@ class Bot:
         self.channels = config.channels
         self.command_prefix = config.prefix
         self.state = {}  # dictionary for cooldown
-        self.cooldown = 5  # default cooldown for commands
+        self.cooldown = 3  # default cooldown for commands
         self.joke = random.randint(0, 84)
         self.time = time.time()
         self.last_msg = ''
