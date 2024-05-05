@@ -60,8 +60,8 @@ class Bot:
         self.chessTimer = None  # chess game pending timer
         # anyone can use these
         self.custom_commands = {
-            'date': Commands.reply_with_date,
-            'ping': Commands.reply_to_ping,
+            'date': date.reply_with_date,
+            'ping': ping.reply_to_ping,
             'help': self.list_commands,
             'help_chess': self.reply_with_chesshelp,
             'source_code': self.reply_with_source_code,
