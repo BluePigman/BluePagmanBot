@@ -18,6 +18,9 @@ import chessCommands
 from threading import Timer
 import newsCommands
 from pymongo.mongo_client import MongoClient
+from Commands import *
+
+
 
 Message = namedtuple(
     'Message',
@@ -57,8 +60,8 @@ class Bot:
         self.chessTimer = None  # chess game pending timer
         # anyone can use these
         self.custom_commands = {
-            'date': self.reply_with_date,
-            'ping': self.reply_to_ping,
+            'date': Commands.reply_with_date,
+            'ping': Commands.reply_to_ping,
             'help': self.list_commands,
             'help_chess': self.reply_with_chesshelp,
             'source_code': self.reply_with_source_code,
@@ -205,7 +208,7 @@ class Bot:
                 and time.time() - self.time > 1:
 
             if message.text_command.lower() in self.custom_commands:
-                self.custom_commands[message.text_command.lower()](message)
+                self.custom_commands[message.text_command.lower()](self, message)
                 self.time = time.time()
 
             if message.text_command.lower() in self.private_commands:
@@ -229,20 +232,20 @@ class Bot:
 
     """ General Commands here"""
 
-    def reply_with_date(self, message):
-        if (message.user not in self.state or time.time() - self.state[message.user] >
-                self.cooldown):
-            self.state[message.user] = time.time()
-            formatted_date = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
-            text = f'{message.user}, the date is {formatted_date} EST.'
-            self.send_privmsg(message.channel, text)
+    # def reply_with_date(self, message):
+    #     if (message.user not in self.state or time.time() - self.state[message.user] >
+    #             self.cooldown):
+    #         self.state[message.user] = time.time()
+    #         formatted_date = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+    #         text = f'{message.user}, the date is {formatted_date} EST.'
+    #         self.send_privmsg(message.channel, text)
 
-    def reply_to_ping(self, message):
-        if (message.user not in self.state or time.time() - self.state[message.user] >
-                self.cooldown):
-            self.state[message.user] = time.time()
-            text = f'@{message.user}, forsenEnter'
-            self.send_privmsg(message.channel, text)
+    # def reply_to_ping(self, message):
+    #     if (message.user not in self.state or time.time() - self.state[message.user] >
+    #             self.cooldown):
+    #         self.state[message.user] = time.time()
+    #         text = f'@{message.user}, forsenEnter'
+    #         self.send_privmsg(message.channel, text)
 
     def reply_with_source_code(self, message):
         if (message.user not in self.state or time.time() - self.state[message.user] >
