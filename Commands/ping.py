@@ -1,18 +1,17 @@
 import time
 
+
 def reply_to_ping(bot, message):
     if (message.user not in bot.state or time.time() - bot.state[message.user] >
             bot.cooldown):
         bot.state[message.user] = time.time()
         
-        # Measure the current time before sending the PONG message
-        start_time = time.time()
+        uptime_seconds = time.time() - bot.start_time
+        uptime_hours = uptime_seconds // 3600
+        uptime_minutes = (uptime_seconds % 3600) // 60
+        uptime_seconds %= 60
         
-        # Send the PONG message to acknowledge the PING
-        bot.send_command('PONG :tmi.twitch.tv')
+        uptime_str = f"{int(uptime_hours)}h {int(uptime_minutes)}m {int(uptime_seconds)}s"
         
-        # Calculate the latency time by subtracting the start time from the current time
-        latency_time = (time.time() - start_time) * 1000  # Convert to milliseconds
-        
-        text = f'@{message.user}, Pong! Latency: {latency_time:.2f} ms'
-        bot.send_privmsg(message.channel, text)
+        response = f"@{message.user}, Pong! Uptime: {uptime_str}"
+        bot.send_privmsg(message.channel, response)
