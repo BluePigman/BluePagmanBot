@@ -1,35 +1,18 @@
-"""
-This is a chat bot for Twitch with some basic commands, and allows you
-to play a game of chess against another chatter.
-@Bluepigman5000
-
-"""
-
-import socket
-import sys
-import ssl
+import socket, sys, ssl, time, config, chess
 from collections import namedtuple
-import time
-import random
-import config
-import chess
 from pymongo.mongo_client import MongoClient
 from Commands import ( bot_info, date, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
 news, help_news, daily, roulette, balance, leaderboard, help)
-
-
 
 Message = namedtuple(
     'Message',
     'prefix user channel irc_command irc_args text text_command text_args',
 )
 
-
 def remove_prefix(string, prefix):
     if not string.startswith(prefix):
         return string
     return string[len(prefix):]
-
 
 class Bot:
 
@@ -43,7 +26,6 @@ class Bot:
         self.command_prefix = config.prefix
         self.state = {}  # dictionary for cooldown
         self.cooldown = 3  # default cooldown for commands
-        self.joke = random.randint(0, 84)
         self.time = time.time()
         self.last_msg = ''
         self.last_msg_time = time.time()
@@ -78,7 +60,7 @@ class Bot:
             'leaderboard': leaderboard.reply_with_leaderboard,
             'help': help.list_commands
         }
-        # self.custom_commands[help] = self.list_commands
+
         # only bot owner can use these commands
         self.private_commands = {
             'leave': self.leave,
@@ -103,13 +85,9 @@ class Bot:
     def send_privmsg(self, channel, text):
         if text == self.last_msg and (time.time() - self.last_msg_time) < 30:
             text += ' \U000e0000'
-            self.send_command(f'PRIVMSG #{channel} : {text}')
-            self.last_msg_time = time.time()
-            self.last_msg = text
-        else:
-            self.send_command(f'PRIVMSG #{channel} : {text}')
-            self.last_msg_time = time.time()
-            self.last_msg = text
+        self.send_command(f'PRIVMSG #{channel} : {text}')
+        self.last_msg_time = time.time()
+        self.last_msg = text
 
     def send_command(self, command):
         if 'PASS' not in command:
@@ -274,7 +252,7 @@ class Bot:
         if message.user == self.player1 or message.user == self.player2:
             self.chessGameActive = False
             self.gameAccepted = False
-            # self.send_privmsg(message.channel, "Chess game has been ended.")
+            self.send_privmsg(message.channel, "Chess game has been reset.")
             self.player1 = ""
             self.player2 = ""
             self.chessGameActive = False
@@ -297,7 +275,6 @@ class Bot:
             text = f'@{message.user} has joined the game.'
             self.send_privmsg(message.channel, text)
             time.sleep(2)
-            # side
             self.player2 = message.user
             self.gameAccepted = True
             text = f"@{self.player1}, Choose a side: {self.command_prefix}white (white), {self.command_prefix}black (black)"
@@ -317,7 +294,6 @@ class Bot:
                 time.sleep(2)
                 text = f"@{self.player1}, you are starting, enter start move."
                 self.send_privmsg(message.channel, text)
-                # instantiate new chess game
                 self.currentGame = chessGame(self.player1, self.player2)
                 time.sleep(2)
 
@@ -345,8 +321,6 @@ class Bot:
 
             # White to play
             if self.currentGame.currentSide == 'w':
-                # print('white: ', self.currentGame.player1)
-
                 if message.user == self.currentGame.player1:
                     if not message.text_args:
                         self.send_privmsg(
@@ -354,8 +328,7 @@ class Bot:
                     else:
                         move = message.text_args[0]
                         if move == "resign":
-                            self.currentGame.resign(
-                                message.user)  # will update pgn
+                            self.currentGame.resign(message.user)  # will update pgn
                             text = f"@{message.user} resigned. @{self.currentGame.player2} wins."
                             self.send_privmsg(message.channel, text)
                             time.sleep(2)
@@ -411,17 +384,14 @@ class Bot:
                     else:
                         move = message.text_args[0]
                         if move == "resign":
-                            self.currentGame.resign(
-                                message.user)  # will update pgn
+                            self.currentGame.resign(message.user)  # will update pgn
                             text = f"@{message.user} resigned. @{self.currentGame.player1} wins! PogChamp"
                             self.send_privmsg(message.channel, text)
                             time.sleep(2)
-                            # get pgn
                             pgn = self.currentGame.getPGN()
                             for m in pgn:
                                 self.send_privmsg(message.channel, m)
                                 time.sleep(2)
-                            # reset chess vars.
                             self.chessGameActive = False
                             self.choseSidePlayer1 = False
                             self.gameAccepted = False
@@ -430,7 +400,6 @@ class Bot:
                             self.player2 = ""
                             return
                         moveSuccesful = self.currentGame.move(move)
-                        # do the move
                         if moveSuccesful:
                             if self.currentGame.gameOver():
                                 result = self.currentGame.result()
@@ -438,7 +407,6 @@ class Bot:
                                 for m in self.currentGame.getPGN():  # print PGN
                                     self.send_privmsg(message.channel, m)
                                     time.sleep(2)
-                                # reset chess vars.
                                 self.chessGameActive = False
                                 self.gameAccepted = False
                                 self.choseSidePlayer1 = False
@@ -446,7 +414,6 @@ class Bot:
                                 self.player1 = ""
                                 self.player2 = ""
                                 return
-                            # if game not over, print PGN, white to play.
                             for m in self.currentGame.getPGN():
                                 self.send_privmsg(message.channel, m)
                                 time.sleep(2)
@@ -569,7 +536,6 @@ class chessGame:
         Get standard algebraic notation of move (e2e4 becomes e4).
         move is a uci representation of move.
         """
-
         return self.board.san(move)
 
     def split_pgn(self):
