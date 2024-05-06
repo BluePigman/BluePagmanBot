@@ -280,8 +280,6 @@ class Bot:
             text = f"@{self.player1}, Choose a side: {self.command_prefix}white (white), {self.command_prefix}black (black)"
             self.send_privmsg(message.channel, text)
             time.sleep(2)
-        pass
-
 
     def chooseSidePlayer1(self, message):
         # Player who started game chooses side first.
@@ -485,11 +483,8 @@ class chessGame:
         self.player2 = ""
         self.board.reset()
         self.pgn = ""
-
         self.currentSide = "w"
-
         self.moveCount = 0
-
         self.increment = 0
 
     def gameOver(self):
