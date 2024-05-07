@@ -14,6 +14,8 @@ A Twitch chatbot running in Python.
 
 [feedparser](https://pypi.org/project/feedparser/)
 
+[requests](https://pypi.org/project/requests/)
+
 For versions 1.3 and higher:
 [pymongo](https://pypi.org/project/pymongo/)
 
