@@ -102,7 +102,7 @@ class Bot:
         self.send_command(f'NICK {self.username}')
         for channel in self.channels:
             self.send_command(f'JOIN #{channel}')
-            self.send_privmsg(channel, 'forsenEnter')
+            self.send_privmsg(channel, 'forsenEnter Bot has joined! 🤖')
         self.start_time = time.time()
         self.loop_for_messages()
 
@@ -210,9 +210,10 @@ class Bot:
     """Private commands"""
 
     def leave(self, message):
-        text = 'forsenLeave'
+        text = 'forsenLeave Bot is shutting down.'
         if message.user == config.bot_owner:
-            self.send_privmsg(message.channel, text)
+            for channel in self.channels:
+                self.send_privmsg(channel, text)
             sys.exit()
         else:
             if ("leave" not in self.state or time.time() - self.state["leave"] >
