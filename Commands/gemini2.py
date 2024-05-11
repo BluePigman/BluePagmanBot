@@ -52,4 +52,4 @@ def generate(prompt):
         n = 495
         return [response[i:i+n] for i in range(0, len(response), n)]
     except Exception as e:
-        return ["Error: " + str(e)]
+        return ["Error: prompt was likely blocked."]
