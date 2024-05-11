@@ -25,7 +25,7 @@ def reply_with_gemini(self, message):
 
 
 generation_config = {
-    "max_output_tokens": 8192,
+    "max_output_tokens": 2000,
     "temperature": 1.1,
     "top_p": 0.95,
 }
