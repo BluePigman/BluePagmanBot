@@ -2,7 +2,7 @@ import socket, sys, ssl, time, config, chess
 from collections import namedtuple
 from pymongo.mongo_client import MongoClient
 from Commands import ( bot_info, date, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
-news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies )
+news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2 )
 
 Message = namedtuple(
     'Message',
@@ -61,7 +61,9 @@ class Bot:
             'help': help.list_commands,
             'shop': shop.reply_with_shop,
             'timeout': timeout.reply_with_timeout,
-            'trophies': trophies.reply_with_trophies
+            'trophies': trophies.reply_with_trophies,
+            'gemini': gemini.reply_with_gemini,
+            'gemini2': gemini2.reply_with_gemini_experimental
         }
 
         # only bot owner can use these commands
