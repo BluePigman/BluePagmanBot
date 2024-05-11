@@ -41,13 +41,15 @@ def generate(prompt):
     model = GenerativeModel(
     "gemini-experimental",
     )
-    response = model.generate_content(
-      [prompt],
-      generation_config=generation_config,
-      safety_settings=safety_settings,
-      stream=False,
-    ).text.replace('\n', ' ')
-    response = response.replace('*', ' ')
-    n = 490
-    return [response[i:i+n] for i in range(0, len(response), n)]
-
+    try:
+        response = model.generate_content(
+            [prompt],
+            generation_config=generation_config,
+            safety_settings=safety_settings,
+            stream=False,
+        ).text.replace('\n', ' ')
+        response = response.replace('*', ' ')
+        n = 490
+        return [response[i:i+n] for i in range(0, len(response), n)]
+    except Exception as e:
+        return ["Error: " + str(e)]
