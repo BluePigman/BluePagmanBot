@@ -232,11 +232,12 @@ class Bot:
 
     # Use: #echo CHANNEL text, will send message text in specified channel.
     def echo(self, message):
-        if len(message.text_args) > 1:
-            channel = " ".join(message.text_args[0:1])
-            text = " ".join(message.text_args[1:])
-            if message.user == config.bot_owner:
-                self.send_privmsg(channel, text)
+        if message.user == config.bot_owner:
+            if len(message.text_args) > 1:
+                channel = " ".join(message.text_args[0:1])
+                text = " ".join(message.text_args[1:])
+                if message.user == config.bot_owner:
+                    self.send_privmsg(channel, text)
 
     # Work in progress.
     def join_channel(self, message):
