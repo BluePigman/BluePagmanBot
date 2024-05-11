@@ -25,7 +25,7 @@ def reply_with_gemini_experimental(self, message):
 
 
 generation_config = {
-    "max_output_tokens": 500,
+    "max_output_tokens": 300,
     "temperature": 2,
 }
 
@@ -49,7 +49,7 @@ def generate(prompt):
             stream=False,
         ).text.replace('\n', ' ')
         response = response.replace('*', ' ')
-        n = 490
+        n = 495
         return [response[i:i+n] for i in range(0, len(response), n)]
     except Exception as e:
         return ["Error: " + str(e)]

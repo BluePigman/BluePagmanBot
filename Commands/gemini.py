@@ -25,8 +25,8 @@ def reply_with_gemini(self, message):
 
 
 generation_config = {
-    "max_output_tokens": 800,
-    "temperature": 1.5,
+    "max_output_tokens": 400,
+    "temperature": 1.1,
     "top_p": 0.95,
 }
 
@@ -38,7 +38,7 @@ safety_settings = {
 }
 
 def generate(prompt):
-    vertexai.init(project="bluepagmanbot", location="us-central1")
+    vertexai.init(project="bluepagmanbot", location="us-east1")
     model = GenerativeModel(
     "gemini-1.5-pro-preview-0409",
     )
@@ -50,9 +50,9 @@ def generate(prompt):
             stream=False,
         ).text.replace('\n', ' ')
         response = response.replace('*', ' ')
-        n = 490
+        n = 495
         return [response[i:i+n] for i in range(0, len(response), n)]
     except Exception as e:
-        return ["Error: " + str(e)]
+        return ["Error: prompt was likely blocked."]
 
 
