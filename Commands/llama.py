@@ -23,9 +23,10 @@ def reply_with_llama(self, message):
         return
 
     prompt = ' '.join(message.text_args)
-    self.send_privmsg(message.channel, "Result usually takes 15 seconds to 2 minutes. Please wait.")
+    self.send_privmsg(message.channel, "Result usually takes over a minute. Please wait.")
     result = generate(prompt)
-    self.send_privmsg(message.channel, "@{message.user},") 
+    self.send_privmsg(message.channel, f"@{message.user},")
+    time.sleep(1) 
     for m in result:
         self.send_privmsg(message.channel, m)
         time.sleep(1)
