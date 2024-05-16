@@ -38,6 +38,7 @@ def generate(prompt):
                                 options= {"num_ctx": 1024})["response"]
         n = 495
         result = result.replace('\n', ' ')
+        result = result.replace('\r\n', ' ')
         return [result[i:i+n] for i in range(0, len(result), n)]
 
     except Exception as e:
