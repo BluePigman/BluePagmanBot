@@ -5,7 +5,7 @@ import ollama
 Instructions:
 Install ollama https://ollama.com/
 pull llm u want to use
-ollama pull mannix/llama3-uncensored
+ollama pull gurubot/llama3-guru-uncensored
 
 pip install ollama
 """
@@ -18,7 +18,7 @@ def reply_with_llama3(self, message):
 
     if not message.text_args:
         m = f"@{message.user}, please provide a prompt. Model: llama3-uncensored, \
-            https://ollama.com/mannix/llama3-uncensored"
+            https://ollama.com/gurubot/llama3-guru-uncensored"
         self.send_privmsg(message.channel, m)
         return
 
