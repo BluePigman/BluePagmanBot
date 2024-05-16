@@ -34,7 +34,7 @@ def reply_with_llama3(self, message):
 
 def generate(prompt):
     try:
-        result = ollama.generate(model='mannix/llama3-uncensored', prompt=prompt, stream=False,
+        result = ollama.generate(model='gurubot/llama3-guru-uncensored', prompt=prompt, stream=False,
                                 options= {"num_ctx": 1024})["response"]
         n = 495
         result = result.replace('\n', ' ')
