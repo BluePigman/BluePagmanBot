@@ -112,7 +112,7 @@ def timeout(channel, moderator, user):
     body = {
         'data': {
             'user_id': user,
-            'duration': 60,
+            'duration': 10,
             'reason': "Someone bought the timeout in the shop and used it on you!"
         }
     }

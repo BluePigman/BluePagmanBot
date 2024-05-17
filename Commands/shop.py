@@ -29,15 +29,15 @@ def reply_with_shop(self, message):
             user_points = user_data['points']
 
             if item == "timeout":
-                if user_points < 500:
+                if user_points < 100:
                     m = f"@{message.user}, you don't have enough Pigga Coins to buy a Timeout."
                     self.send_privmsg(message.channel, m)
                     return
                 # Process the purchase
                 # Deduct points, update database, send message
-                self.users.update_one({'user': message.user}, {'$inc': {'points': -500}})
+                self.users.update_one({'user': message.user}, {'$inc': {'points': -100}})
                 self.users.update_one({'user': message.user}, {'$inc': {'timeout': 1}})
-                m = f'@{message.user}, you bought a Timeout for 500 Pigga Coins! Use it wisely.'
+                m = f'@{message.user}, you bought a Timeout for 100 Pigga Coins! Use it wisely.'
                 self.send_privmsg(message.channel, m)
                 return
 
@@ -61,6 +61,6 @@ def reply_with_shop(self, message):
 
         else:
             # Default response if the command is not recognized
-            m = "Available for sale: Timeout (500 Coins): Timeout a user (not a moderator) for 1 minute | Trophy (1000 Coins): Add a trophy to your collection. 🏆"
+            m = "Available for sale: Timeout (100 Coins): Timeout a user (not a moderator) for 1 minute | Trophy (1000 Coins): Add a trophy to your collection. 🏆"
             self.send_privmsg(message.channel, m)
             return
