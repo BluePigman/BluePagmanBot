@@ -9,9 +9,9 @@ A Twitch chatbot running in Python.
 - Gambling with points.
 
 ## Prerequisites: 
-[Python 3.7+](https://www.python.org/downloads/)
+[Python 3.8+](https://www.python.org/downloads/)
 
-[python-chess](https://pypi.org/project/chess/)
+[chess](https://pypi.org/project/chess/)
 
 [feedparser](https://pypi.org/project/feedparser/)
 
