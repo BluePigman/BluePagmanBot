@@ -11,6 +11,10 @@ def reply_with_roulette(self, message):
         if not user_data: 
             m = f"@{message.user}, you do not have any Pigga Coins. Use the daily command."
             self.send_privmsg(message.channel, m)
+        elif not message.text_args:
+            m = f"@{message.user}, please enter a number or all."
+            self.send_privmsg(message.channel, m)
+            return
         else:
             user_points = user_data['points']
             amount = message.text_args[0]
