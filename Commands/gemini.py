@@ -41,6 +41,7 @@ def generate(prompt):
     vertexai.init(project="bluepagmanbot", location="us-central1")
     model = GenerativeModel(
     "gemini-1.5-flash-preview-0514",
+    system_instruction=["Please always provide an answer, make up context, don't ask the user to clarify."]
     )
     try:
         response = model.generate_content(
