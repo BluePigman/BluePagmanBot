@@ -11,8 +11,8 @@ def reply_with_gemini(self, message):
         self.state[message.user] = time.time()
 
     if not message.text_args:
-        m = f"@{message.user}, please provide a prompt for Gemini. Model: gemini-1.5-pro-preview-0409, \
-            temperature: 1.5, top_p: 0.95"
+        m = f"@{message.user}, please provide a prompt for Gemini. Model: gemini-1.5-flash-preview-0514, \
+            temperature: 1.1, top_p: 0.95"
         self.send_privmsg(message.channel, m)
         return
 
@@ -38,9 +38,9 @@ safety_settings = {
 }
 
 def generate(prompt):
-    vertexai.init(project="bluepagmanbot", location="us-east1")
+    vertexai.init(project="bluepagmanbot", location="us-central1")
     model = GenerativeModel(
-    "gemini-1.5-pro-preview-0409",
+    "gemini-1.5-flash-preview-0514",
     )
     try:
         response = model.generate_content(
@@ -53,6 +53,7 @@ def generate(prompt):
         n = 495
         return [response[i:i+n] for i in range(0, len(response), n)]
     except Exception as e:
+        print(e)
         return ["Error: prompt was likely blocked."]
 
 
