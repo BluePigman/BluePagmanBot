@@ -1,4 +1,4 @@
-import socket, sys, ssl, time, config, chess
+import socket, sys, ssl, time, config, chess, asyncio
 from collections import namedtuple
 from pymongo.mongo_client import MongoClient
 from Commands import ( bot_info, date, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
@@ -89,29 +89,31 @@ class Bot:
         self.db = self.dbClient['test']
         self.users = self.db['Users']
 
-    def send_privmsg(self, channel, text):
+    async def send_privmsg(self, channel, text):
         if text == self.last_msg and (time.time() - self.last_msg_time) < 30:
             text += ' \U000e0000'
-        self.send_command(f'PRIVMSG #{channel} : {text}')
+        await self.send_command(f'PRIVMSG #{channel} : {text}')
         self.last_msg_time = time.time()
         self.last_msg = text
 
-    def send_command(self, command):
+    async def send_command(self, command):
         if 'PASS' not in command:
             print(f'< {command}')
-        self.irc.send((command + '\r\n').encode())
+        self.writer.write((command + '\r\n').encode('utf-8'))
+        await self.writer.drain()
 
-    def connect(self):
-        self.irc = ssl.create_default_context().wrap_socket(
-            socket.socket(), server_hostname=self.irc_server)
-        self.irc.connect((self.irc_server, self.irc_port))
-        self.send_command(f'PASS {self.oauth_token}')
-        self.send_command(f'NICK {self.username}')
+    async def connect(self):
+        self.reader, self.writer = await asyncio.open_connection(
+            self.irc_server, self.irc_port, ssl=ssl.create_default_context()
+        )
+        await self.send_command(f'PASS {self.oauth_token}')
+        await self.send_command(f'NICK {self.username}')
         for channel in self.channels:
-            self.send_command(f'JOIN #{channel}')
-            self.send_privmsg(channel, 'forsenEnter Bot has joined! 🤖')
+            await self.send_command(f'JOIN #{channel}')
+            await self.send_privmsg(channel, 'forsenEnter Bot has joined! 🤖')
+            asyncio.sleep(0.3)
         self.start_time = time.time()
-        self.loop_for_messages()
+        asyncio.create_task(self.loop_for_messages())
 
     def get_user_from_prefix(self, prefix):
         domain = prefix.split('!')[0]
@@ -175,7 +177,7 @@ class Bot:
 
         return message
 
-    def handle_message(self, received_msg):
+    async def handle_message(self, received_msg):
         if len(received_msg) == 0:
             return
 
@@ -184,7 +186,7 @@ class Bot:
         print(f'> {received_msg}')
 
         if message.irc_command == 'PING':
-            self.send_command('PONG :tmi.twitch.tv')
+            await self.send_command('PONG :tmi.twitch.tv')
 
         # Follow 1s cooldown
         if message.irc_command == 'PRIVMSG' and \
@@ -192,55 +194,52 @@ class Bot:
                 and time.time() - self.time > 1:
 
             if message.text_command.lower() in self.custom_commands:
-                self.custom_commands[message.text_command.lower()](self, message)
+                await self.custom_commands[message.text_command.lower()](self, message)
                 self.time = time.time()
 
             if message.text_command.lower() in self.private_commands:
-                self.private_commands[message.text_command.lower()](message)
+                await self.private_commands[message.text_command.lower()](message)
                 self.time = time.time()
 
             if message.text_command.lower() in self.chess_commands:
-                self.chess_commands[message.text_command.lower()](message)
+                await self.chess_commands[message.text_command.lower()](message)
                 self.time = time.time()
 
             # Aliases.
             if message.text_command.lower() == "commands":
-                self.custom_commands["help"](self, message)
+                await self.custom_commands["help"](self, message)
                 self.time = time.time()
 
-    def loop_for_messages(self):
+    async def loop_for_messages(self):
         while True:
-            received_msgs = self.irc.recv(4096).decode(errors='ignore')
+            received_msgs = (await self.reader.read(4096)).decode(errors='ignore')
             for received_msg in received_msgs.split('\r\n'):
-                self.handle_message(received_msg)
+                await self.handle_message(received_msg)
 
     """Private commands"""
 
-    def leave(self, message):
+    async def leave(self, message):
         text = 'forsenLeave Bot is shutting down.'
         if message.user == config.bot_owner:
             for channel in self.channels:
-                self.send_privmsg(channel, text)
+                await self.send_privmsg(channel, text)
             sys.exit()
         else:
-            if ("leave" not in self.state or time.time() - self.state["leave"] >
-                    self.cooldown):
+            if ("leave" not in self.state or time.time() - self.state["leave"] > self.cooldown):
                 self.state["leave"] = time.time()
-                self.send_privmsg(message.channel, "NOIDONTTHINKSO")
+                await self.send_privmsg(message.channel, "NOIDONTTHINKSO")
 
-    def say(self, message):
+    async def say(self, message):
         if message.user == config.bot_owner:
-            self.send_privmsg(message.channel, " ".join(message.text_args))
+            await self.send_privmsg(message.channel, " ".join(message.text_args))
 
     # Use: #echo CHANNEL text, will send message text in specified channel.
-    def echo(self, message):
+    async def echo(self, message):
         if message.user == config.bot_owner:
             if len(message.text_args) > 1:
-                channel = " ".join(message.text_args[0:1])
-                text = " ".join(message.text_args[1:])
-                if message.user == config.bot_owner:
-                    self.send_privmsg(channel, text)
-
+                channel = message.text_args[0]
+                text = ' '.join(message.text_args[1:])
+                await self.send_privmsg(channel, text)
     # Work in progress.
     def join_channel(self, message):
         if message.user == config.bot_owner:
@@ -554,7 +553,7 @@ class chessGame:
 
 def main():
     bot = Bot()
-    bot.connect()
+    asyncio.run(bot.connect())
 
 
 if __name__ == '__main__':
