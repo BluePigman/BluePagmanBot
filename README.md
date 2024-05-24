@@ -25,6 +25,9 @@ ollama
 ``pip install --upgrade google-cloud-aiplatform``
 
 
+``gcloud auth application-default login``
+
+
 ## How to use: 
 
 IMPORTANT: If you don't want to set up a MongoDB, then use v1.2 in releases.
