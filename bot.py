@@ -231,6 +231,8 @@ class Bot:
     def say(self, message):
         if message.user == config.bot_owner:
             self.send_privmsg(message.channel, " ".join(message.text_args))
+        else:
+            self.send_privmsg(message.channel, "No")
 
     # Use: #echo CHANNEL text, will send message text in specified channel.
     def echo(self, message):
