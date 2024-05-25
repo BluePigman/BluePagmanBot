@@ -27,6 +27,7 @@ ollama
 
 ``gcloud auth application-default login``
 
+``pip install pillow``
 
 ## How to use: 
 
