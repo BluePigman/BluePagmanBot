@@ -1,9 +1,9 @@
 import socket, sys, ssl, time, config, chess
 from collections import namedtuple
 from pymongo.mongo_client import MongoClient
-from Commands import ( bot_info, date, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
+from Commands import ( bot_info, date, help_ascii, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
 news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2, llama, llama3,
-ascii )
+ascii, help_ascii )
 
 
 Message = namedtuple(
@@ -68,7 +68,8 @@ class Bot:
             'gemini2': gemini2.reply_with_gemini_experimental,
             'llama': llama.reply_with_llama,
             'llama3': llama3.reply_with_llama3,
-            'ascii': ascii.reply_with_ascii
+            'ascii': ascii.reply_with_ascii,
+            'help_ascii': help_ascii.reply_with_help_ascii
         }
 
         # only bot owner can use these commands
