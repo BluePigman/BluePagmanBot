@@ -1,31 +1,61 @@
-import os, sys
+import os
+import sys
 import time
 import re
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, UnidentifiedImageError, ImageSequence
 import requests
 from io import BytesIO
-
+import argparse
 
 # Add the parent directory of the current script to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-
 from BrailleArt import braillecreate, brailletransform
 
-def reply_with_ascii(bot, message):
-    if (message.user not in bot.state or time.time() - bot.state[message.user] >
-            bot.cooldown):
-        bot.state[message.user] = time.time()
-
-
+class CustomArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        raise argparse.ArgumentError(None, message)
     
+    def exit(self, status=0, message=None):
+        if message:
+            raise argparse.ArgumentError(None, message)
+
+def parse_custom_args(args):
+    parser = CustomArgumentParser(description="Process image to ASCII art.", add_help=False)
+    parser.add_argument('-w', type=int, default=60, help="Sets the width of the ASCII in pixels.")
+    parser.add_argument('-h', type=int, default=60, help="Sets the height of the ASCII in pixels.")
+    parser.add_argument('-r', type=int, choices=[90, 180, 270], help="Rotates the ASCII given degrees.")
+    parser.add_argument('-tr', type=int, default=128, help="Static threshold dithering (0-255).")
+    parser.add_argument('-d', action='store_true', help="Use Floyd-Steinberg dithering.")
+    parser.add_argument('-b', action='store_true', help="Remove transparent background.")
+    parser.add_argument('-e', action='store_true', help="Keep empty characters.")
+    parser.add_argument('-i', action='store_true', help="Invert the end result.")
+    parser.add_argument('-g', action='store_true', help="Use multiple frames of the first gif provided.")
+    parser.add_argument('-t', type=str, help="Text to print on the ASCII.")
+    
+    # Custom help argument to avoid conflict with -h for height
+    parser.add_argument('--help', action='help', help="Show this help message and exit.")
+
+    try:
+        parsed_args = parser.parse_args(args)
+        return vars(parsed_args)
+    except argparse.ArgumentError as e:
+        raise argparse.ArgumentError(None, str(e))
+
+def reply_with_ascii(bot, message):
+    if message.user not in bot.state or time.time() - bot.state[message.user] > bot.cooldown:
+        bot.state[message.user] = time.time()
+        
         if not message.text_args or not re.match(r'((ftp|http|https)://.+)|(\./frames/.+)', message.text_args[0]):
             m = f"@{message.user}, please provide a URL of the image (right click emote and copy 4x link in Chatterino)."
             bot.send_privmsg(message.channel, m)
             return
         
-        args = parse_custom_args(message.text_args[1:])
-        print(args)
+        try:
+            args = parse_custom_args(message.text_args[1:])
+        except Exception as e:
+            bot.send_privmsg(message.channel, "Error parsing arguments: " + str(e) + f". Run {bot.command_prefix}ascii_help for more info.")
+            return
         
         resp = requests.get(message.text_args[0])
         if resp.status_code == 200:
@@ -33,76 +63,60 @@ def reply_with_ascii(bot, message):
         else:
             bot.send_privmsg(message.channel, "The image could not be loaded. :Z")
             return
+        
         try:
             image = Image.open(BytesIO(img_bytes))
-            image = image.convert("RGBA")
-            image_str = ""
-            if args['dithering']:
-                image_str = braillecreate.floyd_steinberg_dithering(image, color_treshold=args['threshold'],  fill_transparency=args['background'], dot_for_blank = args['empty'], width=args['width'], height=args['height'])
+
+            frames = []
+            if getattr(image, "is_animated", False):
+                total_frames = image.n_frames
+                max_frames = 20
+
+                if total_frames > max_frames:
+                    # Calculate the interval to sample frames
+                    interval = total_frames // max_frames
+                else:
+                    interval = 1
+
+                # Extract frames based on the calculated interval
+                for i, frame in enumerate(ImageSequence.Iterator(image)):
+                    if i % interval == 0:
+                        frame = frame.convert('RGBA')
+                        frames.append(frame)
+                        if len(frames) >= max_frames:
+                            break
             else:
-                image_str = braillecreate.treshold_dithering(image, color_treshold=args['threshold'], dot_for_blank = args['empty'],  fill_transparency=args['background'], width=args['width'], height=args['height'])
+                frames.append(image)
+                
+            for frame in frames:
+                frame = frame.convert("RGBA")
+                image_str = ""
+                if args['d']:
+                    image_str = braillecreate.floyd_steinberg_dithering(frame, color_treshold=args['tr'], fill_transparency=args['b'], dot_for_blank=not args['e'], width=args['w'], height=args['h'])
+                else:
+                    image_str = braillecreate.treshold_dithering(frame, color_treshold=args['tr'], dot_for_blank=not args['e'], fill_transparency=args['b'], width=args['w'], height=args['h'])
 
-            if args['invert'] == False:
-                image_str = brailletransform.invert(image_str, args['empty'])
-            if args['rotate'] == 90:
-                image_str = brailletransform.turn_90(image_str, args['empty'])
-            if args['rotate'] == 180:
-                image_str = brailletransform.turn_180(image_str, args['empty'])
-            if args['rotate'] == 270:
-                image_str = brailletransform.turn_270(image_str, args['empty'])
+                
+                if len(image_str) > 499:
+                    m = "The image is too long to display in a message. :Z Try using smaller values for -w and/or -h. \
+                    If you tried negative values, please use positive ones. Staring "
+                    bot.send_privmsg(message.channel, m)
+                    break
 
-            bot.send_privmsg(message.channel, image_str)
+                if args['i']:
+                    image_str = brailletransform.invert(image_str, not args['e'])
+                if args['r'] == 90:
+                    image_str = brailletransform.turn_90(image_str, dot_for_blank=not args['e'])
+                elif args['r'] == 180:
+                    image_str = brailletransform.turn_180(image_str, dot_for_blank=not args['e'])
+                elif args['r'] == 270:
+                    image_str = brailletransform.turn_270(image_str, dot_for_blank=not args['e'])
+
+                if args['t']:
+                    image_str += f"\n{args['t']}"
+
+                bot.send_privmsg(message.channel, image_str)
+                time.sleep(0.1)
+
         except UnidentifiedImageError:
             bot.send_privmsg(message.channel, "The link was not a valid image. :Z")
-
-
-def parse_custom_args(args):
-    options = {
-        'width': 60,
-        'height': 60,
-        'rotate': None,
-        'threshold': 128,
-        'dithering': False,
-        'background': False,
-        'empty': True,
-        'invert': False,
-        'gif': False,
-        'text': None
-    }
-    
-    i = 0
-    while i < len(args):
-        if args[i] == '-w' and i + 1 < len(args):
-            options['width'] = int(args[i + 1])
-            i += 2
-        elif args[i] == '-h' and i + 1 < len(args):
-            options['height'] = int(args[i + 1])
-            i += 2
-        elif args[i] == '-r' and i + 1 < len(args):
-            options['rotate'] = int(args[i + 1])
-            i += 2
-        elif args[i] == '-tr' and i + 1 < len(args):
-            options['threshold'] = int(args[i + 1])
-            i += 2
-        elif args[i] == '-d':
-            options['dithering'] = True
-            i += 1
-        elif args[i] == '-b':
-            options['background'] = True
-            i += 1
-        elif args[i] == '-e':
-            options['empty'] = False
-            i += 1
-        elif args[i] == '-i':
-            options['invert'] = True
-            i += 1
-        elif args[i] == '-g':
-            options['gif'] = True
-            i += 1
-        elif args[i] == '-t' and i + 1 < len(args):
-            options['text'] = " ".join(args[i + 1:])
-            break
-        else:
-            i += 1
-    
-    return options
