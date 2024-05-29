@@ -6,6 +6,7 @@ from PIL import Image, UnidentifiedImageError, ImageSequence
 import requests
 from io import BytesIO
 import argparse
+from pymongo import MongoClient
 
 # Add the parent directory of the current script to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -46,10 +47,24 @@ def reply_with_ascii(bot, message):
     if message.user not in bot.state or time.time() - bot.state[message.user] > bot.cooldown:
         bot.state[message.user] = time.time()
         
-        if not message.text_args or not re.match(r'((ftp|http|https)://.+)|(\./frames/.+)', message.text_args[0]):
-            m = f"@{message.user}, please provide a URL of the image (right click emote and copy 4x link in Chatterino)."
+        # Validate if the first argument is a URL or an emote name
+        if not message.text_args:
+            m = f"@{message.user}, please provide a URL of the image or a global emote name."
             bot.send_privmsg(message.channel, m)
             return
+
+        input_arg = message.text_args[0]
+        if re.match(r'((ftp|http|https)://.+)|(\./frames/.+)', input_arg):
+            image_url = input_arg
+        else:
+            # Check if the input is an emote name and retrieve the URL from the database
+            emote = bot.db['Emotes'].find_one({"name": input_arg})
+            if emote:
+                image_url = emote['url']
+            else:
+                m = f"@{message.user}, could not find the emote '{input_arg}' in the database."
+                bot.send_privmsg(message.channel, m)
+                return
         
         try:
             args = parse_custom_args(message.text_args[1:])
@@ -57,7 +72,7 @@ def reply_with_ascii(bot, message):
             bot.send_privmsg(message.channel, "Error parsing arguments: " + str(e) + f". Run {bot.command_prefix}ascii_help for more info.")
             return
         
-        resp = requests.get(message.text_args[0])
+        resp = requests.get(image_url)
         if resp.status_code == 200:
             img_bytes = resp.content
         else:
