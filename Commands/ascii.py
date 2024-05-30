@@ -28,8 +28,8 @@ def parse_custom_args(args):
     parser.add_argument('-r', type=int, choices=[90, 180, 270], help="Rotates the ASCII given degrees.")
     parser.add_argument('-tr', type=int, default=128, help="Static threshold dithering (0-255).")
     parser.add_argument('-d', action='store_true', help="Use Floyd-Steinberg dithering.")
-    parser.add_argument('-b', action='store_true', help="Remove transparent background.")
-    parser.add_argument('-e', action='store_true', help="Keep empty characters.")
+    parser.add_argument('-b', action='store_false', help="Remove transparent background.")
+    parser.add_argument('-e', action='store_false', help="Keep empty characters.")
     parser.add_argument('-i', action='store_true', help="Invert the end result.")
     parser.add_argument('-g', action='store_true', help="Use multiple frames of the first gif provided.")
     parser.add_argument('-t', type=str, help="Text to print on the ASCII.")
@@ -107,10 +107,11 @@ def reply_with_ascii(bot, message):
                 frame = frame.convert("RGBA")
                 image_str = ""
                 if args['d']:
-                    image_str = braillecreate.floyd_steinberg_dithering(frame, color_treshold=args['tr'], fill_transparency=args['b'], dot_for_blank=not args['e'], width=args['w'], height=args['h'])
+                    image_str = braillecreate.floyd_steinberg_dithering(frame, color_treshold=args['tr'], fill_transparency=args['b'], dot_for_blank= args['e'], width=args['w'], height=args['h'])
                 else:
-                    image_str = braillecreate.treshold_dithering(frame, color_treshold=args['tr'], dot_for_blank=not args['e'], fill_transparency=args['b'], width=args['w'], height=args['h'])
-
+                    image_str = braillecreate.treshold_dithering(frame, color_treshold=args['tr'], dot_for_blank= args['e'], fill_transparency=args['b'], width=args['w'], height=args['h'])
+                
+                image_str = brailletransform.invert(image_str, args['e'])
                 
                 if len(image_str) > 499:
                     m = "The image is too long to display in a message. :Z Try using smaller values for -w and/or -h. \
@@ -119,13 +120,13 @@ def reply_with_ascii(bot, message):
                     break
 
                 if args['i']:
-                    image_str = brailletransform.invert(image_str, not args['e'])
+                    image_str = brailletransform.invert(image_str, args['e'])
                 if args['r'] == 90:
-                    image_str = brailletransform.turn_90(image_str, dot_for_blank=not args['e'])
+                    image_str = brailletransform.turn_90(image_str, dot_for_blank= args['e'])
                 elif args['r'] == 180:
-                    image_str = brailletransform.turn_180(image_str, dot_for_blank=not args['e'])
+                    image_str = brailletransform.turn_180(image_str, dot_for_blank= args['e'])
                 elif args['r'] == 270:
-                    image_str = brailletransform.turn_270(image_str, dot_for_blank=not args['e'])
+                    image_str = brailletransform.turn_270(image_str, dot_for_blank= args['e'])
 
                 if args['t']:
                     image_str += f"\n{args['t']}"
