@@ -40,7 +40,7 @@ def reply_with_roulette(self, message):
                     if gamba == 1:
                         self.users.update_one({'user': message.user}, {'$inc': {'points': amount}})
                         new_balance = user_points + amount
-                        m = f'@{message.user}, you won {amount} Pigga Coins in roulette and now have {new_balance} Pigga Coins!'
+                        m = f'@{message.user}, you won {amount} Pigga Coins in roulette and now have {new_balance} Pigga Coins! Pog '
                         self.send_privmsg(message.channel, m)
                     else:
                         amountDec = -amount
