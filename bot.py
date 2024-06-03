@@ -3,7 +3,7 @@ from collections import namedtuple
 from pymongo.mongo_client import MongoClient
 from Commands import ( bot_info, date, help_ascii, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
 news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2, llama, llama3,
-ascii, help_ascii, reloademotes )
+ascii, help_ascii, reloadglobals )
 
 
 Message = namedtuple(
@@ -70,7 +70,11 @@ class Bot:
             'llama3': llama3.reply_with_llama3,
             'ascii': ascii.reply_with_ascii,
             'help_ascii': help_ascii.reply_with_help_ascii,
-            'reload': reloademotes.reload_emotes
+            'reload_twitch': reloadglobals.reload_twitch_global,
+            'reload_bttv': reloadglobals.reload_bttv_global,
+            'reload_ffz': reloadglobals.reload_ffz_global,
+            'reload_7tv': reloadglobals.reload_7tv_global,
+            'reload_channel': reloadglobals.reload_7tv_channel
         }
 
         # only bot owner can use these commands
@@ -81,6 +85,7 @@ class Bot:
             'join_channel': self.join_channel,
             'leave_channel': self.part_channel,
             'reset_chess': self.reset_chess
+
         }
 
         # commands for playing chess
