@@ -101,6 +101,12 @@ def reply_with_ascii(bot, message):
                         frames.append(frame)
                         if len(frames) >= max_frames:
                             break
+                
+                # Ensure the last frame is included
+                image.seek(total_frames - 1)
+                last_frame = image.convert('RGBA')
+                if last_frame not in frames:
+                    frames.append(last_frame)
             else:
                 frames.append(image)
                 
