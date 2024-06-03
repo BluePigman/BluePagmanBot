@@ -52,7 +52,8 @@ def reply_with_ascii(bot, message):
             m = f"@{message.user}, please provide a URL of the image or a global emote name."
             bot.send_privmsg(message.channel, m)
             return
-
+        if "\U000e0000" in message.text_args:
+            message.text_args.remove("\U000e0000")
         input_arg = message.text_args[0]
         if re.match(r'((ftp|http|https)://.+)|(\./frames/.+)', input_arg):
             image_url = input_arg
