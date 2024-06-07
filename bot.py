@@ -230,10 +230,6 @@ class Bot:
                 received_msgs = self.irc.recv(4096).decode(errors='ignore')
                 for received_msg in received_msgs.split('\r\n'):
                     self.handle_message(received_msg)
-            except socket.timeout:
-                print("Socket timeout, continuing...")
-                self.connect()
-                continue
             except Exception as e:
                 print(f"Exception in loop_for_messages: {e}")
                 self.connect()
