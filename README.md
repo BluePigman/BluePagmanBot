@@ -2,11 +2,12 @@
 A Twitch chatbot running in Python. 
 
 ##  Major Features:
-- **NEW!** Generate text from a text prompt using Gemini 1.5 Pro or Llama 2
+- Generate text from a text prompt using Gemini 1.5 Pro or Llama 2.
 - Get a random chess opening name, can add specific keywords, and/or indicate the side.
 - Play a chess game through sending messages, with a dynamically updated PGN of the ongoing game.
 - Get a random news headline from Google News.
 - Gambling with points.
+- Generates Braille/ASCII art from emotes/image links.
 
 ## Prerequisites: 
 [Python 3.8+](https://www.python.org/downloads/)
