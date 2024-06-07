@@ -111,17 +111,22 @@ class Bot:
         self.irc.send((command + '\r\n').encode())
 
     def connect(self):
-        self.irc = ssl.create_default_context().wrap_socket(
-            socket.socket(), server_hostname=self.irc_server)
-        self.irc.connect((self.irc_server, self.irc_port))
-        self.send_command(f'PASS {self.oauth_token}')
-        self.send_command(f'NICK {self.username}')
-        for channel in self.channels:
-            self.send_command(f'JOIN #{channel}')
-            self.send_privmsg(channel, 'forsenEnter Bot has joined! 🤖')
-        self.start_time = time.time()
-        self.loop_for_messages()
-        print("Testing...")
+        while True:
+            try:
+                self.irc = ssl.create_default_context().wrap_socket(
+                    socket.socket(), server_hostname=self.irc_server)
+                self.irc.settimeout(60)
+                self.irc.connect((self.irc_server, self.irc_port))
+                self.send_command(f'PASS {self.oauth_token}')
+                self.send_command(f'NICK {self.username}')
+                for channel in self.channels:
+                    self.send_command(f'JOIN #{channel}')
+                    self.send_privmsg(channel, 'forsenEnter Bot has joined! 🤖')
+                self.start_time = time.time()
+                self.loop_for_messages()
+            except Exception as e:
+                print(f"Exception in connect: {e}")
+                time.sleep(5)  # wait before retrying connection
 
     def get_user_from_prefix(self, prefix):
         domain = prefix.split('!')[0]
