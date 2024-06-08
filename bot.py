@@ -114,7 +114,6 @@ class Bot:
     def connect(self):
         self.irc = ssl.create_default_context().wrap_socket(
             socket.socket(), server_hostname=self.irc_server)
-        self.irc.settimeout(60)
         self.irc.connect((self.irc_server, self.irc_port))
         self.send_command(f'PASS {self.oauth_token}')
         self.send_command(f'NICK {self.username}')
@@ -221,9 +220,14 @@ class Bot:
 
     def loop_for_messages(self):
         while True:
-            received_msgs = self.irc.recv(4096).decode(errors='ignore')
-            for received_msg in received_msgs.split('\r\n'):
-                self.handle_message(received_msg)
+            try:
+                received_msgs = self.irc.recv(4096).decode(errors='ignore')
+                for received_msg in received_msgs.split('\r\n'):
+                    self.handle_message(received_msg)
+            except Exception as e:
+                print(f"Exception in loop_for_messages: {e}")
+                self.connect()
+                continue
             
 
     """Private commands"""
