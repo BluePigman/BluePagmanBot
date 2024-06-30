@@ -3,7 +3,7 @@ import time
 
 def reply_with_chesshelp(bot, message):
 
-        text = (f"""@{message.user}, moves should be entered in either SAN or UCI notation. SAN moves \
+        text = (f"""@{message['source']['nick']}, moves should be entered in either SAN or UCI notation. SAN moves \
             follow the format: letter of piece (except for pawn moves), x if there is a capture, \
             and the coordinate of the square the piece moves to. \
             For pawn promotions add = followed by the letter of the piece. \
@@ -19,11 +19,11 @@ def reply_with_chesshelp(bot, message):
             you type {bot.command_prefix}move e4 OR {bot.command_prefix}move e2e4 \
             To resign type {bot.command_prefix}move resign"""
 
-        if (message.user not in bot.state or time.time() - bot.state[message.user] >
+        if (message['source']['nick'] not in bot.state or time.time() - bot.state[message['source']['nick']] >
                 bot.cooldown):
-            bot.state[message.user] = time.time()
-            bot.send_privmsg(message.channel, text)
+            bot.state[message['source']['nick']] = time.time()
+            bot.send_privmsg(message['command']['channel'], text)
             time.sleep(2)
-            bot.send_privmsg(message.channel, text2)
+            bot.send_privmsg(message['command']['channel'], text2)
             time.sleep(2)
-            bot.send_privmsg(message.channel, text3)
+            bot.send_privmsg(message['command']['channel'], text3)

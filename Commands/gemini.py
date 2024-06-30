@@ -6,20 +6,20 @@ import vertexai.preview.generative_models as generative_models
 
 
 def reply_with_gemini(self, message):
-    if (message.user not in self.state or time.time() - self.state[message.user] >
+    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
             self.cooldown):
-        self.state[message.user] = time.time()
+        self.state[message['source']['nick']] = time.time()
 
-    if not message.text_args:
-        m = f"@{message.user}, please provide a prompt for Gemini. Model: gemini-1.5-flash-preview-0514, \
+    if not message['command']['botCommandParams']:
+        m = f"@{message['source']['nick']}, please provide a prompt for Gemini. Model: gemini-1.5-flash-preview-0514, \
             temperature: 1.1, top_p: 0.95"
-        self.send_privmsg(message.channel, m)
+        self.send_privmsg(message['command']['channel'], m)
         return
 
-    prompt = ' '.join(message.text_args)
+    prompt = ' '.join(message['command']['botCommandParams'])
     result = generate(prompt)
     for m in result:
-        self.send_privmsg(message.channel, m)
+        self.send_privmsg(message['command']['channel'], m)
         time.sleep(1)
 
 

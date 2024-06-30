@@ -3,13 +3,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import requests, time, config
 
 def reload_7tv_channel(self, message):
-    if (message.user not in self.state or time.time() - self.state[message.user] > self.cooldown):
-        self.state[message.user] = time.time()
+    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
+        self.state[message['source']['nick']] = time.time()
 
-        channel_id =  get_user_id(message.channel) 
+        channel_id =  get_user_id(message['command']['channel']) 
         if not channel_id:
-            m = f"Error: Could not retrieve channel ID for {message.channel}"
-            self.send_privmsg(message.channel, m)
+            m = f"Error: Could not retrieve channel ID for {message['command']['channel']}"
+            self.send_privmsg(message['command']['channel'], m)
             return
         start_time = time.time()  # Start measuring time
         # Make GET request
@@ -47,20 +47,20 @@ def reload_7tv_channel(self, message):
             
             # Send success message with elapsed time
             m = f"7 TV Channel Emotes reloaded successfully in {elapsed_time:.2f} seconds."
-            self.send_privmsg(message.channel, m)
+            self.send_privmsg(message['command']['channel'], m)
         else:
             # Print error message
             m = f"Error: {response.status_code} - {response.text}"
-            self.send_privmsg(message.channel, m)
+            self.send_privmsg(message['command']['channel'], m)
         
 def reload_ffz_channel(self, message):
-    if (message.user not in self.state or time.time() - self.state[message.user] > self.cooldown):
-        self.state[message.user] = time.time()
+    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
+        self.state[message['source']['nick']] = time.time()
 
-        channel_id =  get_user_id(message.channel) 
+        channel_id =  get_user_id(message['command']['channel']) 
         if not channel_id:
-            m = f"Error: Could not retrieve channel ID for {message.channel}"
-            self.send_privmsg(message.channel, m)
+            m = f"Error: Could not retrieve channel ID for {message['command']['channel']}"
+            self.send_privmsg(message['command']['channel'], m)
             return
         start_time = time.time()  # Start measuring time
         # Make GET request
@@ -98,20 +98,20 @@ def reload_ffz_channel(self, message):
             
             # Send success message with elapsed time
             m = f"FFZ Channel Emotes reloaded successfully in {elapsed_time:.2f} seconds."
-            self.send_privmsg(message.channel, m)
+            self.send_privmsg(message['command']['channel'], m)
         else:
             # Print error message
             m = f"Error: {response.status_code} - {response.text}"
-            self.send_privmsg(message.channel, m)
+            self.send_privmsg(message['command']['channel'], m)
 
 def reload_bttv_channel(self, message):
-    if (message.user not in self.state or time.time() - self.state[message.user] > self.cooldown):
-        self.state[message.user] = time.time()
+    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
+        self.state[message['source']['nick']] = time.time()
 
-        channel_id =  get_user_id(message.channel) 
+        channel_id =  get_user_id(message['command']['channel']) 
         if not channel_id:
-            m = f"Error: Could not retrieve channel ID for {message.channel}"
-            self.send_privmsg(message.channel, m)
+            m = f"Error: Could not retrieve channel ID for {message['command']['channel']}"
+            self.send_privmsg(message['command']['channel'], m)
             return
         start_time = time.time()  # Start measuring time
         # Make GET request
@@ -148,9 +148,9 @@ def reload_bttv_channel(self, message):
             
             # Send success message with elapsed time
             m = f"BetterTTV Channel Emotes reloaded successfully in {elapsed_time:.2f} seconds."
-            self.send_privmsg(message.channel, m)
+            self.send_privmsg(message['command']['channel'], m)
         else:
-            self.send_privmsg(message.channel, f"Error: {response.status_code} - {response.text}")
+            self.send_privmsg(message['command']['channel'], f"Error: {response.status_code} - {response.text}")
 
 def get_user_id(username):
     headers = {

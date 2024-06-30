@@ -10,11 +10,11 @@ def calculate_uptime(bot):
     return uptime_str
 
 def reply_to_ping(bot, message):
-    if (message.user not in bot.state or time.time() - bot.state[message.user] >
+    if (message['source']['nick'] not in bot.state or time.time() - bot.state[message['source']['nick']] >
             bot.cooldown):
-        bot.state[message.user] = time.time()
+        bot.state[message['source']['nick']] = time.time()
         start_time = time.time()
-        timeout_timer = Timer(10, handle_timeout, args=[bot, message.channel])
+        timeout_timer = Timer(10, handle_timeout, args=[bot, message['command']['channel']])
         timeout_timer.start()
         
         bot.send_command('PING :tmi.twitch.tv')
@@ -25,8 +25,8 @@ def reply_to_ping(bot, message):
                     timeout_timer.cancel()
                     latency_time = (time.time() - start_time) * 1000  # Convert to milliseconds
                     uptime_str = calculate_uptime(bot)
-                    text = f'@{message.user}, Pong! Latency: {latency_time:.2f} ms Uptime: {uptime_str}'
-                    bot.send_privmsg(message.channel, text)
+                    text = f"@{message['source']['nick']}, Pong! Latency: {latency_time:.2f} ms Uptime: {uptime_str}"
+                    bot.send_privmsg(message['command']['channel'], text)
                     return
 
 def handle_timeout(bot, channel):

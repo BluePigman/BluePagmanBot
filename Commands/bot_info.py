@@ -7,7 +7,7 @@ def reply_with_bot(self, message):
     It has some basic commands, and can run a game of chess in chat \
     between two different players. It is currently running on a VM on Google Cloud Compute Engine.'
 
-    if (message.user not in self.state or time.time() - self.state[message.user] >
+    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
             self.cooldown):
-        self.state[message.user] = time.time()
-        self.send_privmsg(message.channel, text)
+        self.state[message['source']['nick']] = time.time()
+        self.send_privmsg(message['command']['channel'], text)

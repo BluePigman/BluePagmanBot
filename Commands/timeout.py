@@ -6,30 +6,30 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import time, config, requests
 
 def reply_with_timeout(self, message):
-    if (message.user not in self.state or time.time() - self.state[message.user] >
+    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
             self.cooldown):
-        self.state[message.user] = time.time()
+        self.state[message['source']['nick']] = time.time()
 
-        if not message.text_args:
-            m = f"@{message.user}, please specify a user (not moderator or broadcaster) to timeout."
-            self.send_privmsg(message.channel, m)
+        if not message['command']['botCommandParams']:
+            m = f"@{message['source']['nick']}, please specify a user (not moderator or broadcaster) to timeout."
+            self.send_privmsg(message['command']['channel'], m)
             return
 
-        userToTimeout = message.text_args[0]
+        userToTimeout = message['command']['botCommandParams'][0]
 
         if '\U000e0000' in userToTimeout:
             userToTimeout = userToTimeout.replace('\U000e0000', '')
 
-        user_data = self.users.find_one({'user': message.user})
+        user_data = self.users.find_one({'user': message['source']['nick']})
         if not user_data or 'timeout' not in user_data:
-            m = f"@{message.user}, you don't have any timeouts to use. Buy them in the shop."
-            self.send_privmsg(message.channel, m)
+            m = f"@{message['source']['nick']}, you don't have any timeouts to use. Buy them in the shop."
+            self.send_privmsg(message['command']['channel'], m)
             return
 
         timeout_count = user_data['timeout']
         if timeout_count <= 0:
-            m = f"@{message.user}, you don't have any timeouts left to use. Buy them in the shop."
-            self.send_privmsg(message.channel, m)
+            m = f"@{message['source']['nick']}, you don't have any timeouts left to use. Buy them in the shop."
+            self.send_privmsg(message['command']['channel'], m)
             return
 
         if ',' in userToTimeout:
@@ -38,37 +38,37 @@ def reply_with_timeout(self, message):
             userToTimeout = userToTimeout.replace('@', '')
 
         
-        if message.text_args[0] == 'amount':
-            m = f"@{message.user}, you have {timeout_count} timeouts available."
-            self.send_privmsg(message.channel, m)
+        if message['command']['botCommandParams'][0] == 'amount':
+            m = f"@{message['source']['nick']}, you have {timeout_count} timeouts available."
+            self.send_privmsg(message['command']['channel'], m)
             return
 
         # Get user ID of the channel and user to timeout
-        channel_id  = get_user_id(message.channel)
+        channel_id  = get_user_id(message['command']['channel'])
         timeout_id = get_user_id(userToTimeout)
         moderator_id = get_user_id('bluepagmanbot')
 
-        m = f"@{message.user} used a timeout on {userToTimeout}!"
-        self.send_privmsg(message.channel, m)
+        m = f"@{message['source']['nick']} used a timeout on {userToTimeout}!"
+        self.send_privmsg(message['command']['channel'], m)
 
         # Attempt timeout
         result = timeout(channel_id, moderator_id, timeout_id)
 
         if result == "Success":
-            self.users.update_one({'user': message.user}, {'$inc': {'timeout': -1}})
+            self.users.update_one({'user': message['source']['nick']}, {'$inc': {'timeout': -1}})
             return
         if result == "Bad":
-            self.users.update_one({'user': message.user}, {'$inc': {'timeout': -1}})
-            m = f"@{message.user}, you tried to timeout a mod/broadcaster, which is impossible. -500 LUL"
-            self.send_privmsg(message.channel, m)
+            self.users.update_one({'user': message['source']['nick']}, {'$inc': {'timeout': -1}})
+            m = f"@{message['source']['nick']}, you tried to timeout a mod/broadcaster, which is impossible. -500 LUL"
+            self.send_privmsg(message['command']['channel'], m)
             return
         if result == "InsufficientPrivileges":
             m = "The bot is not a moderator in this channel!"
-            self.send(message.channel, m)
+            self.send(message['command']['channel'], m)
             return
         else:
-            m = f"@{message.user}, something went wrong. Your timeout was not used."
-            self.send_privmsg(message.channel, m)
+            m = f"@{message['source']['nick']}, something went wrong. Your timeout was not used."
+            self.send_privmsg(message['command']['channel'], m)
             return 
 
 

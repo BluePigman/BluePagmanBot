@@ -8,17 +8,17 @@ headers = {
     }
 
 def reload_global_emotes(self, message):
-    if (message.user not in self.state or time.time() - self.state[message.user] > self.cooldown):
-        self.state[message.user] = time.time()
+    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
+        self.state[message['source']['nick']] = time.time()
         reload_7tv_global(self, message)
         reload_ffz_global(self, message)
         reload_bttv_global(self, message)
         reload_twitch_global(self, message)
-        self.send_privmsg(message.channel, "Global Emotes reloaded successfully.")
+        self.send_privmsg(message['command']['channel'], "Global Emotes reloaded successfully.")
 
 def reload_twitch_global(self, message):
-    if (message.user not in self.state or time.time() - self.state[message.user] > self.cooldown):
-        self.state[message.user] = time.time()
+    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
+        self.state[message['source']['nick']] = time.time()
         
         start_time = time.time()  # Start measuring time
 
@@ -63,11 +63,11 @@ def reload_twitch_global(self, message):
             
             # Send success message with elapsed time
             m = f"Global Twitch emotes reloaded successfully in {elapsed_time:.2f} seconds. Random emote is: {random_emote}"
-            self.send_privmsg(message.channel, m)
+            self.send_privmsg(message['command']['channel'], m)
         else:
             # Print error message
             m = f"Error: {response.status_code} - {response.text}"
-            self.send_privmsg(message.channel, m)
+            self.send_privmsg(message['command']['channel'], m)
 
 def reload_bttv_global(self, message):
     start_time = time.time()  # Start measuring time
@@ -106,11 +106,11 @@ def reload_bttv_global(self, message):
         
         # Send success message with elapsed time
         m = f"Global BetterTTV emotes reloaded successfully in {elapsed_time:.2f} seconds."
-        self.send_privmsg(message.channel, m)
+        self.send_privmsg(message['command']['channel'], m)
     else:
         # Print error message
         m = f"Error: {response.status_code} - {response.text}"
-        self.send_privmsg(message.channel, m)
+        self.send_privmsg(message['command']['channel'], m)
 
 
 def reload_ffz_global(self, message):
@@ -149,11 +149,11 @@ def reload_ffz_global(self, message):
         
         # Send success message with elapsed time
         m = f"FFZ Global Emotes reloaded successfully in {elapsed_time:.2f} seconds."
-        self.send_privmsg(message.channel, m)
+        self.send_privmsg(message['command']['channel'], m)
     else:
         # Print error message
         m = f"Error: {response.status_code} - {response.text}"
-        self.send_privmsg(message.channel, m)
+        self.send_privmsg(message['command']['channel'], m)
 
 def reload_7tv_global(self, message):
     start_time = time.time()  # Start measuring time
@@ -190,8 +190,8 @@ def reload_7tv_global(self, message):
         
         # Send success message with elapsed time
         m = f"7TV Global Emotes reloaded successfully in {elapsed_time:.2f} seconds."
-        self.send_privmsg(message.channel, m)
+        self.send_privmsg(message['command']['channel'], m)
     else:
         # Print error message
         m = f"Error: {response.status_code} - {response.text}"
-        self.send_privmsg(message.channel, m)
+        self.send_privmsg(message['command']['channel'], m)

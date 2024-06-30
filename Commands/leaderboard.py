@@ -3,4 +3,4 @@ def reply_with_leaderboard(self, message):
     leaderboard_message = "Leaderboard: "
     for idx, user in enumerate(top_users, start=1):
         leaderboard_message += f"{idx}. @{user['user']} - {user['points']}   "
-    self.send_privmsg(message.channel, leaderboard_message)
+    self.send_privmsg(message['command']['channel'], leaderboard_message)

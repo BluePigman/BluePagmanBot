@@ -7,8 +7,8 @@ def list_commands(self, message):
         self.command_prefix + cmd
         for cmd in custom_cmd_names
     ]
-    text = "" f'@{message.user}, Commands: ' + ' '.join(all_cmd_names)
-    if (message.user not in self.state or time.time() - self.state[message.user] >
+    text = "" f"@{message['source']['nick']}, Commands: " + ' '.join(all_cmd_names)
+    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
             self.cooldown):
-        self.state[message.user] = time.time()
-        self.send_privmsg(message.channel, text)
+        self.state[message['source']['nick']] = time.time()
+        self.send_privmsg(message['command']['channel'], text)

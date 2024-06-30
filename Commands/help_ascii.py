@@ -15,9 +15,9 @@ def reply_with_help_ascii(self, message):
     -g Use multiple frames of the first gif provided.
     -t {text} Text to print below the ASCII. (TODO)""".replace("\n", " ")
 
-    if (message.user not in self.state or time.time() - self.state[message.user] >
+    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
             self.cooldown):
-        self.state[message.user] = time.time()
-        self.send_privmsg(message.channel, help_msg)
+        self.state[message['source']['nick']] = time.time()
+        self.send_privmsg(message['command']['channel'], help_msg)
         time.sleep(0.69)
-        self.send_privmsg(message.channel, help_msg2)
+        self.send_privmsg(message['command']['channel'], help_msg2)

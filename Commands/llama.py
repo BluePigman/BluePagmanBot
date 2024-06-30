@@ -12,23 +12,23 @@ pip install ollama
 
 
 def reply_with_llama(self, message):
-    if (message.user not in self.state or time.time() - self.state[message.user] >
+    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
             self.cooldown):
-        self.state[message.user] = time.time()
+        self.state[message['source']['nick']] = time.time()
 
-    if not message.text_args:
-        m = f"@{message.user}, please provide a prompt. Model: llama2-uncensored, \
+    if not message['command']['botCommandParams']:
+        m = f"@{message['source']['nick']}, please provide a prompt. Model: llama2-uncensored, \
             https://ollama.com/library/llama2-uncensored"
-        self.send_privmsg(message.channel, m)
+        self.send_privmsg(message['command']['channel'], m)
         return
 
-    prompt = ' '.join(message.text_args)
-    self.send_privmsg(message.channel, "Result usually takes over a minute. Please wait.")
+    prompt = ' '.join(message['command']['botCommandParams'])
+    self.send_privmsg(message['command']['channel'], "Result usually takes over a minute. Please wait.")
     result = generate(prompt)
-    self.send_privmsg(message.channel, f"@{message.user},")
+    self.send_privmsg(message['command']['channel'], f"@{message['source']['nick']},")
     time.sleep(1) 
     for m in result:
-        self.send_privmsg(message.channel, m)
+        self.send_privmsg(message['command']['channel'], m)
         time.sleep(1)
 
 

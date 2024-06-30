@@ -4,23 +4,23 @@ import requests
 from urllib.parse import quote
 
 def reply_with_sparlerlink(self, message):
-    if (message.user not in self.state or time.time() - self.state[message.user] > self.cooldown):
-        self.state[message.user] = time.time()
+    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
+        self.state[message['source']['nick']] = time.time()
 
         
         url = "https://pr0gramm.com/api/items/get?flags=1"
         
         
 
-        if (message.text_args):
+        if (message['command']['botCommandParams']):
             
-            input_text = ' '.join(message.text_args)
+            input_text = ' '.join(message['command']['botCommandParams'])
 
             if "-p" in input_text:
                 input_text = input_text[:input_text.index("-p")]
                 url += "&promoted=1"
                 
-            keywords = ' '.join(message.text_args)
+            keywords = ' '.join(message['command']['botCommandParams'])
             if '\U000e0000' in keywords:
                 keywords = keywords.replace('\U000e0000', '')
             keywords = keywords.replace(" ", "+")
@@ -35,10 +35,10 @@ def reply_with_sparlerlink(self, message):
             data = response.json().get('items', [])
             
             if len(data) < 1:
-                self.send_privmsg(message.channel, "No link for @Sparler :(")
+                self.send_privmsg(message['command']['channel'], "No link for @Sparler :(")
             else:
                 random_item = data[random.randint(0, len(data) - 1)]
                 text = f"https://vid.pr0gramm.com/{random_item['image']}"
-                self.send_privmsg(message.channel, text)
+                self.send_privmsg(message['command']['channel'], text)
         except Exception as e:
-            self.send_privmsg(message.channel, "No link for @Sparler :( (something went wrong)")
+            self.send_privmsg(message['command']['channel'], "No link for @Sparler :( (something went wrong)")
