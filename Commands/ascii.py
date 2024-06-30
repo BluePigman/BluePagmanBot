@@ -56,7 +56,7 @@ def reply_with_ascii(bot, message):
             message['command']['botCommandParams'].remove("\U000e0000")
         input_arg = message['command']['botCommandParams'].split()
         if re.match(r'((ftp|http|https)://.+)|(\./frames/.+)', input_arg[0]):
-            image_url = input_arg
+            image_url = input_arg[0]
         else:
             # Check if the input is an emote name and retrieve the URL from the database
             emote = bot.db['Emotes'].find_one({"name": input_arg[0]})
