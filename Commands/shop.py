@@ -6,11 +6,18 @@ def reply_with_shop(self, message):
         self.cooldown):
         self.state[message['source']['nick']] = time.time()
 
-        query = " ".join(message['command']['botCommandParams'])
+        query = message['command']['botCommandParams']
+
+        print(query)
+        if not query:
+            # Default response if the command is not recognized
+            m = "Available for sale: Timeout (100 Coins): Timeout a user (not a moderator) for 1 minute | Trophy (1000 Coins): Add a trophy to your collection. 🏆"
+            self.send_privmsg(message['command']['channel'], m)
+            return
+        
         if '\U000e0000' in query:
                 query = query.replace('\U000e0000', '')
         
-        print(query)
 
         if query.startswith("buy"):
             args = query.split(" ")
@@ -58,9 +65,3 @@ def reply_with_shop(self, message):
                 m = f"@{message['source']['nick']}, that item is not available in the shop."
                 self.send_privmsg(message['command']['channel'], m)
                 return
-
-        else:
-            # Default response if the command is not recognized
-            m = "Available for sale: Timeout (100 Coins): Timeout a user (not a moderator) for 1 minute | Trophy (1000 Coins): Add a trophy to your collection. 🏆"
-            self.send_privmsg(message['command']['channel'], m)
-            return
