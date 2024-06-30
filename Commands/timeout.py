@@ -44,7 +44,7 @@ def reply_with_timeout(self, message):
             return
 
         # Get user ID of the channel and user to timeout
-        channel_id  = get_user_id(message['command']['channel'])
+        channel_id  = message["tags"]["room-id"]
         timeout_id = get_user_id(userToTimeout)
         moderator_id = get_user_id('bluepagmanbot')
 
