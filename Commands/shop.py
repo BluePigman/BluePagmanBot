@@ -11,7 +11,7 @@ def reply_with_shop(self, message):
         print(query)
         if not query:
             # Default response if the command is not recognized
-            m = "Available for sale: Timeout (100 Coins): Timeout a user (not a moderator) for 1 minute | Trophy (1000 Coins): Add a trophy to your collection. 🏆"
+            m = "Available for sale: Timeout (100 Coins): Timeout a user (not a moderator) for 10 seconds.| Trophy (1000 Coins): Add a trophy to your collection. 🏆"
             self.send_privmsg(message['command']['channel'], m)
             return
         
