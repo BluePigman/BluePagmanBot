@@ -128,14 +128,20 @@ class Bot:
         raw_command_component = None
         raw_parameters_component = None
 
+        # Parse tags component if it exists
         if message[idx] == '@':
-            end_idx = message.index(' ')
+            end_idx = message.find(' ')
+            if end_idx == -1:
+                return None
             raw_tags_component = message[1:end_idx]
             idx = end_idx + 1
 
+        # Parse source component if it exists
         if message[idx] == ':':
             idx += 1
-            end_idx = message.index(' ', idx)
+            end_idx = message.find(' ', idx)
+            if end_idx == -1:
+                return None
             raw_source_component = message[idx:end_idx]
             idx = end_idx + 1
 
