@@ -22,7 +22,7 @@ def reply_with_trophies(self, message):
                 return
 
         else: # search a user's trophies count.
-            searchUser = message['command']['botCommandParams'][0]
+            searchUser = message['command']['botCommandParams']
             if '\U000e0000' in searchUser:
                 searchUser = searchUser.replace('\U000e0000', '')
             if '@' in searchUser:

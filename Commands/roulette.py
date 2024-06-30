@@ -7,7 +7,7 @@ def reply_with_roulette(self, message):
             self.cooldown):
         self.state[message['source']['nick']] = time.time()
         user_data = self.users.find_one({'user': message['source']['nick']})
-
+        args = message['command']['botCommandParams'].split()
         if not user_data: 
             m = f"@{message['source']['nick']}, you do not have any Pigga Coins. Use the daily command."
             self.send_privmsg(message['command']['channel'], m)
@@ -17,7 +17,7 @@ def reply_with_roulette(self, message):
             return
         else:
             user_points = user_data['points']
-            amount = message['command']['botCommandParams'][0]
+            amount = args[0]
 
             if user_points == 0:
                 m = f"@{message['source']['nick']}, you don't have any Pigga Coins. PoroSad"

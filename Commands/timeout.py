@@ -15,7 +15,7 @@ def reply_with_timeout(self, message):
             self.send_privmsg(message['command']['channel'], m)
             return
 
-        userToTimeout = message['command']['botCommandParams'][0]
+        userToTimeout = message['command']['botCommandParams']
 
         if '\U000e0000' in userToTimeout:
             userToTimeout = userToTimeout.replace('\U000e0000', '')
