@@ -54,21 +54,21 @@ def reply_with_ascii(bot, message):
             return
         if "\U000e0000" in message['command']['botCommandParams']:
             message['command']['botCommandParams'].remove("\U000e0000")
-        input_arg = message['command']['botCommandParams']
-        if re.match(r'((ftp|http|https)://.+)|(\./frames/.+)', input_arg):
+        input_arg = message['command']['botCommandParams'].split()
+        if re.match(r'((ftp|http|https)://.+)|(\./frames/.+)', input_arg[0]):
             image_url = input_arg
         else:
             # Check if the input is an emote name and retrieve the URL from the database
-            emote = bot.db['Emotes'].find_one({"name": input_arg})
+            emote = bot.db['Emotes'].find_one({"name": input_arg[0]})
             if emote:
                 image_url = emote['url']
             else:
-                m = f"@{message['source']['nick']}, could not find the emote '{input_arg}' in the database."
+                m = f"@{message['source']['nick']}, could not find the emote '{input_arg[0]}' in the database. Try the link instead."
                 bot.send_privmsg(message['command']['channel'], m)
                 return
         
         try:
-            args = parse_custom_args(message['command']['botCommandParams'][1:])
+            args = parse_custom_args(input_arg[1:])
         except Exception as e:
             bot.send_privmsg(message['command']['channel'], "Error parsing arguments: " + str(e) + f". Run {bot.command_prefix}ascii_help for more info.")
             return
