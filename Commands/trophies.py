@@ -8,17 +8,17 @@ def reply_with_trophies(self, message):
         if not message['command']['botCommandParams']:
             user_data = self.users.find_one({'user': message['source']['nick']})
             if not user_data or 'trophies' not in user_data: 
-                m = f"@{message['source']['nick']}, you do not have any trophies in your collection. Buy some in the shop."
+                m = f"@{message['tags']['display-name']}, you do not have any trophies in your collection. Buy some in the shop."
                 self.send_privmsg(message['command']['channel'], m)
                 return
             trophies_count = user_data.get('trophies', 0)
             if trophies_count <= 0:
-                m = f"@{message['source']['nick']}, you don't have any trophies in your collection. Buy some in the shop."
+                m = f"@{message['tags']['display-name']}, you don't have any trophies in your collection. Buy some in the shop."
                 self.send_privmsg(message['command']['channel'], m)
                 return
             else:
                 trophy_string = f"🏆 " * trophies_count
-                m = f"@{message['source']['nick']}, you have {trophies_count} trophies in your collection. {trophy_string}"
+                m = f"@{message['tags']['display-name']}, you have {trophies_count} trophies in your collection. {trophy_string}"
                 return
 
         else: # search a user's trophies count.
@@ -30,8 +30,8 @@ def reply_with_trophies(self, message):
             
             user_data = self.users.find_one({'user': searchUser.lower()})
             if not user_data or 'trophies' not in user_data:
-                self.send_privmsg(message['command']['channel'], f"@{message['source']['nick']}, That user does not have any trophies.")
+                self.send_privmsg(message['command']['channel'], f"@{message['tags']['display-name']}, That user does not have any trophies.")
             else:
                 trophy_string = f"🏆 " * user_data['trophies']
-                self.send_privmsg(message['command']['channel'], f"@{message['source']['nick']}, {searchUser} has {user_data['trophies']} trophies in their \
+                self.send_privmsg(message['command']['channel'], f"@{message['tags']['display-name']}, {searchUser} has {user_data['trophies']} trophies in their \
                                   collection. {trophy_string}")

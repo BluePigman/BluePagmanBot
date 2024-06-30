@@ -25,7 +25,7 @@ def reply_to_ping(bot, message):
                     timeout_timer.cancel()
                     latency_time = (time.time() - start_time) * 1000  # Convert to milliseconds
                     uptime_str = calculate_uptime(bot)
-                    text = f"@{message['source']['nick']}, Pong! Latency: {latency_time:.2f} ms Uptime: {uptime_str}"
+                    text = f"@{message['tags']['display-name']}, Pong! Latency: {latency_time:.2f} ms Uptime: {uptime_str}"
                     bot.send_privmsg(message['command']['channel'], text)
                     return
 

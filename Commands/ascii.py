@@ -49,7 +49,7 @@ def reply_with_ascii(bot, message):
         
         # Validate if the first argument is a URL or an emote name
         if not message['command']['botCommandParams']:
-            m = f"@{message['source']['nick']}, please provide a URL of the image or a global emote name."
+            m = f"@{message['tags']['display-name']}, please provide a URL of the image or a global emote name."
             bot.send_privmsg(message['command']['channel'], m)
             return
         if "\U000e0000" in message['command']['botCommandParams']:
@@ -63,7 +63,7 @@ def reply_with_ascii(bot, message):
             if emote:
                 image_url = emote['url']
             else:
-                m = f"@{message['source']['nick']}, could not find the emote '{input_arg[0]}' in the database. Try the link instead."
+                m = f"@{message['tags']['display-name']}, could not find the emote '{input_arg[0]}' in the database. Try the link instead."
                 bot.send_privmsg(message['command']['channel'], m)
                 return
         

@@ -11,7 +11,7 @@ def reply_with_gemini_experimental(self, message):
         self.state[message['source']['nick']] = time.time()
 
     if not message['command']['botCommandParams']:
-        m = f"@{message['source']['nick']}, please provide a prompt for Gemini. Model: gemini-experimental, \
+        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-experimental, \
             temperature: 2"
         self.send_privmsg(message['command']['channel'], m)
         return

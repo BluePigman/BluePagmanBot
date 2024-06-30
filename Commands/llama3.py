@@ -17,7 +17,7 @@ def reply_with_llama3(self, message):
         self.state[message['source']['nick']] = time.time()
 
     if not message['command']['botCommandParams']:
-        m = f"@{message['source']['nick']}, please provide a prompt. Model: Dolphin 2.9 Llama 3, \
+        m = f"@{message['tags']['display-name']}, please provide a prompt. Model: Dolphin 2.9 Llama 3, \
             https://ollama.com/library/dolphin-llama3"
         self.send_privmsg(message['command']['channel'], m)
         return
@@ -25,7 +25,7 @@ def reply_with_llama3(self, message):
     prompt = ' '.join(message['command']['botCommandParams'])
     self.send_privmsg(message['command']['channel'], "Result usually takes a few minutes. Please wait.")
     result = generate(prompt)
-    self.send_privmsg(message['command']['channel'], f"@{message['source']['nick']},")
+    self.send_privmsg(message['command']['channel'], f"@{message['tags']['display-name']},")
     time.sleep(1) 
     for m in result:
         self.send_privmsg(message['command']['channel'], m)

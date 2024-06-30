@@ -17,7 +17,7 @@ def reply_with_llama(self, message):
         self.state[message['source']['nick']] = time.time()
 
     if not message['command']['botCommandParams']:
-        m = f"@{message['source']['nick']}, please provide a prompt. Model: llama2-uncensored, \
+        m = f"@{message['tags']['display-name']}, please provide a prompt. Model: llama2-uncensored, \
             https://ollama.com/library/llama2-uncensored"
         self.send_privmsg(message['command']['channel'], m)
         return
@@ -25,7 +25,7 @@ def reply_with_llama(self, message):
     prompt = ' '.join(message['command']['botCommandParams'])
     self.send_privmsg(message['command']['channel'], "Result usually takes over a minute. Please wait.")
     result = generate(prompt)
-    self.send_privmsg(message['command']['channel'], f"@{message['source']['nick']},")
+    self.send_privmsg(message['command']['channel'], f"@{message['tags']['display-name']},")
     time.sleep(1) 
     for m in result:
         self.send_privmsg(message['command']['channel'], m)

@@ -16,4 +16,4 @@ def reply_with_news(self, message):
             self.send_privmsg(message['command']['channel'], m)
         except Exception as e:
             print(e)
-            self.send_privmsg(message['command']['channel'], f"@{message['source']['nick']}, No news found for the given query.")
+            self.send_privmsg(message['command']['channel'], f"@{message['tags']['display-name']}, No news found for the given query.")

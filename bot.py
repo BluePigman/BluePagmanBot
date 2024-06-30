@@ -392,7 +392,7 @@ class Bot:
     def join(self, message):  # join game
         if message['source']['nick'] != self.player1 and self.chessGameActive and not self.gameAccepted:
             self.chessTimer.cancel()
-            text = f"@{message['source']['nick']} has joined the game."
+            text = f"@{message['tags']['display-name']} has joined the game."
             self.send_privmsg(message['command']['channel'], text)
             time.sleep(2)
             self.player2 = message['source']['nick']
@@ -447,7 +447,7 @@ class Bot:
                         move = message['command']['botCommandParams'][0]
                         if move == "resign":
                             self.currentGame.resign(message['source']['nick'])  # will update pgn
-                            text = f"@{message['source']['nick']} resigned. @{self.currentGame.player2} wins."
+                            text = f"@{message['tags']['display-name']} resigned. @{self.currentGame.player2} wins."
                             self.send_privmsg(message['command']['channel'], text)
                             time.sleep(2)
                             # get pgn
@@ -503,7 +503,7 @@ class Bot:
                         move = message['command']['botCommandParams'][0]
                         if move == "resign":
                             self.currentGame.resign(message['source']['nick'])  # will update pgn
-                            text = f"@{message['source']['nick']} resigned. @{self.currentGame.player1} wins! PogChamp"
+                            text = f"@{message['tags']['display-name']} resigned. @{self.currentGame.player1} wins! PogChamp"
                             self.send_privmsg(message['command']['channel'], text)
                             time.sleep(2)
                             pgn = self.currentGame.getPGN()

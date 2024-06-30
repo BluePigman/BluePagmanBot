@@ -5,7 +5,7 @@ import chessCommands
 
 def reply_with_random_opening(self, message):
 
-    text = f"@{message['source']['nick']}, "
+    text = f"@{message['tags']['display-name']}, "
 
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
             self.cooldown):
