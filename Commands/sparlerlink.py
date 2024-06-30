@@ -14,13 +14,13 @@ def reply_with_sparlerlink(self, message):
 
         if (message['command']['botCommandParams']):
             
-            input_text = ' '.join(message['command']['botCommandParams'])
+            input_text = message['command']['botCommandParams']
 
             if "-p" in input_text:
                 input_text = input_text[:input_text.index("-p")]
                 url += "&promoted=1"
                 
-            keywords = ' '.join(message['command']['botCommandParams'])
+            keywords = input_text
             if '\U000e0000' in keywords:
                 keywords = keywords.replace('\U000e0000', '')
             keywords = keywords.replace(" ", "+")
