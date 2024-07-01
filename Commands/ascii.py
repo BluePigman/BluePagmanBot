@@ -73,12 +73,14 @@ def reply_with_ascii(bot, message):
             bot.send_privmsg(message['command']['channel'], "Error parsing arguments: " + str(e) + f". Run {bot.command_prefix}ascii_help for more info.")
             return
         
-        resp = requests.get(image_url)
-        if resp.status_code == 200:
+        try:
+            resp = requests.get(image_url)
+            resp.raise_for_status()  # This will raise an HTTPError for bad responses
             img_bytes = resp.content
-        else:
-            bot.send_privmsg(message['command']['channel'], "The image could not be loaded. :Z")
+        except requests.exceptions.RequestException as e:
+            bot.send_privmsg(message['command']['channel'], f"Error, URL was invalid. FailFish")
             return
+        
         
         try:
             image = Image.open(BytesIO(img_bytes))
