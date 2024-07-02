@@ -344,7 +344,7 @@ class Bot:
 
     def say(self, message):
         if message['source']['nick'] == config.bot_owner:
-            self.send_privmsg(message['command']['channel'], " ".join(message['command']['botCommandParams']))
+            self.send_privmsg(message['command']['channel'], message['command']['botCommandParams'])
         else:
             self.send_privmsg(message['command']['channel'], "No")
 
@@ -352,8 +352,9 @@ class Bot:
     def echo(self, message):
         if message['source']['nick'] == config.bot_owner:
             if len(message['command']['botCommandParams']) > 1:
-                channel = " ".join(message['command']['botCommandParams'][0:1])
-                text = " ".join(message['command']['botCommandParams'][1:])
+                text  = message['command']['botCommandParams'].split()
+                channel = text[0]
+                text = " ".join(text[1:])
                 if message['source']['nick'] == config.bot_owner:
                     self.send_privmsg(channel, text)
 
