@@ -13,6 +13,12 @@ def get_random_news_item(keyword = None):
  
     news_item = random.choice(feed.entries)
     final_url = get_redirect_url(news_item.link)
+    # if url is paywalled, try to get from archive.today
+    paywalled = [
+        "nytimes.com"
+    ]
+    if any(domain in final_url for domain in paywalled):
+        final_url = f"https://archive.today/?run=1&url={final_url}"
     return_str = f"{news_item.title}, published on {news_item.published}, {final_url}"
     return return_str
 
