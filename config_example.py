@@ -6,3 +6,4 @@ bot_owner = "Bot Owner" # For private commands.
 db_uri = "Your MongoDB URI"
 user_access_token = "Your user access token"
 client_id = "Your client ID"
+githubToken = "Your Github Token"
