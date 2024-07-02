@@ -1,7 +1,6 @@
 import random
 import time
 import requests
-from urllib.parse import quote
 
 def reply_with_sparlerlink(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
