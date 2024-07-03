@@ -74,9 +74,8 @@ def reply_with_ascii(bot, message):
         
         try:
             resp = requests.get(image_url)
-            resp.raise_for_status()  # This will raise an HTTPError for bad responses
             img_bytes = resp.content
-        except requests.exceptions.RequestException as e:
+        except Exception:
             bot.send_privmsg(message['command']['channel'], f"Error, URL was invalid. FailFish")
             return
         
