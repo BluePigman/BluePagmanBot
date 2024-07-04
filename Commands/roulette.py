@@ -7,7 +7,6 @@ def reply_with_roulette(self, message):
             self.cooldown):
         self.state[message['source']['nick']] = time.time()
         user_data = self.users.find_one({'user': message['source']['nick']})
-        args = message['command']['botCommandParams'].split()
         if not user_data: 
             m = f"@{message['tags']['display-name']}, you do not have any Pigga Coins. Use the daily command."
             self.send_privmsg(message['command']['channel'], m)
@@ -17,7 +16,7 @@ def reply_with_roulette(self, message):
             return
         else:
             user_points = user_data['points']
-            amount = args[0]
+            amount = message['command']['botCommandParams'].split()[0]
 
             if user_points == 0:
                 m = f"@{message['tags']['display-name']}, you don't have any Pigga Coins. PoroSad"
@@ -28,9 +27,8 @@ def reply_with_roulette(self, message):
                 elif not amount.isdigit() or int(amount) <= 0:
                     m = f"@{message['tags']['display-name']}, please enter a positive number or 'all'."
                     self.send_privmsg(message['command']['channel'], m)
-                    return  # Exit the function early if the input is invalid
 
-                amount = int(amount)  # Convert the amount to an integer
+                amount = int(amount)
 
                 if amount > user_points:
                     m = f"@{message['tags']['display-name']}, you don't have enough Pigga Coins."
