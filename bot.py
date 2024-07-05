@@ -413,7 +413,7 @@ class Bot:
         # Player who started game chooses side first.
         if self.chessGameActive and self.player2 and message['source']['nick'] == self.player1 and not self.choseSidePlayer1:
 
-            if message.text_command.lower() == "white":
+            if message['command']['botCommand'].lower() == "white":
                 self.choseSidePlayer1 = True
                 text = f"@{self.player1}, you will play as white"
                 self.send_privmsg(message['command']['channel'], text)
@@ -423,7 +423,7 @@ class Bot:
                 self.currentGame = chessGame(self.player1, self.player2)
                 time.sleep(2)
 
-            elif message.text_command.lower() == "black":
+            elif message['command']['botCommand'].lower() == "black":
                 text = f"@{self.player1}, you will play as black"
                 self.send_privmsg(message['command']['channel'], text)
                 time.sleep(2)
@@ -452,7 +452,7 @@ class Bot:
                         self.send_privmsg(
                             message['command']['channel'], f'@{self.currentGame.player1}, please enter a move!')
                     else:
-                        move = message['command']['botCommandParams'][0]
+                        move = message['command']['botCommandParams']
                         if move == "resign":
                             self.currentGame.resign(message['source']['nick'])  # will update pgn
                             text = f"@{message['tags']['display-name']} resigned. @{self.currentGame.player2} wins."
@@ -508,7 +508,7 @@ class Bot:
                         self.send_privmsg(
                             message['command']['channel'], f'@{self.currentGame.player2}, please enter a move!')
                     else:
-                        move = message['command']['botCommandParams'][0]
+                        move = message['command']['botCommandParams']
                         if move == "resign":
                             self.currentGame.resign(message['source']['nick'])  # will update pgn
                             text = f"@{message['tags']['display-name']} resigned. @{self.currentGame.player1} wins! PogChamp"
