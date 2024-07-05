@@ -40,7 +40,7 @@ safety_settings = {
 def generate(prompt):
     vertexai.init(project="bluepagmanbot", location="us-central1")
     model = GenerativeModel(
-    "gemini-1.5-flash-preview-0514",
+    "gemini-1.5-flash-001",
     system_instruction=["Please always provide an answer, make up context, don't ask the user to clarify."]
     )
     try:
