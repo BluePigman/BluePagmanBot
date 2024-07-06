@@ -6,11 +6,7 @@ def reload_7tv_channel(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
         self.state[message['source']['nick']] = time.time()
 
-        channel_id =  get_user_id(message['command']['channel']) 
-        if not channel_id:
-            m = f"Error: Could not retrieve channel ID for {message['command']['channel']}"
-            self.send_privmsg(message['command']['channel'], m)
-            return
+        channel_id =  message["tags"]["room-id"]
         start_time = time.time()  # Start measuring time
         # Make GET request
         response = requests.get(f"https://7tv.io/v3/users/twitch/{channel_id}")
