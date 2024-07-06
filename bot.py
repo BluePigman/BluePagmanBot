@@ -104,7 +104,7 @@ class Bot:
         self.irc = ssl.create_default_context().wrap_socket(
             socket.socket(), server_hostname=self.irc_server)
         self.irc.connect((self.irc_server, self.irc_port))
-        self.send_command('CAP REQ :twitch.tv/membership twitch.tv/tags twitch.tv/commands')
+        self.send_command('CAP REQ :twitch.tv/tags twitch.tv/commands')
         self.send_command(f'PASS {self.oauth_token}')
         self.send_command(f'NICK {self.username}')
         for channel in self.channels:
