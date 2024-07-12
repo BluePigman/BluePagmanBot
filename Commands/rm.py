@@ -15,6 +15,7 @@ def reply_with_rm(self, message):
         response = requests.get(url)
         if response.status_code == 403:
             self.send_privmsg(message['command']['channel'], "Reddit is rate limited! Wait 10 minutes for more.")
+            return
         data = response.json()
         posts = data["data"]["children"]
         if len(posts) == 0:
