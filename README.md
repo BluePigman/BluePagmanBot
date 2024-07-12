@@ -30,6 +30,8 @@ ollama
 
 ``pip install pillow``
 
+``pip install texasholdem``
+
 ## How to use: 
 
 IMPORTANT: If you don't want to set up a MongoDB, then use v1.2 in releases.
