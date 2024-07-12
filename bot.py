@@ -2,7 +2,7 @@ import socket, sys, ssl, time, config, chess
 from pymongo.mongo_client import MongoClient
 from Commands import ( bot_info, date, help_ascii, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
 news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2, llama, llama3,
-ascii, help_ascii, reloadglobals, reloadchannel, sparlerlink, suggest )
+ascii, help_ascii, reloadglobals, reloadchannel, sparlerlink, suggest, poker )
 
 class Bot:
 
@@ -28,6 +28,11 @@ class Bot:
         self.currentGame = None  # hold the chess game
         self.chessTimer = None  # chess game pending timer
         self.start_time = None # to measure bot uptime
+        # poker params
+        self.pokerGameActive = False
+        self.pokerPlayers = {} # username : userid
+        self.pokerGame = None
+        self.pokerTimer = None
 
         # anyone can use these
         self.custom_commands = {
@@ -63,7 +68,8 @@ class Bot:
             'reload_ffz': reloadchannel.reload_ffz_channel,
             'reload_7tv': reloadchannel.reload_7tv_channel,
             'sparlerlink': sparlerlink.reply_with_sparlerlink,
-            'suggest': suggest.reply_with_suggest
+            'suggest': suggest.reply_with_suggest,
+            'poker': poker.reply_with_poker
         }
 
         # only bot owner can use these commands
@@ -109,7 +115,7 @@ class Bot:
         self.send_command(f'NICK {self.username}')
         for channel in self.channels:
             self.send_command(f'JOIN #{channel}')
-            self.send_privmsg(channel, 'forsenEnter Bot has joined! 🤖')
+            self.send_privmsg(channel, 'Bot has joined...')
         self.start_time = time.time()
         self.loop_for_messages()
 
@@ -363,14 +369,14 @@ class Bot:
     # Work in progress.
     def join_channel(self, message):
         if message['source']['nick'] == config.bot_owner:
-            newChannel = " ".join(message['command']['botCommandParams'])
+            newChannel = message['command']['botCommandParams']
             self.send_command(f'JOIN #{newChannel}')
             self.send_privmsg(newChannel, "forsenEnter")
             self.send_privmsg(message['command']['channel'], "Success")
 
     def part_channel(self, message):
         if message['source']['nick'] == config.bot_owner:
-            newChannel = " ".join(message['command']['botCommandParams'])
+            newChannel = message['command']['botCommandParams']
             self.send_privmsg(newChannel, "forsenLeave")
             self.send_command(f'PART #{newChannel}')
 
