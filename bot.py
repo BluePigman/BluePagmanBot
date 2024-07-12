@@ -80,7 +80,8 @@ class Bot:
             'echo': self.echo,
             'join_channel': self.join_channel,
             'leave_channel': self.part_channel,
-            'reset_chess': self.reset_chess
+            'reset_chess': self.reset_chess,
+            'reset_poker': self.reset_poker
 
         }
 
@@ -116,7 +117,7 @@ class Bot:
         self.send_command(f'NICK {self.username}')
         for channel in self.channels:
             self.send_command(f'JOIN #{channel}')
-            self.send_privmsg(channel, 'Bot has joined...')
+            self.send_privmsg(channel, 'forsenEnter Bot has joined. 🤖')
         self.start_time = time.time()
         self.loop_for_messages()
 
@@ -395,6 +396,15 @@ class Bot:
             self.choseSidePlayer1 = False
             self.currentGame = None
             time.sleep(2)
+            
+    def reset_poker(self, message):
+        if message['tags']['display-name'] in  self.pokerPlayers:
+            self.send_privmsg(message['command']['channel'], "Poker game has been reset.")
+            self.pokerGameActive = False
+            self.pokerPlayers = {}
+            self.pokerGame = None
+            self.pokerTimer = None
+            time.sleep(0.9)
 
     # Runs if no one accepts chess challenge after 30s.
     def gameTimeout(self, channel):
