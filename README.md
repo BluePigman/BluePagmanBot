@@ -31,7 +31,7 @@ ollama
 ``pip install pillow``
 
 ``pip install texasholdem``
-
+``pip install beautifulsoup4``
 ## How to use: 
 
 IMPORTANT: If you don't want to set up a MongoDB, then use v1.2 in releases.
