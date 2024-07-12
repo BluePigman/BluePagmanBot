@@ -1,6 +1,5 @@
 import random
 import time
-from datetime import datetime, timezone
 import requests
 def reply_with_rm(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
@@ -10,7 +9,7 @@ def reply_with_rm(self, message):
             subreddit = "all"
         else:
             subreddit = message['command']['botCommandParams'].split()[0]
-        url = f"https://oauth.reddit.com/r/{subreddit}/hot.json"
+        url = f"https://reddit.com/r/{subreddit}/hot.json"
 
         response = requests.get(url)
         if response.status_code == 403:
