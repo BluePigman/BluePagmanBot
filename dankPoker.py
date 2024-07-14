@@ -85,9 +85,11 @@ class DankPokerGame:
 
     def deal_turn(self):
         self.board.append(self.deck.draw(1)[0])
+        self.currentMaxBet = 0
 
     def deal_river(self):
         self.board.append(self.deck.draw(1)[0])
+        self.currentMaxBet = 0
 
     def next_turn(self):
         self.currentTurnIndex = (self.currentTurnIndex + 1) % len(self.player_order)
