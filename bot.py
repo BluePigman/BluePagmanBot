@@ -30,6 +30,7 @@ class Bot:
         self.start_time = None # to measure bot uptime
         # poker params
         self.pokerGameActive = False
+        self.pokerGamePending = False
         self.pokerPlayers = {} # username : userid
         self.pokerGame = None
         self.pokerTimer = None

@@ -7,7 +7,6 @@ def reply_with_poker(self, message):
     if not (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
                 self.cooldown):
         return
-    
     self.state[message['source']['nick']] = time.time()
 
     if not message['command']['botCommandParams']:
@@ -16,8 +15,11 @@ def reply_with_poker(self, message):
         self.send_privmsg(message['command']['channel'], msg)
         return
 
+    if self.pokerGameActive and message['tags']['display-name'] not in self.pokerPlayers:
+        return
+    
     if message['command']['botCommandParams'].lower() == "start" or message['command']['botCommandParams'].lower() == "play":
-        if self.pokerGameActive:
+        if self.pokerGamePending:
             return
         if not tryWhisper(message['tags']['user-id']):
             self.send_privmsg(message['command']['channel'], "You have blocked whispers from strangers. \
@@ -27,7 +29,7 @@ def reply_with_poker(self, message):
         
         self.send_privmsg(message['command']['channel'], f"A poker game has started. \
                           Type {self.command_prefix}poker join to join. Game starts in 30 seconds.")
-        self.pokerGameActive = True
+        self.pokerGamePending = True
         self.pokerTimer = Timer(30, pokerTimeout, (self, message['command']['channel'],))
         self.pokerPlayers[message['tags']['display-name']] = message['tags']['user-id']
         self.pokerTimer.start()
@@ -130,8 +132,8 @@ def reply_with_poker(self, message):
             time.sleep(1)
             self.send_privmsg(message['command']['channel'], "game over ok")
             self.pokerGameActive = False
+            endPokerGame(self)
             
-
     else:
         if self.pokerGameActive:
             self.send_privmsg(message['command']['channel'], f"Your turn, {self.pokerGame.get_turn()} Usage: {self.command_prefix} poker  fold, bet <amount>, call, or check.")
@@ -141,10 +143,11 @@ def pokerTimeout(self, channel):
     if len(self.pokerPlayers) == 1:
         text = "No one accepted the challenge. :("
         self.send_privmsg(channel, text)
-        self.pokerGameActive = False
+        self.pokerGamePending = False
         self.pokerPlayers = {}
         return
     msg = "Poker is starting, joined users: " + ", ".join(self.pokerPlayers)
+    self.pokerGameActive = True
     self.send_privmsg(channel, msg)
     time.sleep(0.5)
     runPokerRound(self, channel)
