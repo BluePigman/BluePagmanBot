@@ -5,7 +5,7 @@ from dankPoker import DankPokerGame
 
 def reply_with_poker(self, message):
     if not (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
-                self.cooldown):
+                1):
         return
     self.state[message['source']['nick']] = time.time()
 
@@ -36,7 +36,7 @@ def reply_with_poker(self, message):
         return
 
     elif message['command']['botCommandParams'].lower() == "join":
-        if message['tags']['display-name'] in self.pokerPlayers or not self.pokerGameActive:
+        if message['tags']['display-name'] in self.pokerPlayers or not self.pokerGamePending:
             return 
 
         # try whisper
@@ -101,14 +101,16 @@ def reply_with_poker(self, message):
     
     elif message['command']['botCommandParams'].lower() == "check":
         if self.pokerGameActive and message['tags']['display-name'] in self.pokerPlayers and self.pokerGame.get_turn()  == message['tags']['display-name']:
-            self.pokerGame.check(message['tags']['display-name'])
+            if not self.pokerGame.check(message['tags']['display-name']):
+                self.send_privmsg(message['command']['channel'], "You cannot check, you must bet, fold or raise. The current max bet is " + str(self.pokerGame.currentMaxBet))
+                return
             self.send_privmsg(message['command']['channel'], f"{message['tags']['display-name']} has checked.")
             time.sleep(0.5)
 
     elif message['command']['botCommandParams'].lower() == "chips":
         if self.pokerGameActive and message['tags']['display-name'] in self.pokerPlayers:
             self.send_privmsg(message['command']['channel'], f"{message['tags']['display-name']} has {self.pokerGame.get_chips([message['tags']['display-name']])} chips.")
-            time.sleep(0.5)
+            time.sleep(1)
         return
     
     if self.pokerGameActive and self.pokerGame.is_betting_round_complete():
@@ -130,13 +132,23 @@ def reply_with_poker(self, message):
             self.send_privmsg(message['command']['channel'], f"The winner is {winner}, with a {hand_name}.")
             self.pokerGame.distribute_chips()
             time.sleep(1)
-            self.send_privmsg(message['command']['channel'], "game over ok")
-            self.pokerGameActive = False
-            endPokerGame(self)
+            if self.pokerGame.round == 5:
+                self.send_privmsg(message['command']['channel'], "game over ok")
+                self.pokerGameActive = False
+                endPokerGame(self)
+                return
+            else:
+                printChips(self, message['command']['channel'])
+                time.sleep(1)
+                verifyPlayers(self)
+                self.pokerGame.start_new_round()
+                self.send_privmsg(message['command']['channel'], "Next round starting...")
+                time.sleep(1)
+                runPokerRound(self, message['command']['channel'], self.pokerGame.round)
             
     else:
         if self.pokerGameActive:
-            self.send_privmsg(message['command']['channel'], f"Your turn, {self.pokerGame.get_turn()} Usage: {self.command_prefix} poker  fold, bet <amount>, call, or check.")
+            self.send_privmsg(message['command']['channel'], f"Your turn, {self.pokerGame.get_turn()} Usage: {self.command_prefix}poker  fold, bet <amount>, call, or check.")
 
 
 def pokerTimeout(self, channel):
@@ -150,12 +162,21 @@ def pokerTimeout(self, channel):
     self.pokerGameActive = True
     self.send_privmsg(channel, msg)
     time.sleep(0.5)
-    runPokerRound(self, channel)
+    runPokerRound(self, channel, 0)
     
-
-def runPokerRound(self, channel):
-    
-    self.pokerGame = DankPokerGame(self.pokerPlayers)
+def printChips(self, channel):
+    msg = ""
+    for player in self.pokerPlayers:
+        msg += f"{player}: {self.pokerGame.get_chips(player)} chips. "
+    self.send_privmsg(channel, msg)
+def verifyPlayers(self):
+    for player in self.pokerPlayers:
+        if player not in self.pokerGame.players:
+            self.pokerPlayers.pop(player)
+    return
+def runPokerRound(self, channel, round):
+    if round == 0:
+        self.pokerGame = DankPokerGame(self.pokerPlayers)
     self.pokerGame.deal_to_all_players()
     for player in self.pokerPlayers:
         if not whisperCards(self, self.pokerPlayers[player], player):

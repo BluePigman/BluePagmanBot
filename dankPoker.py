@@ -21,6 +21,7 @@ class DankPokerGame:
         self.currentTurnIndex = 0
         self.player_order = list(players.keys())
         self.phase = "flop" # Flop, Turn, River
+        self.round = 0
 
     def get_chips(self, player: str) -> int:
         return self.players[player]["chips"]
@@ -32,7 +33,12 @@ class DankPokerGame:
         self.deck = Deck()
         self.deck.shuffle()
         self.board = []
+        self.round += 1
+        self.canCheck = False
         for player in self.players:
+            if self.players[player]["chips"] == 0:
+                self.players.pop(player)
+                continue
             self.players[player]["folded"] = False
             self.players[player]["bet"] = 0
             self.players[player]["hand"] = []
@@ -68,8 +74,12 @@ class DankPokerGame:
         self.bet(player, inc)
 
     def check(self, player: str):
-        self.players[player]["acted"] = True
-        self.next_turn()
+        if self.currentMaxBet == 0:
+            self.players[player]["acted"] = True
+            self.next_turn()
+            return True
+        else:
+            return False
 
     def get_turn(self):
         return self.player_order[self.currentTurnIndex]
@@ -104,6 +114,13 @@ class DankPokerGame:
         for player in self.players:
             self.players[player]["acted"] = False
         return True
+    
+    def one_left(self): # check if only one player left (everyone else folded)
+        count = 0
+        for player in self.players:
+            if not self.players[player]["folded"]:
+                count += 1
+        return count == 1
 
     def get_winner(self) -> tuple: # return best player and name of hand
         best_hand = None
