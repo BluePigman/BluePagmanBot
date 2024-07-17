@@ -8,6 +8,7 @@ A Twitch chatbot running in Python.
 - Get a random news headline from Google News.
 - Gambling with points.
 - Generates Braille/ASCII art from emotes/image links.
+- Play Texas Hold'em poker with multiple people. (work in progress)
 
 ## Prerequisites: 
 [Python 3.8+](https://www.python.org/downloads/)
