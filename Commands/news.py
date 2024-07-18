@@ -5,7 +5,7 @@ def reply_with_news(self, message):
         self.state[message['source']['nick']] = time.time()
         try:
             if (message['command']['botCommandParams']):
-                keywords = ' '.join(message['command']['botCommandParams'])
+                keywords = message['command']['botCommandParams']
                 if '\U000e0000' in keywords:
                     keywords = keywords.replace('\U000e0000', '')
                 keywords = keywords.replace(" ", "+")
