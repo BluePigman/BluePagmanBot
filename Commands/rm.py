@@ -75,7 +75,7 @@ def scrape_subreddit(subreddit):
         time_posted = post.find("span", class_="created")["title"] if post.find("span", class_="created") else None
         score = post.find("div", class_="post_score").get_text(strip=True).replace(' Upvotes', '') if post.find("div", class_="post_score") else None
         score = score.replace('Upvotes', '') if score else None
-        score = score.replace("\u2022", "Idk") if score else None
+        score = score.replace("\u2022", "Idk ") if score else None
         
         subreddit = post.find("a", class_="post_subreddit").get_text(strip=True)
         # Create a dictionary for the post
