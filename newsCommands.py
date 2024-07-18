@@ -1,6 +1,7 @@
 import feedparser
 import random
 import requests
+import base64, re
  
 def get_random_news_item(keyword = None):
     url = f"https://news.google.com/rss/search?q={keyword}"
@@ -10,9 +11,15 @@ def get_random_news_item(keyword = None):
     feed = feedparser.parse(url)
     if feed.bozo != 0:
         return "Failed to retrieve or parse the RSS feed."
- 
+    if not feed.entries or len(feed.entries) == 0:
+        return "No news found for the given query."
     news_item = random.choice(feed.entries)
     final_url = get_redirect_url(news_item.link)
+    print(final_url)
+    if final_url.startswith("https://news.google.com/rss/articles/"):
+        final_url = decode_url(final_url)
+        if not final_url:
+            return "Failed to decode the URL."
     # if url is paywalled, try to get from archive.today
     paywalled = [
         "nytimes.com",
@@ -26,6 +33,36 @@ def get_random_news_item(keyword = None):
 def get_redirect_url(url):
     response = requests.get(url, allow_redirects=True)
     return response.url
+
+
+def decode_url(google_news_url):
+    code_pattern = r'\/articles\/(.*?)\?'
+    code_match = re.search(code_pattern , google_news_url)
+    if not code_match:
+        return "Error: Not a valid link"
+
+    encoded_url = code_match.group(1)
+
+    # Add the missing padding
+    missing_padding = len(encoded_url) % 4
+    if missing_padding:
+        encoded_url += '=' * (4 - missing_padding)
+
+    decoded_url = str(base64.b64decode(encoded_url), 'utf-8', errors='ignore')
+    if not decoded_url:
+        return "None"
+    print(decoded_url)
+    url_pattern = r'http.+'
+    url_match = re.search(url_pattern , decoded_url)
+    if not url_match:
+        return "Error: Missing http:"
+        
+    decoded_url = url_match.group(0)
+    head, _, _ = decoded_url.partition("\x01")
+    return head
+
+
+
 
 def get_help_text():
     return "Get a random news headline for a given query. If no query is provided, get a random news headline."
