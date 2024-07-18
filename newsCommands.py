@@ -48,14 +48,28 @@ def decode_url(google_news_url):
     if missing_padding:
         encoded_url += '=' * (4 - missing_padding)
 
-    decoded_url = str(base64.b64decode(encoded_url), 'utf-8', errors='ignore')
+    try:
+        decoded_url = str(base64.urlsafe_b64decode(encoded_url), 'utf-8', errors='ignore')
+    except Exception as e:
+        return str(e)[:390]
+
     if not decoded_url:
         return "None"
     print(decoded_url)
     url_pattern = r'http.+'
-    url_match = re.search(url_pattern , decoded_url)
+    url_match = re.search(url_pattern , decoded_url, re.IGNORECASE)
     if not url_match:
-        return "Error: Missing http:"
+        # Attempt to find YouTube video ID pattern
+        youtube_id_match = re.search(r'([a-zA-Z0-9_-]{11})', decoded_url)
+        if youtube_id_match:
+            youtube_url = f"https://www.youtube.com/watch?v={youtube_id_match.group(0)}"
+            r = requests.get(youtube_url)
+            if "Video Unavailable" in r.text:
+                return "Error: Youtube video unavailable"
+            return youtube_url
+        
+        return "Error: Unable to decode link", str(decoded_url)
+
         
     decoded_url = url_match.group(0)
     head, _, _ = decoded_url.partition("\x01")
