@@ -28,7 +28,6 @@ def reply_with_sparlerlink(self, message):
             url += f"&tags={keywords}"
 
         try:
-            print(url)
             response = requests.get(url)
             response.raise_for_status()
             data = response.json().get('items', [])

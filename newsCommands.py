@@ -15,7 +15,6 @@ def get_random_news_item(keyword = None):
         return "No news found for the given query."
     news_item = random.choice(feed.entries)
     final_url = get_redirect_url(news_item.link)
-    print(final_url)
     if final_url.startswith("https://news.google.com/rss/articles/"):
         final_url = decode_url(final_url)
         if not final_url:
@@ -55,7 +54,6 @@ def decode_url(google_news_url):
 
     if not decoded_url:
         return "None"
-    print(decoded_url)
     url_pattern = r'http.+'
     url_match = re.search(url_pattern , decoded_url, re.IGNORECASE)
     if not url_match:

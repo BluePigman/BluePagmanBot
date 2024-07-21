@@ -14,7 +14,6 @@ def reply_with_news(self, message):
                 m = newsCommands.get_random_news_item(keywords)
             else:
                 m = newsCommands.get_random_news_item()
-            print(m)
             self.send_privmsg(message['command']['channel'], m) 
         except Exception as e:
             print(e)
