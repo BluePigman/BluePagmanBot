@@ -16,7 +16,7 @@ def reply_with_gemini_experimental(self, message):
         self.send_privmsg(message['command']['channel'], m)
         return
 
-    prompt = ' '.join(message['command']['botCommandParams'])
+    prompt = message['command']['botCommandParams']
     result = generate(prompt)
     for m in result:
         self.send_privmsg(message['command']['channel'], m)

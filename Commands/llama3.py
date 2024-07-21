@@ -22,7 +22,7 @@ def reply_with_llama3(self, message):
         self.send_privmsg(message['command']['channel'], m)
         return
 
-    prompt = ' '.join(message['command']['botCommandParams'])
+    prompt = message['command']['botCommandParams']
     self.send_privmsg(message['command']['channel'], "Result usually takes a few minutes. Please wait.")
     result = generate(prompt)
     self.send_privmsg(message['command']['channel'], f"@{message['tags']['display-name']},")
