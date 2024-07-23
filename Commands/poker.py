@@ -51,8 +51,13 @@ def reply_with_poker(self, message):
     
     elif message['command']['botCommandParams'].lower() == "fold":
         if self.pokerGameActive and message['tags']['display-name'] in self.pokerPlayers:
-            self.pokerGame.fold(message['tags']['display-name'])
+            x = self.pokerGame.fold(message['tags']['display-name'])
             self.send_privmsg(message['command']['channel'], f"{message['tags']['display-name']} has folded for this round.")
+            if x:
+                self.send_privmsg(message['command']['channel'], f"{x} wins the pot.")
+                time.sleep(1)
+                verifyPlayers(self)
+                self.pokerGame.start_new_round()
             time.sleep(0.5)
 
     elif message['command']['botCommandParams'].lower().startswith("bet"):

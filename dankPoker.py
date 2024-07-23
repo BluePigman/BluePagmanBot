@@ -35,6 +35,7 @@ class DankPokerGame:
         self.board = []
         self.round += 1
         self.canCheck = False
+        self.phase = "flop"
         for player in self.players:
             if self.players[player]["chips"] == 0:
                 self.players.pop(player)
@@ -51,6 +52,8 @@ class DankPokerGame:
     def fold(self, player: str):
         self.players[player]["folded"] = True
         self.players[player]["acted"] = True
+        if self.one_left():
+            return self.get_winner()
         self.next_turn()
 
     def bet(self, player: str, amount: int) -> bool:
