@@ -1,6 +1,0 @@
-chess
-feedparser
-requests
-pymongo
-ollama
-google-cloud-aiplatform
