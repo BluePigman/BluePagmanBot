@@ -2,14 +2,14 @@
 A Twitch chatbot running in Python. 
 
 ##  Major Features:
-- Generate text from a text prompt using Gemini 1.5 Pro or Llama 2.
+- Generate text from a text prompt using Gemini 1.5 Pro.
 - Get a random chess opening name, can add specific keywords, and/or indicate the side.
 - Play a chess game through sending messages, with a dynamically updated PGN of the ongoing game.
 - Get a random news headline from Google News.
 - Gambling with points.
 - Generates Braille/ASCII art from emotes/image links.
-- Play Texas Hold'em poker with multiple people. (work in progress)
-
+- Play Texas Hold'em poker with multiple people.
+- 
 ## Prerequisites: 
 [Python 3.8+](https://www.python.org/downloads/)
 
@@ -22,8 +22,6 @@ A Twitch chatbot running in Python.
 For versions 1.3 and higher:
 [pymongo](https://pypi.org/project/pymongo/)
 
-ollama
-
 ``pip install --upgrade google-cloud-aiplatform``
 
 
@@ -32,6 +30,7 @@ ollama
 ``pip install pillow``
 
 ``pip install texasholdem``
+
 ``pip install beautifulsoup4``
 ## How to use: 
 
