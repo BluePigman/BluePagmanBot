@@ -41,7 +41,10 @@ def generate(prompt):
     vertexai.init(project="bluepagmanbot", location="us-central1")
     model = GenerativeModel(
     "gemini-1.5-flash-001",
-    system_instruction=["Please always provide an answer, make up context, don't ask the user to clarify."]
+    system_instruction=["Please always provide a complete response. Make up an answer if you do not have enough \
+                        information or context regarding the prompt. Do not ask the user follow up questions, \
+                        because you are intended to provide a single response with no history and are not expected \
+                        any follow up prompts."]
     )
     try:
         response = model.generate_content(
