@@ -26,7 +26,8 @@ def get_random_news_item(keyword = None):
     ]
     if any(domain in final_url for domain in paywalled):
         final_url = f"https://archive.today/?run=1&url={final_url}"
-    return_str = f"{news_item.title}, published on {news_item.published}, {final_url}"
+    # return_str = f"{news_item.title}, published on {news_item.published}, {final_url}"
+    return_str = f"{news_item.title}, published on {news_item.published}"
     return return_str
 
 def get_redirect_url(url):
