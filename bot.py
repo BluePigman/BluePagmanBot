@@ -2,7 +2,7 @@ import socket, sys, ssl, time, config, chess
 from pymongo.mongo_client import MongoClient
 from Commands import ( bot_info, date, help_ascii, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
 news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2, llama, llama3,
-ascii, help_ascii, reloadglobals, reloadchannel, sparlerlink, suggest, poker, rm )
+ascii, help_ascii, reloadglobals, reloadchannel, sparlerlink, suggest, poker, rm, olympics )
 
 class Bot:
 
@@ -71,7 +71,8 @@ class Bot:
             'sparlerlink': sparlerlink.reply_with_sparlerlink,
             'suggest': suggest.reply_with_suggest,
             'poker': poker.reply_with_poker,
-            'rm': rm.reply_with_rm
+            'rm': rm.reply_with_rm,
+            'olympics': olympics.reply_with_olympics
         }
 
         # only bot owner can use these commands
@@ -309,6 +310,7 @@ class Bot:
                 self.send_privmsg(channel, "The Twitch server needs to terminate the connection for maintenance. Reconnecting...")
             self.irc.shutdown(socket.SHUT_RDWR)
             self.irc.close()
+            time.sleep(1)
             self.connect()
 
         # # Follow 1s cooldown
