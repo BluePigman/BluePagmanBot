@@ -70,6 +70,9 @@ def scrape_subreddit(subreddit):
 
         if link and link.startswith("/r/"):
             link = f"https://l.opnxng.com{link}"
+        
+        if link.startswith("/gallery"):
+            link = f"https://reddit.com{link}"
 
         # Extract the time posted and score
         time_posted = post.find("span", class_="created")["title"] if post.find("span", class_="created") else None
