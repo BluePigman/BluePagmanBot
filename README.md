@@ -51,5 +51,13 @@ https://github.com/BluePigman/BluePagmanBot/assets/82780692/6cab58f2-3a63-4344-9
 <img src="https://user-images.githubusercontent.com/82780692/187820763-d8b24c7f-979a-42ca-b28e-d872e84f0c0e.png"> <img  src="https://user-images.githubusercontent.com/82780692/187818815-f37aa7df-b9ed-4d67-b32c-f58cc55ea2ba.png">
 
 
+## Credits:
+
+This bot takes a lot of functionality from https://github.com/VJ-Duardo/VJBotardo
 
 
+https://github.com/VJ-Duardo/PyBrailleArt for Braille Art
+https://github.com/kevle1/paris-2024-olympic-api for getting 2024 Olympics medal counts
+https://github.com/SSujitX/google-news-url-decoder to decode Google News URLs
+
+And everyone else that helped me with testing by using the bot, intentionaly or unintentionaly!
