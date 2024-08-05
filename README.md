@@ -60,4 +60,4 @@ https://github.com/VJ-Duardo/PyBrailleArt for Braille Art
 https://github.com/kevle1/paris-2024-olympic-api for getting 2024 Olympics medal counts
 https://github.com/SSujitX/google-news-url-decoder to decode Google News URLs
 
-And everyone else that helped me with testing by using the bot, intentionaly or unintentionaly!
+And everyone else that helped me with testing by using the bot, thank you!
