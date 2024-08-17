@@ -25,7 +25,7 @@ def reply_with_summarize(self, message):
             self.send_privmsg(message['command']['channel'], "No transcript found for the video.")
             return
         prompt = f"Here is the transcript for a youtube video, please summarize it in under 500 characters, \
-        ignoring any sponsors of the video: {transcript}"
+        ignoring any sponsors of the video or mention of interacting with their channel (Subscribing, liking, etc): {transcript}"
     else:
         self.send_privmsg(message['command']['channel'], "Please provide a Youtube link to summarize.")
         return
