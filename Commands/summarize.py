@@ -1,5 +1,5 @@
 import re, time
-import gemini
+from Commands import gemini
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 
 
