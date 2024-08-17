@@ -2,14 +2,14 @@
 A Twitch chatbot running in Python. 
 
 ##  Major Features:
-- Generate text from a text prompt using Gemini 1.5 Pro.
+- Generate text from a text prompt using Google Gemini.
 - Get a random chess opening name, can add specific keywords, and/or indicate the side.
 - Play a chess game through sending messages, with a dynamically updated PGN of the ongoing game.
 - Get a random news headline from Google News.
 - Gambling with points.
 - Generates Braille/ASCII art from emotes/image links.
 - Play Texas Hold'em poker with multiple people.
-- 
+- Summarize Youtube videos (sends transcript to Gemini)
 ## Prerequisites: 
 [Python 3.8+](https://www.python.org/downloads/)
 
@@ -32,6 +32,10 @@ For versions 1.3 and higher:
 ``pip install texasholdem``
 
 ``pip install beautifulsoup4``
+
+``pip install youtube_transcript_api``
+
+
 ## How to use: 
 
 IMPORTANT: If you don't want to set up a MongoDB, then use v1.2 in releases.
