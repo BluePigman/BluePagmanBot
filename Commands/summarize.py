@@ -9,8 +9,7 @@ def reply_with_summarize(self, message):
         self.state[message['source']['nick']] = time.time()
 
     if not message['command']['botCommandParams']:
-        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-1.5-flash-001, \
-            temperature: 1.1, top_p: 0.95"
+        m = f"@{message['tags']['display-name']}, please provide a youtube URL link to summarize."
         self.send_privmsg(message['command']['channel'], m)
         return
 
@@ -54,7 +53,7 @@ def extract_youtube_id(text):
 def get_transcript(video_id):
     try:
         # First, try to get the manually created English transcript
-        transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=['en-GB', 'en'])
+        transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=['en-GB'])
     except NoTranscriptFound:
         try:
             # If not available, try to get the auto-generated English transcript
