@@ -41,10 +41,15 @@ def reply_with_describe(self, message):
     if re.match(r'((ftp|http|https)://.+)|(\./frames/.+)', prompt):
         media_url = prompt
         try:
-            if any(ext in media_url.lower() for ext in ['.jpg', '.jpeg', '.png', 'format=jpg']):
-                image = Image.open(requests.get(media_url, stream=True).raw)
-                response = genai.GenerativeModel("gemini-1.5-flash", safety_settings=safety_settings).generate_content(["Give me a concise description of this image, ideally under 100 words.", image])
-                description = response.text.replace('\n', ' ')
+            if any(ext in media_url.lower() for ext in ['.jpg', '.jpeg', '.png', 'format=jpg', 'cdn.']):
+                try:
+                    image = Image.open(requests.get(media_url, stream=True).raw)
+                    response = genai.GenerativeModel("gemini-1.5-flash", safety_settings=safety_settings).generate_content(["Give me a concise description of this image, ideally under 100 words.", image])
+                    description = response.text.replace('\n', ' ')
+                except Exception as e:
+                    print(e)
+                    self.send_privmsg(message['command']['channel'], "Image could not be processed, check the link.")
+                    return
             
             elif '.mp4' in media_url.lower():
                 try:
