@@ -26,6 +26,15 @@ def get_file_size(url):
         print(f"Error fetching file size: {e}")
     return None
 
+def get_content_type(url):
+    try:
+        response = requests.get(url)
+        return response.headers.get('Content-Type')
+    except Exception as e:
+        print(f"Error fetching content type: {e}")
+        return None
+
+
 def reply_with_describe(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
         self.state[message['source']['nick']] = time.time()
@@ -41,17 +50,18 @@ def reply_with_describe(self, message):
     if re.match(r'((ftp|http|https)://.+)|(\./frames/.+)', prompt):
         media_url = prompt
         try:
-            if any(ext in media_url.lower() for ext in ['.jpg', '.jpeg', '.png', 'format=jpg', 'cdn.']):
+            content_type = get_content_type(media_url)
+            if content_type and content_type in ['image/jpeg', 'image/png', 'image/webp', 'image/gif']:
                 try:
-                    image = Image.open(requests.get(media_url, stream=True).raw)
+                    image = Image.open(requests.get(media_url, stream=True).raw).convert('RGB')
                     response = genai.GenerativeModel("gemini-1.5-flash", safety_settings=safety_settings).generate_content(["Give me a concise description of this image, ideally under 100 words.", image])
                     description = response.text.replace('\n', ' ')
                 except Exception as e:
                     print(e)
                     self.send_privmsg(message['command']['channel'], "Image could not be processed, check the link.")
                     return
-            
-            elif '.mp4' in media_url.lower():
+
+            elif content_type and content_type in ['video/mp4']:
                 try:
                     file_size = get_file_size(media_url)
                     if file_size and file_size > MAX_FILE_SIZE:
@@ -81,7 +91,7 @@ def reply_with_describe(self, message):
                 os.remove(video_file_name)
 
             else:
-                m = f"@{message['tags']['display-name']}, unsupported media type. Please provide a link to an image or a .mp4 video."
+                m = f"@{message['tags']['display-name']}, content type could not be inferred. Please provide a link to an image or a .mp4 video."
                 self.send_privmsg(message['command']['channel'], m)
                 return
             
