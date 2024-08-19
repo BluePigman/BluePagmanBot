@@ -9,7 +9,8 @@ A Twitch chatbot running in Python.
 - Gambling with points.
 - Generates Braille/ASCII art from emotes/image links.
 - Play Texas Hold'em poker with multiple people.
-- Summarize Youtube videos (sends transcript to Gemini)
+- Summarize Youtube videos (sends transcript to Gemini).
+- Describe image and video links (uploads to Gemini and asks for description).
 ## Prerequisites: 
 [Python 3.8+](https://www.python.org/downloads/)
 
@@ -34,6 +35,8 @@ For versions 1.3 and higher:
 ``pip install beautifulsoup4``
 
 ``pip install youtube_transcript_api``
+
+``pip install -U google-generativeai``
 
 
 ## How to use: 
