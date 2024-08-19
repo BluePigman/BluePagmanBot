@@ -34,22 +34,20 @@ def reply_with_summarize(self, message):
         time.sleep(1)
 
 def extract_youtube_id(text):
-    # Regular expression to match standard and shortened YouTube URLs
-    youtube_regex = r"(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$"
+    youtube_regex = r"(https?://)?(www\.|m\.)?(youtube\.com|youtu\.be)/.+$"
     
-    # Check if the text contains a YouTube link
     match = re.search(youtube_regex, text)
     if match:
-        # For standard YouTube URLs
-        if "youtube.com" in text:
+        if "youtube.com/watch" in text:
             video_id = text.split("v=")[-1].split("&")[0]
-        # For shortened YouTube URLs
+        elif "youtube.com/shorts" in text:
+            video_id = text.split("/shorts/")[-1].split("?")[0]
         elif "youtu.be" in text:
             video_id = text.split("/")[-1].split("?")[0]
         return video_id
     else:
         return None
-
+    
 def get_transcript(video_id):
     try:
         # First, try to get the manually created English transcript
