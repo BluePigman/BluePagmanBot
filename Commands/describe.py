@@ -54,7 +54,11 @@ def reply_with_describe(self, message):
             if content_type and content_type in ['image/jpeg', 'image/png', 'image/webp', 'image/gif']:
                 try:
                     image = Image.open(requests.get(media_url, stream=True).raw).convert('RGB')
-                    response = genai.GenerativeModel("gemini-1.5-flash", safety_settings=safety_settings).generate_content(["Give me a concise description of this image, ideally under 100 words.", image])
+                    input = "Give me a concise description of this image, ideally under 100 words, translating to English if needed."
+                    response = genai.GenerativeModel("gemini-1.5-flash", safety_settings=safety_settings).generate_content([input, image])
+                    if response.prompt_feedback.block_reason:
+                        self.send_privmsg(message['command']['channel'], "The prompt was blocked, the image is likely inappropriate for Gemini.")
+                        return
                     description = response.text.replace('\n', ' ')
                 except Exception as e:
                     print(e)
@@ -85,7 +89,8 @@ def reply_with_describe(self, message):
                 self.send_privmsg(message['command']['channel'], "Video is being uploaded to Gemini, please wait 10 seconds.")
                 time.sleep(10) 
                 
-                response = genai.GenerativeModel("gemini-1.5-flash", safety_settings=safety_settings).generate_content([video_file, "Describe the content of this video, in under 100 words, translating to English if needed."])
+                input = "Describe the content of this video, in under 100 words, translating to English if needed."
+                response = genai.GenerativeModel("gemini-1.5-flash", safety_settings=safety_settings).generate_content([video_file, input])
                 description = response.text.replace('\n', ' ')
 
                 os.remove(video_file_name)
