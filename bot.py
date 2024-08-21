@@ -195,6 +195,9 @@ class Bot:
             parsed_tag = tag.split('=')
             tag_value = None if parsed_tag[1] == '' else parsed_tag[1]
 
+            if parsed_tag[0] == 'reply-parent-msg-body':
+                tag_value = tag_value.replace('\\s', ' ')
+
             if parsed_tag[0] in ['badges', 'badge-info']:
                 if tag_value:
                     dict_badges = {}
