@@ -121,7 +121,7 @@ class Bot:
         self.send_command(f'NICK {self.username}')
         for channel in self.channels:
             self.send_command(f'JOIN #{channel}')
-            self.send_privmsg(channel, 'forsenEnter Bot has joined. 🤖')
+            self.send_privmsg(channel, config.initial_msg)
         self.start_time = time.time()
         self.loop_for_messages()
 
