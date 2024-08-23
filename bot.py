@@ -60,8 +60,6 @@ class Bot:
             'trophies': trophies.reply_with_trophies,
             'gemini': gemini.reply_with_gemini,
             'gemini2': gemini2.reply_with_gemini_experimental,
-            'llama': llama.reply_with_llama,
-            'llama3': llama3.reply_with_llama3,
             'ascii': ascii.reply_with_ascii,
             'help_ascii': help_ascii.reply_with_help_ascii,
             'reload_globals': reloadglobals.reload_global_emotes,
