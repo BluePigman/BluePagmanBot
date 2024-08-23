@@ -1,14 +1,9 @@
-import os
-import sys
 import time
 import re
 from PIL import Image, UnidentifiedImageError, ImageSequence
 import requests
 from io import BytesIO
 import argparse
-
-# Add the parent directory of the current script to sys.path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from BrailleArt import braillecreate, brailletransform
 

@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-import os
-import sys
-
 from .brailledata import braille_descr_dic
 from PIL import Image
 

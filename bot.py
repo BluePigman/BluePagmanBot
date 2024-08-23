@@ -1,7 +1,7 @@
 import socket, sys, ssl, time, config, chess
 from pymongo.mongo_client import MongoClient
 from Commands import ( bot_info, date, help_ascii, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
-news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2, llama, llama3,
+news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2,
 ascii, help_ascii, reloadglobals, reloadchannel, sparlerlink, suggest, poker, rm, olympics, summarize, describe, rottentomatoes )
 
 class Bot:
