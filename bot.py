@@ -72,7 +72,8 @@ class Bot:
             'rm': rm.reply_with_rm,
             'olympics': olympics.reply_with_olympics,
             'summarize': summarize.reply_with_summarize,
-            'describe': describe.reply_with_describe
+            'describe': describe.reply_with_describe,
+            'rt': rottentomatoes.reply_with_rottentomatoes
         }
 
         # only bot owner can use these commands
