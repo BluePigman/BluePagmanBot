@@ -77,7 +77,7 @@ def reply_with_describe(self, message):
             media_url = prompt
             content_type = get_content_type(media_url)
         else:
-            m = f"@{message['tags']['display-name']}, the provided input is not a valid emote name or URL. Try reloading emotes"
+            m = f"@{message['tags']['display-name']}, the provided input either is an invalid URL or the emote is not a global/channel emote."
             self.send_privmsg(message['command']['channel'], m)
             return
 
