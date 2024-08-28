@@ -1,3 +1,4 @@
+from io import BytesIO
 import os, requests, time, re, config
 from PIL import Image
 import google.generativeai as genai
@@ -34,6 +35,15 @@ def get_content_type(url):
         print(f"Error fetching content type: {e}")
         return None
 
+def is_chunked(url):
+    try:
+        response = requests.get(url)
+        return response.headers.get('Transfer-Encoding') == 'chunked'
+    except Exception as e:
+        print(f"Error checking for chunked transfer encoding: {e}")
+        return False
+
+
 def generate_gemini_description(media, input_text):
     try:
         response = genai.GenerativeModel("gemini-1.5-flash", safety_settings=safety_settings).generate_content([media, input_text])
@@ -54,12 +64,13 @@ def reply_with_describe(self, message):
         return
 
     prompt = message['command']['botCommandParams']
-
+    chunked = False
     # Check if input is an emote name
     emote = self.db['Emotes'].find_one({"name": prompt})
     if emote:
         media_url = emote['url']
         content_type = get_content_type(media_url)
+
     else:
         # Regex to check if the URL is for an image or video
         if re.match(r'((ftp|http|https)://.+)|(\./frames/.+)', prompt):
@@ -72,7 +83,13 @@ def reply_with_describe(self, message):
 
     if content_type in ['image/jpeg', 'image/png', 'image/webp', 'image/gif']:
         try:
-            image = Image.open(requests.get(media_url, stream=True).raw).convert('RGB')
+            if is_chunked(media_url):
+                response = requests.get(media_url, stream=True)
+                image_data = b''.join(chunk for chunk in response.iter_content(1024))
+                image = Image.open(BytesIO(image_data))
+            else:
+                image = Image.open(requests.get(media_url, stream=True).raw)
+            image = image.convert('RGB')
             input_text = "Give me a concise description of this image, ideally under 100 words, translating to English if needed."
             description = generate_gemini_description(image, input_text)
             if not description:
