@@ -472,7 +472,7 @@ class Bot:
             self.state["move"] = time.time()
 
             # White to play
-            if self.currentGame.currentSide == 'w':
+            if self.currentGame.current_side == 'w':
                 if message['source']['nick'] == self.currentGame.player1:
                     if not message['command']['botCommandParams']:
                         self.send_privmsg(
@@ -485,7 +485,7 @@ class Bot:
                             self.send_privmsg(message['command']['channel'], text)
                             time.sleep(2)
                             # get pgn
-                            pgn = self.currentGame.getPGN()
+                            pgn = self.currentGame.get_pgn()
                             for m in pgn:
                                 self.send_privmsg(message['command']['channel'], m)
                                 time.sleep(2)
@@ -500,11 +500,11 @@ class Bot:
                         moveSuccesful = self.currentGame.move(move)
                         # do the move
                         if moveSuccesful:
-                            if self.currentGame.gameOver():
+                            if self.currentGame.game_over():
                                 result = self.currentGame.result()
                                 self.send_privmsg(message['command']['channel'], result)
                                 time.sleep(2)
-                                for m in self.currentGame.getPGN():  # print PGN
+                                for m in self.currentGame.get_pgn():  # print PGN
                                     self.send_privmsg(message['command']['channel'], m)
                                     time.sleep(2)
                                 self.chessGameActive = False
@@ -515,7 +515,7 @@ class Bot:
                                 self.player2 = ""
                                 return
                             # if game not over, print PGN, black to play.
-                            for m in self.currentGame.getPGN():
+                            for m in self.currentGame.get_pgn():
                                 self.send_privmsg(message['command']['channel'], m)
                                 time.sleep(2)
                             self.send_privmsg(
@@ -527,7 +527,7 @@ class Bot:
                             self.send_privmsg(message['command']['channel'], text)
                             time.sleep(2)
 
-            elif self.currentGame.currentSide == 'b':
+            elif self.currentGame.current_side == 'b':
 
                 if message['source']['nick'] == self.currentGame.player2:
                     if not message['command']['botCommandParams']:
@@ -540,7 +540,7 @@ class Bot:
                             text = f"@{message['tags']['display-name']} resigned. @{self.currentGame.player1} wins! PogChamp"
                             self.send_privmsg(message['command']['channel'], text)
                             time.sleep(2)
-                            pgn = self.currentGame.getPGN()
+                            pgn = self.currentGame.get_pgn()
                             for m in pgn:
                                 self.send_privmsg(message['command']['channel'], m)
                                 time.sleep(2)
@@ -553,10 +553,10 @@ class Bot:
                             return
                         moveSuccesful = self.currentGame.move(move)
                         if moveSuccesful:
-                            if self.currentGame.gameOver():
+                            if self.currentGame.game_over():
                                 result = self.currentGame.result()
                                 self.send_privmsg(message['command']['channel'], result)
-                                for m in self.currentGame.getPGN():  # print PGN
+                                for m in self.currentGame.get_pgn():  # print PGN
                                     self.send_privmsg(message['command']['channel'], m)
                                     time.sleep(2)
                                 self.chessGameActive = False
@@ -566,7 +566,7 @@ class Bot:
                                 self.player1 = ""
                                 self.player2 = ""
                                 return
-                            for m in self.currentGame.getPGN():
+                            for m in self.currentGame.get_pgn():
                                 self.send_privmsg(message['command']['channel'], m)
                                 time.sleep(2)
                             self.send_privmsg(
