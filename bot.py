@@ -1,4 +1,4 @@
-import socket, sys, ssl, time, config
+import socket, sys, ssl, time, config, chess
 from chess_game import ChessGame
 from pymongo.mongo_client import MongoClient
 from Commands import ( bot_info, date, help_ascii, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
@@ -671,7 +671,7 @@ class chessGame:
             return result
 
         elif self.board.is_insufficient_material():  # Check for draw by insufficient material
-            pgn += ' { The game is a draw. } 1/2-1/2'
+            self.pgn += ' { The game is a draw. } 1/2-1/2'
             result = "Draw by insufficient material."
             return result
 
