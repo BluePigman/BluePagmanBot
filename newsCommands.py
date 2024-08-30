@@ -9,7 +9,6 @@ def get_random_news_item(keyword=None):
     url = f"https://news.google.com/rss/search?q={keyword}"
     if not keyword:
         url = "https://news.google.com/rss"
-    
     feed = feedparser.parse(url)
     if feed.bozo != 0:
         return "Failed to retrieve or parse the RSS feed."
@@ -18,7 +17,7 @@ def get_random_news_item(keyword=None):
     news_item = random.choice(feed.entries)
     final_url = get_redirect_url(news_item.link)
     if final_url.startswith("https://news.google.com/rss/articles/"):
-        final_url = decode_google_news_url(final_url)
+        # final_url = decode_google_news_url(final_url)
         if not final_url:
             return "Failed to decode the URL."
     # if url is paywalled, try to get from archive.today
