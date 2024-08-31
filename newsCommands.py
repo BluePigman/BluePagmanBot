@@ -1,7 +1,6 @@
 import feedparser
 import random
 import requests
-import base64
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import json
@@ -50,7 +49,6 @@ def get_redirect_url(url):
     return response.url
 
 def decode_google_news_url(source_url):
-    """Decodes a Google News URL using the updated API-based method."""
     try:
         base64_str_response = get_base64_str(source_url)
         if not base64_str_response["status"]:
