@@ -4,6 +4,12 @@ import requests
 import base64
 from datetime import datetime
 from zoneinfo import ZoneInfo
+import json
+from urllib.parse import quote, urlparse
+from selectolax.parser import HTMLParser
+
+def get_help_text():
+    return "Get a random news headline for a given query. If no query is provided, get a random news headline."
 
 def get_random_news_item(keyword=None):
     url = f"https://news.google.com/rss/search?q={keyword}"
@@ -15,11 +21,14 @@ def get_random_news_item(keyword=None):
     if not feed.entries or len(feed.entries) == 0:
         return "No news found for the given query."
     news_item = random.choice(feed.entries)
-    final_url = get_redirect_url(news_item.link)
-    if final_url.startswith("https://news.google.com/rss/articles/"):
-        # final_url = decode_google_news_url(final_url)
-        if not final_url:
-            return "Failed to decode the URL."
+    news_url = get_redirect_url(news_item.link)
+    if news_url.startswith("https://news.google.com/rss/articles/"):
+        final_url = decode_google_news_url(news_url)
+        if final_url["status"] == False:
+            print(final_url["message"])
+            final_url = "Failed to decode the URL."
+        else:
+            final_url = final_url["decoded_url"]
     # if url is paywalled, try to get from archive.today
     paywalled = [
         "nytimes.com",
@@ -27,7 +36,7 @@ def get_random_news_item(keyword=None):
     ]
     if any(domain in final_url for domain in paywalled):
         final_url = f"https://archive.today/?run=1&url={final_url}"
-    return_str = f"{news_item.title}, published on {gmt_to_est(news_item.published)}"
+    return_str = f"{news_item.title}, published on {gmt_to_est(news_item.published)}, {final_url}"
     return return_str
 
 def gmt_to_est(gmt_time_str):
@@ -41,70 +50,108 @@ def get_redirect_url(url):
     return response.url
 
 def decode_google_news_url(source_url):
-    url = requests.utils.urlparse(source_url)
-    path = url.path.split("/")
-    if url.hostname == "news.google.com" and len(path) > 1 and path[-2] == "articles":
-        base64_str = path[-1]
-        decoded_bytes = base64.urlsafe_b64decode(base64_str + "==")
-        decoded_str = decoded_bytes.decode("latin1")
+    """Decodes a Google News URL using the updated API-based method."""
+    try:
+        base64_str_response = get_base64_str(source_url)
+        if not base64_str_response["status"]:
+            return base64_str_response
 
-        prefix = b"\x08\x13\x22".decode("latin1")
-        if decoded_str.startswith(prefix):
-            decoded_str = decoded_str[len(prefix):]
+        decoding_params_response = get_decoding_params(
+            base64_str_response["base64_str"]
+        )
+        if not decoding_params_response["status"]:
+            return decoding_params_response
 
-        suffix = b"\xd2\x01\x00".decode("latin1")
-        if decoded_str.endswith(suffix):
-            decoded_str = decoded_str[:-len(suffix)]
+        signature = decoding_params_response["signature"]
+        timestamp = decoding_params_response["timestamp"]
+        base64_str = decoding_params_response["base64_str"]
 
-        bytes_array = bytearray(decoded_str, "latin1")
-        length = bytes_array[0]
-        if length >= 0x80:
-            decoded_str = decoded_str[2:length + 1]
+        decoded_url_response = decode_url(signature, timestamp, base64_str)
+        if not decoded_url_response["status"]:
+            return decoded_url_response
+
+        return {"status": True, "decoded_url": decoded_url_response["decoded_url"]}
+    except Exception as e:
+        return {
+            "status": False,
+            "message": f"Error in decode_google_news_url: {str(e)}",
+        }
+    
+def get_base64_str(source_url):
+    try:
+        url = urlparse(source_url)
+        path = url.path.split("/")
+        if (
+            url.hostname == "news.google.com"
+            and len(path) > 1
+            and path[-2] in ["articles", "read"]
+        ):
+            base64_str = path[-1]
+            return {"status": True, "base64_str": base64_str}
         else:
-            decoded_str = decoded_str[1:length + 1]
+            return {"status": False, "message": "Invalid Google News URL format."}
+    except Exception as e:
+        return {"status": False, "message": f"Error in get_base64_str: {str(e)}"}
 
-        if decoded_str.startswith("AU_yqL"):
-            return fetch_decoded_batch_execute(base64_str)
+def get_decoding_params(base64_str):
+    try:
+        response = requests.get(f"https://news.google.com/articles/{base64_str}")
+        response.raise_for_status()
 
-        return decoded_str
-    else:
-        return source_url
+        parser = HTMLParser(response.text)
+        datas = parser.css_first("c-wiz > div[jscontroller]")
+        if datas is None:
+            return {
+                "status": False,
+                "message": "Failed to fetch data attributes from Google News.",
+            }
 
-def get_help_text():
-    return "Get a random news headline for a given query. If no query is provided, get a random news headline."
+        return {
+            "status": True,
+            "signature": datas.attributes.get("data-n-a-sg"),
+            "timestamp": datas.attributes.get("data-n-a-ts"),
+            "base64_str": base64_str,
+        }
+    except requests.exceptions.RequestException as req_err:
+        return {
+            "status": False,
+            "message": f"Request error in get_decoding_params: {str(req_err)}",
+        }
+    except Exception as e:
+        return {"status": False, "message": f"Error in get_decoding_params: {str(e)}"}
 
-def fetch_decoded_batch_execute(id):
-    s = (
-        '[[["Fbv4je","[\\"garturlreq\\",[[\\"en-US\\",\\"US\\",[\\"FINANCE_TOP_INDICES\\",\\"WEB_TEST_1_0_0\\"],'
-        'null,null,1,1,\\"US:en\\",null,180,null,null,null,null,null,0,null,null,[1608992183,723341000]],'
-        '\\"en-US\\",\\"US\\",1,[2,3,4,8],1,0,\\"655000234\\",0,0,null,0],\\"'
-        + id
-        + '\\"]",null,"generic"]]]'
-    )
 
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
-        "Referer": "https://news.google.com/",
-    }
+def decode_url(signature, timestamp, base64_str):
+    try:
+        url = "https://news.google.com/_/DotsSplashUi/data/batchexecute"
 
-    response = requests.post(
-        "https://news.google.com/_/DotsSplashUi/data/batchexecute?rpcids=Fbv4je",
-        headers=headers,
-        data={"f.req": s},
-    )
+        payload = [
+            "Fbv4je",
+            f'["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],"X","X",1,[1,1,1],1,1,null,0,0,null,0],"{base64_str}",{timestamp},"{signature}"]',
+        ]
+        headers = {
+            "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        }
+        response = requests.post(
+            url, headers=headers, data=f"f.req={quote(json.dumps([[payload]]))}"
+        )
+        response.raise_for_status()
 
-    if response.status_code != 200:
-        return "Failed to fetch data from Google."
+        parsed_data = json.loads(response.text.split("\n\n")[1])[:-2]
+        decoded_url = json.loads(parsed_data[0][2])[1]
 
-    text = response.text
-    header = '[\\"garturlres\\",\\"'
-    footer = '\\",'
-    if header not in text:
-        raise Exception(f"Header not found in response: {text}")
-    start = text.split(header, 1)[1]
-    if footer not in start:
-        raise Exception("Footer not found in response.")
-    url = start.split(footer, 1)[0]
-    if r"\\u003d" in url:
-        url = url.replace(r"\\u003d", "=")
-    return url
+        return {"status": True, "decoded_url": decoded_url}
+    except requests.exceptions.RequestException as req_err:
+        return {
+            "status": False,
+            "message": f"Request error in decode_url: {str(req_err)}",
+        }
+    except (json.JSONDecodeError, IndexError, TypeError) as parse_err:
+        return {
+            "status": False,
+            "message": f"Parsing error in decode_url: {str(parse_err)}",
+        }
+    except Exception as e:
+        return {"status": False, "message": f"Error in decode_url: {str(e)}"}
+
