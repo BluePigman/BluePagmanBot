@@ -38,6 +38,8 @@ For versions 1.3 and higher:
 
 ``pip install -U google-generativeai``
 
+``pip install selectolax``
+
 
 ## How to use: 
 
