@@ -1,9 +1,13 @@
-import socket, sys, ssl, time, config, chess
+import socket
+import sys
+import ssl
+import time
+import config
 from chess_game import ChessGame
 from pymongo.mongo_client import MongoClient
-from Commands import ( bot_info, date, help_ascii, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
-news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2,
 ascii, help_ascii, reloadglobals, reloadchannel, sparlerlink, suggest, poker, rm, olympics, summarize, describe, rottentomatoes )
+from Commands import (bot_info, date, help_ascii, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
+                      news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2,
 
 class Bot:
 
@@ -28,11 +32,11 @@ class Bot:
         self.choseSidePlayer1 = False
         self.currentGame = None  # hold the chess game
         self.chessTimer = None  # chess game pending timer
-        self.start_time = None # to measure bot uptime
+        self.start_time = None  # to measure bot uptime
         # poker params
         self.pokerGameActive = False
         self.pokerGamePending = False
-        self.pokerPlayers = {} # username : userid
+        self.pokerPlayers = {}  # username : userid
         self.pokerGame = None
         self.pokerTimer = None
 
@@ -178,7 +182,8 @@ class Bot:
             parsed_message['parameters'] = raw_parameters_component
 
             if raw_parameters_component and raw_parameters_component[0] == self.command_prefix:
-                parsed_message['command'] = self.parse_parameters(raw_parameters_component, parsed_message['command'])
+                parsed_message['command'] = self.parse_parameters(
+                    raw_parameters_component, parsed_message['command'])
 
         return parsed_message
 
@@ -241,7 +246,7 @@ class Bot:
         if command_parts[0] in ['JOIN', 'PART', 'NOTICE', 'CLEARCHAT', 'HOSTTARGET', 'PRIVMSG']:
             parsed_command = {
                 'command': command_parts[0],
-                'channel': command_parts[1][1:] 
+                'channel': command_parts[1][1:]
             }
         elif command_parts[0] == 'PING':
             parsed_command = {'command': command_parts[0]}
@@ -253,10 +258,11 @@ class Bot:
         elif command_parts[0] in ['GLOBALUSERSTATE', 'USERSTATE', 'ROOMSTATE']:
             parsed_command = {
                 'command': command_parts[0],
-                'channel': command_parts[1][1:]  if len(command_parts) > 1 else None
+                'channel': command_parts[1][1:] if len(command_parts) > 1 else None
             }
         elif command_parts[0] == 'RECONNECT':
-            print('The Twitch IRC server is about to terminate the connection for maintenance.')
+            print(
+                'The Twitch IRC server is about to terminate the connection for maintenance.')
             parsed_command = {'command': command_parts[0]}
         elif command_parts[0] == '421':
             print(f'Unsupported IRC command: {command_parts[2]}')
@@ -264,7 +270,7 @@ class Bot:
         elif command_parts[0] == '001':
             parsed_command = {
                 'command': command_parts[0],
-                'channel': command_parts[1][1:] 
+                'channel': command_parts[1][1:]
             }
         elif command_parts[0] in ['002', '003', '004', '353', '366', '372', '375', '376']:
             print(f'numeric message: {command_parts[0]}')
@@ -298,7 +304,6 @@ class Bot:
 
         return command
 
-
     def handle_message(self, received_msg):
         if received_msg == "None" or not received_msg:
             return
@@ -312,27 +317,31 @@ class Bot:
 
         if message['command']['command'] == 'RECONNECT':
             for channel in self.channels:
-                self.send_privmsg(channel, "The Twitch server needs to terminate the connection for maintenance. Reconnecting...")
+                self.send_privmsg(
+                    channel, "The Twitch server needs to terminate the connection for maintenance. Reconnecting...")
             self.irc.shutdown(socket.SHUT_RDWR)
             self.irc.close()
             time.sleep(1)
             self.connect()
 
         # # Follow 1s cooldown
-        if message['command']['command']== 'PRIVMSG' and \
-            message['parameters'][0] == (self.command_prefix) \
-            and time.time() - self.time > 1:
-            
+        if message['command']['command'] == 'PRIVMSG' and \
+                message['parameters'][0] == (self.command_prefix) \
+                and time.time() - self.time > 1:
+
             if message['command']['botCommand'].lower() in self.custom_commands:
-                self.custom_commands[message['command']['botCommand'].lower()](self, message)
+                self.custom_commands[message['command']
+                                     ['botCommand'].lower()](self, message)
                 self.time = time.time()
 
             if message['command']['botCommand'].lower() in self.private_commands:
-                self.private_commands[message['command']['botCommand'].lower()](message)
+                self.private_commands[message['command']
+                                      ['botCommand'].lower()](message)
                 self.time = time.time()
 
             if message['command']['botCommand'].lower() in self.chess_commands:
-                self.chess_commands[message['command']['botCommand'].lower()](message)
+                self.chess_commands[message['command']
+                                    ['botCommand'].lower()](message)
                 self.time = time.time()
 
             # Aliases.
@@ -345,7 +354,6 @@ class Bot:
             received_msgs = self.irc.recv(4096).decode(errors='ignore')
             for received_msg in received_msgs.split('\r\n'):
                 self.handle_message(received_msg)
-            
 
     """Private commands"""
 
@@ -359,11 +367,13 @@ class Bot:
             if ("leave" not in self.state or time.time() - self.state["leave"] >
                     self.cooldown):
                 self.state["leave"] = time.time()
-                self.send_privmsg(message['command']['channel'], "NOIDONTTHINKSO")
+                self.send_privmsg(message['command']
+                                  ['channel'], "NOIDONTTHINKSO")
 
     def say(self, message):
         if message['source']['nick'] == config.bot_owner:
-            self.send_privmsg(message['command']['channel'], message['command']['botCommandParams'])
+            self.send_privmsg(
+                message['command']['channel'], message['command']['botCommandParams'])
         else:
             self.send_privmsg(message['command']['channel'], "No")
 
@@ -371,7 +381,7 @@ class Bot:
     def echo(self, message):
         if message['source']['nick'] == config.bot_owner:
             if len(message['command']['botCommandParams']) > 1:
-                text  = message['command']['botCommandParams'].split()
+                text = message['command']['botCommandParams'].split()
                 channel = text[0]
                 text = " ".join(text[1:])
                 if message['source']['nick'] == config.bot_owner:
@@ -397,17 +407,19 @@ class Bot:
         if message['source']['nick'] == self.player1 or message['source']['nick'] == self.player2:
             self.chessGameActive = False
             self.gameAccepted = False
-            self.send_privmsg(message['command']['channel'], "Chess game has been reset.")
+            self.send_privmsg(
+                message['command']['channel'], "Chess game has been reset.")
             self.player1 = ""
             self.player2 = ""
             self.chessGameActive = False
             self.choseSidePlayer1 = False
             self.currentGame = None
             time.sleep(2)
-            
+
     def reset_poker(self, message):
-        if message['tags']['display-name'] in  self.pokerPlayers:
-            self.send_privmsg(message['command']['channel'], "Poker game has been reset.")
+        if message['tags']['display-name'] in self.pokerPlayers:
+            self.send_privmsg(
+                message['command']['channel'], "Poker game has been reset.")
             self.pokerGameActive = False
             self.pokerPlayers = {}
             self.pokerGame = None
@@ -480,14 +492,17 @@ class Bot:
                     else:
                         move = message['command']['botCommandParams']
                         if move == "resign":
-                            self.currentGame.resign(message['source']['nick'])  # will update pgn
+                            self.currentGame.resign(
+                                message['source']['nick'])  # will update pgn
                             text = f"@{message['tags']['display-name']} resigned. @{self.currentGame.player2} wins."
-                            self.send_privmsg(message['command']['channel'], text)
+                            self.send_privmsg(
+                                message['command']['channel'], text)
                             time.sleep(2)
                             # get pgn
                             pgn = self.currentGame.get_pgn()
                             for m in pgn:
-                                self.send_privmsg(message['command']['channel'], m)
+                                self.send_privmsg(
+                                    message['command']['channel'], m)
                                 time.sleep(2)
                             # reset chess vars.
                             self.chessGameActive = False
@@ -502,10 +517,12 @@ class Bot:
                         if moveSuccesful:
                             if self.currentGame.game_over():
                                 result = self.currentGame.result()
-                                self.send_privmsg(message['command']['channel'], result)
+                                self.send_privmsg(
+                                    message['command']['channel'], result)
                                 time.sleep(2)
                                 for m in self.currentGame.get_pgn():  # print PGN
-                                    self.send_privmsg(message['command']['channel'], m)
+                                    self.send_privmsg(
+                                        message['command']['channel'], m)
                                     time.sleep(2)
                                 self.chessGameActive = False
                                 self.choseSidePlayer1 = False
@@ -516,7 +533,8 @@ class Bot:
                                 return
                             # if game not over, print PGN, black to play.
                             for m in self.currentGame.get_pgn():
-                                self.send_privmsg(message['command']['channel'], m)
+                                self.send_privmsg(
+                                    message['command']['channel'], m)
                                 time.sleep(2)
                             self.send_privmsg(
                                 message['command']['channel'], f"@{self.currentGame.player2} it is your turn.")
@@ -524,7 +542,8 @@ class Bot:
                         else:  # move was unsuccessful
                             text = f"Invalid/illegal move, please try again. \
                             For help refer to {self.command_prefix}help_chess."
-                            self.send_privmsg(message['command']['channel'], text)
+                            self.send_privmsg(
+                                message['command']['channel'], text)
                             time.sleep(2)
 
             elif self.currentGame.current_side == 'b':
@@ -536,13 +555,16 @@ class Bot:
                     else:
                         move = message['command']['botCommandParams']
                         if move == "resign":
-                            self.currentGame.resign(message['source']['nick'])  # will update pgn
+                            self.currentGame.resign(
+                                message['source']['nick'])  # will update pgn
                             text = f"@{message['tags']['display-name']} resigned. @{self.currentGame.player1} wins! PogChamp"
-                            self.send_privmsg(message['command']['channel'], text)
+                            self.send_privmsg(
+                                message['command']['channel'], text)
                             time.sleep(2)
                             pgn = self.currentGame.get_pgn()
                             for m in pgn:
-                                self.send_privmsg(message['command']['channel'], m)
+                                self.send_privmsg(
+                                    message['command']['channel'], m)
                                 time.sleep(2)
                             self.chessGameActive = False
                             self.choseSidePlayer1 = False
@@ -555,9 +577,11 @@ class Bot:
                         if moveSuccesful:
                             if self.currentGame.game_over():
                                 result = self.currentGame.result()
-                                self.send_privmsg(message['command']['channel'], result)
+                                self.send_privmsg(
+                                    message['command']['channel'], result)
                                 for m in self.currentGame.get_pgn():  # print PGN
-                                    self.send_privmsg(message['command']['channel'], m)
+                                    self.send_privmsg(
+                                        message['command']['channel'], m)
                                     time.sleep(2)
                                 self.chessGameActive = False
                                 self.gameAccepted = False
@@ -567,7 +591,8 @@ class Bot:
                                 self.player2 = ""
                                 return
                             for m in self.currentGame.get_pgn():
-                                self.send_privmsg(message['command']['channel'], m)
+                                self.send_privmsg(
+                                    message['command']['channel'], m)
                                 time.sleep(2)
                             self.send_privmsg(
                                 message['command']['channel'], f"@{self.currentGame.player1} it is your turn.")
@@ -575,8 +600,10 @@ class Bot:
                         else:  # move was unsuccessful
                             text = f"Invalid/illegal move, please try again. \
                             For help refer to {self.command_prefix}help_chess."
-                            self.send_privmsg(message['command']['channel'], text)
+                            self.send_privmsg(
+                                message['command']['channel'], text)
                             time.sleep(2)
+
 
 def main():
     bot = Bot()
