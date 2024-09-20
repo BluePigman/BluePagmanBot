@@ -183,6 +183,15 @@ class Bot:
             parsed_message['source'] = self.parse_source(raw_source_component)
             parsed_message['parameters'] = raw_parameters_component
 
+            # if message is a reply, remove leading @username
+            if parsed_message['tags'] and parsed_message['tags'].get('reply-parent-msg-body'):
+                raw_parameters_component = raw_parameters_component.split(' ')[
+                    1:]
+                raw_parameters_component = " ".join(raw_parameters_component)
+                parsed_message['parameters'] = raw_parameters_component
+                raw_parameters_component = raw_parameters_component + \
+                    " " + parsed_message['tags']['reply-parent-msg-body']
+
             if raw_parameters_component and raw_parameters_component[0] == self.command_prefix:
                 parsed_message['command'] = self.parse_parameters(
                     raw_parameters_component, parsed_message['command'])
@@ -304,7 +313,6 @@ class Bot:
         else:
             command['botCommand'] = command_parts[:params_idx]
             command['botCommandParams'] = command_parts[params_idx:].strip()
-
         return command
 
     def handle_message(self, received_msg):
