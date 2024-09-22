@@ -208,8 +208,9 @@ class Bot:
         parsed_tags = tags.split(';')
 
         for tag in parsed_tags:
-            parsed_tag = tag.split('=')
-            tag_value = None if parsed_tag[1] == '' else parsed_tag[1]
+            parsed_tag = tag.split('=', 1)
+            tag_value = None if len(
+                parsed_tag) == 1 or parsed_tag[1] == '' else parsed_tag[1]
 
             if parsed_tag[0] == 'reply-parent-msg-body':
                 if tag_value:
