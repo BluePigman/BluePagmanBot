@@ -1,28 +1,42 @@
 import time
 import threading
-from datetime import datetime, timedelta
 from reminder_class import Reminder
 
 
 def reply_with_reminder(self, message):
-    user = message['tags']['display-name']
-    channel = message['command']['channel']
+    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
+            self.cooldown):
+        self.state[message['source']['nick']] = time.time()
 
-    # Enforce cooldown
-    if user not in self.state or time.time() - self.state[user] > self.cooldown:
-        self.state[user] = time.time()
+        user = message['tags']['display-name']
+        channel = message['command']['channel']
+
+        # Get the user's reminder count from MongoDB
+        user_data = self.users.find_one({'user': message['source']['nick']})
+        if user_data:
+            reminder_count = user_data.get('reminderCount', 0)
+        else:
+            # If user is not found, initialize their reminderCount
+            reminder_count = 0
+            self.users.insert_one(
+                {'user': message['source']['nick'], 'reminderCount': 0})
+
+        # Check if the user has hit the reminder limit
+        if reminder_count >= 5:
+            self.send_privmsg(
+                channel, f"@{user}, you already have 5 pending reminders. Please touch some grass.")
+            return
 
         # Parse command parameters
         recipient, time_str, reminder_message = parse_remind_command(
             message['command']['botCommandParams'])
 
-        # Check if time_str is missing or invalid
+        # Validate time_str
         if time_str is None:
             self.send_privmsg(
                 channel, f"@{user}, please specify a valid time for the reminder, like 'in 30s' or 'in 2h'.")
             return
 
-        # Parse time string to seconds
         seconds = parse_time_to_seconds(time_str)
         if seconds is None:
             self.send_privmsg(
@@ -30,27 +44,39 @@ def reply_with_reminder(self, message):
             return
 
         # Create a Reminder instance
+        reminder_message = reminder_message or "No message"
         if recipient == "me":
             recipient = user
-            reminder_message = reminder_message or "No message"
-            reminder = Reminder(
-                creator=user, recipient=recipient, time_ago=time_str, message=reminder_message)
-            display_message = reminder.display_reminder()
-        else:
-            reminder = Reminder(
-                creator=user, recipient=recipient, time_ago=time_str, message=reminder_message)
-            display_message = reminder.display_reminder()
+        reminder = Reminder(
+            creator=user, recipient=recipient, time_ago=time_str, message=reminder_message)
+        display_message = reminder.display_reminder()
 
         # Schedule the reminder
-        schedule_reminder(self, seconds, display_message,
-                          channel)
+        schedule_reminder(self, seconds, display_message, channel, user)
+
+        # Increment the user's reminder count in the database
+        self.users.update_one({'user': message['source']['nick']}, {
+            '$inc': {'reminderCount': 1}})
 
         # Confirm the reminder setup in chat
         self.send_privmsg(channel,
                           f"@{user}, I will remind {recipient} in {time_str}.")
-    else:
-        self.send_privmsg(channel,
-                          f"@{user}, please wait before sending another reminder.")
+
+
+def schedule_reminder(bot_instance, delay, message, channel, user):
+    """
+    Schedules a reminder to be sent after a specified delay.
+    After sending the reminder, decrement the user's reminder count in MongoDB.
+    """
+    def send_reminder():
+        # Send the reminder
+        bot_instance.send_privmsg(channel, message)
+
+        # Decrement the user's reminder count in the database
+        bot_instance.users.update_one(
+            {'user': user.lower()}, {'$inc': {'reminderCount': -1}})
+
+    threading.Timer(delay, send_reminder).start()
 
 
 def parse_remind_command(args):
@@ -159,16 +185,3 @@ def parse_time_to_seconds(time_str):
         return seconds
     except (ValueError, IndexError):
         return None  # Catch invalid format and indexing errors
-
-
-def schedule_reminder(bot_instance, delay, message, channel):
-    """
-    Schedules a reminder to be sent after a specified delay.
-
-    :param bot_instance: The bot instance that should send the reminder
-    :param delay: The delay in seconds before the reminder is sent
-    :param message: The message to send
-    :param channel: The channel to send the reminder to
-    """
-    threading.Timer(delay, bot_instance.send_privmsg,
-                    args=(channel, message)).start()
