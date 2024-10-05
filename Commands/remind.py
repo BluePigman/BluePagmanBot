@@ -24,7 +24,7 @@ def reply_with_reminder(self, message):
         # Check if the user has hit the reminder limit
         if reminder_count >= 5:
             self.send_privmsg(
-                channel, f"@{user}, you already have 5 pending reminders. Please touch some grass.")
+                channel, f"@{user}, you already have 5 pending reminders. Enough spamming.")
             return
 
         # Parse command parameters
@@ -38,9 +38,10 @@ def reply_with_reminder(self, message):
             return
 
         seconds = parse_time_to_seconds(time_str)
-        if seconds is None:
+        # Check for minimum 1 minute (60 seconds)
+        if seconds is None or seconds < 60:
             self.send_privmsg(
-                channel, f"@{user}, invalid time format or time is too large. Please specify a correct time format like '30s', '2m', '1h', etc., and ensure it is less than 1 month.")
+                channel, f"@{user}, you must set a reminder for at least 1 minute. The maximum time you can remind someone is 1 month.")
             return
 
         # Create a Reminder instance
@@ -130,6 +131,7 @@ def parse_time_to_seconds(time_str):
     :param time_str: A time string to parse
     :return: Number of seconds represented by the string or None if invalid
     """
+    MIN_SECONDS = 60  # Minimum time limit of 1 minute in seconds
     MAX_SECONDS = 30 * 24 * 3600  # Maximum time limit of 30 days in seconds
 
     try:
@@ -152,8 +154,8 @@ def parse_time_to_seconds(time_str):
             else:
                 return None  # Invalid unit
 
-            if seconds > MAX_SECONDS:
-                return None  # Exceeds the maximum allowed time
+            if seconds > MAX_SECONDS or seconds < MIN_SECONDS:
+                return None  # Exceeds the maximum allowed time or below the minimum
 
             return seconds
 
@@ -179,8 +181,8 @@ def parse_time_to_seconds(time_str):
         else:
             return None  # Invalid unit
 
-        if seconds > MAX_SECONDS:
-            return None  # Exceeds the maximum allowed time
+        if seconds > MAX_SECONDS or seconds < MIN_SECONDS:
+            return None  # Exceeds the maximum allowed time or below the minimum
 
         return seconds
     except (ValueError, IndexError):
