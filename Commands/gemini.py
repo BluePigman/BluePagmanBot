@@ -9,7 +9,7 @@ def reply_with_gemini(self, message):
         self.state[message['source']['nick']] = time.time()
 
     if not message['command']['botCommandParams']:
-        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-1.5-flash-001, \
+        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-1.5-flash-002, \
             temperature: 1.1, top_p: 0.95"
         self.send_privmsg(message['command']['channel'], m)
         return
@@ -22,7 +22,7 @@ def reply_with_gemini(self, message):
 
 
 generation_config = {
-    "max_output_tokens": 2000,
+    "max_output_tokens": 500,
     "temperature": 1.1,
     "top_p": 0.95,
 }
