@@ -1,8 +1,6 @@
 import time
-
 import vertexai
-from vertexai.generative_models import GenerativeModel
-import vertexai.preview.generative_models as generative_models
+from vertexai.generative_models import GenerativeModel, SafetySetting, Tool, grounding
 
 
 def reply_with_gemini_experimental(self, message):
@@ -11,8 +9,9 @@ def reply_with_gemini_experimental(self, message):
         self.state[message['source']['nick']] = time.time()
 
     if not message['command']['botCommandParams']:
-        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-experimental, \
-            temperature: 2"
+        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Uses grounding, which means it will \
+         use Google for its responses.  Model: gemini-1.5-flash-002, \
+            temperature: 2, top_p: 0.75"
         self.send_privmsg(message['command']['channel'], m)
         return
 
@@ -23,27 +22,54 @@ def reply_with_gemini_experimental(self, message):
         time.sleep(1)
 
 
-
 generation_config = {
     "max_output_tokens": 300,
     "temperature": 2,
+    "top_p": 0.75,
 }
 
-safety_settings = {
-    generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
-    generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
-    generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
-    generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
-}
+safety_settings = [
+    SafetySetting(
+        category=SafetySetting.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+        threshold=SafetySetting.HarmBlockThreshold.BLOCK_NONE
+    ),
+    SafetySetting(
+        category=SafetySetting.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+        threshold=SafetySetting.HarmBlockThreshold.BLOCK_NONE
+    ),
+    SafetySetting(
+        category=SafetySetting.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+        threshold=SafetySetting.HarmBlockThreshold.BLOCK_NONE
+    ),
+    SafetySetting(
+        category=SafetySetting.HarmCategory.HARM_CATEGORY_HARASSMENT,
+        threshold=SafetySetting.HarmBlockThreshold.BLOCK_NONE
+    ),
+]
 
-def generate(prompt):
+tools = [
+    Tool.from_google_search_retrieval(
+        google_search_retrieval=grounding.GoogleSearchRetrieval()
+    ),
+]
+
+
+def generate(prompt) -> list[str]:
     vertexai.init(project="bluepagmanbot", location="us-central1")
     model = GenerativeModel(
-    "gemini-experimental",
+        "gemini-1.5-flash-002",
+        tools=tools,
+        system_instruction=["Please always provide a complete response. Make up an answer if you do not have enough \
+                        information or context regarding the prompt. Do not ask the user follow up questions, \
+                        because you are intended to provide a single response with no history and are not expected \
+                        any follow up prompts. If given a media file, please describe it. For GIFS/WEBP files describe all frames."]
     )
     try:
+        if isinstance(prompt, str):
+            prompt = [prompt]
+
         response = model.generate_content(
-            [prompt],
+            prompt,
             generation_config=generation_config,
             safety_settings=safety_settings,
             stream=False,
@@ -52,4 +78,5 @@ def generate(prompt):
         n = 495
         return [response[i:i+n] for i in range(0, len(response), n)]
     except Exception as e:
-        return ["Error: prompt was likely blocked."]
+        print(e)
+        return ["Error: ", e[0:490]]
