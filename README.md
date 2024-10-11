@@ -28,8 +28,6 @@ For versions 1.3 and higher:
 
 ``gcloud auth application-default login``
 
-``pip install pillow``
-
 ``pip install texasholdem``
 
 ``pip install beautifulsoup4``
