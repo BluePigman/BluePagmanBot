@@ -23,7 +23,7 @@ def reply_with_gemini_experimental(self, message):
 
 
 generation_config = {
-    "max_output_tokens": 300,
+    "max_output_tokens": 900,
     "temperature": 2,
     "top_p": 0.75,
 }
