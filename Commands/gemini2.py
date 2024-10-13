@@ -23,7 +23,7 @@ def reply_with_gemini_experimental(self, message):
 
 
 generation_config = {
-    "max_output_tokens": 900,
+    "max_output_tokens": 400,
     "temperature": 2,
     "top_p": 0.75,
 }
@@ -59,10 +59,10 @@ def generate(prompt) -> list[str]:
     model = GenerativeModel(
         "gemini-1.5-flash-002",
         tools=tools,
-        system_instruction=["Please always provide a complete response. Make up an answer if you do not have enough \
-                        information or context regarding the prompt. Do not ask the user follow up questions, \
-                        because you are intended to provide a single response with no history and are not expected \
-                        any follow up prompts. If given a media file, please describe it. For GIFS/WEBP files describe all frames."]
+        system_instruction=["""Please always provide a short and concise response. Do not ask the user follow up questions, 
+                        because you are intended to provide a single response with no history and are not expected
+                        any follow up prompts. If given a media file, please describe it. For GIFS/WEBP files describe all frames.
+                        Answer should be at most 990 characters."""]
     )
     try:
         if isinstance(prompt, str):
