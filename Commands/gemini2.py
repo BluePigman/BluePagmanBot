@@ -62,7 +62,8 @@ def generate(prompt) -> list[str]:
         system_instruction=["""Please always provide a short and concise response. Do not ask the user follow up questions, 
                         because you are intended to provide a single response with no history and are not expected
                         any follow up prompts. If given a media file, please describe it. For GIFS/WEBP files describe all frames.
-                        Answer should be at most 990 characters."""]
+                        Answer should be at most 990 characters. Don't mention source numbers because the user
+                            will not know what they are referring to."""]
     )
     try:
         if isinstance(prompt, str):
