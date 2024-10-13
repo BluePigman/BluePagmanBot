@@ -147,6 +147,22 @@ def reply_with_describe(self, message):
 
         os.remove(video_file_name)
 
+    elif content_type == 'application/pdf':
+        try:
+            pdf = Part.from_uri(
+                mime_type=content_type,
+                uri=media_url
+            )
+            input_text = "Summarize this pdf, translating to English if needed."
+            description = generate_gemini_description(pdf, input_text)
+
+        except Exception as e:
+            print(e)
+            self.send_privmsg(message['command']['channel'], str(e)[0:400])
+            time.sleep(0.5)
+            self.send_privmsg(
+                message['command']['channel'], "PDF could not be processed, check the link.")
+            return
     else:
         m = f"@{message['tags']['display-name']}, content type was found to be {content_type}. Please provide a valid emote name, or a link to an image or a .mp4 video."
         self.send_privmsg(message['command']['channel'], m)
