@@ -1,170 +1,77 @@
-import requests, time, config
+import pymongo
+import requests
+import time
+import config
 
-def reload_7tv_channel(self, message):
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
+
+def reload_channel(self, message):
+    if (message['source']['nick'] not in self.state or
+            time.time() - self.state[message['source']['nick']] > self.cooldown):
         self.state[message['source']['nick']] = time.time()
 
-        channel_id =  message["tags"]["room-id"]
-        start_time = time.time()  # Start measuring time
-        # Make GET request
-        response = requests.get(f"https://7tv.io/v3/users/twitch/{channel_id}")
+        channel_id = message["tags"]["room-id"]
+        start_time = time.time()
 
+        # Combined current emote set for all platforms
+        current_emote_ids = set()
+
+        emotes_collection = self.db['Emotes']
+        bulk_operations = []
+
+        # Helper function to process emotes from different platforms
+        def process_emotes(emotes, emote_type, id_key="id", name_key="name", url_template=""):
+            for emote in emotes:
+                emote_id = emote[id_key]
+                name = emote[name_key]
+                url = url_template.format(emote_id)
+
+                # Prepare upsert operation with emote_type
+                bulk_operations.append(
+                    pymongo.UpdateOne(
+                        {"emote_id": emote_id},
+                        {"$set": {"name": name, "url": url, "emote_type": emote_type}},
+                        upsert=True
+                    )
+                )
+                current_emote_ids.add(emote_id)
+
+        # 7TV emotes
+        response = requests.get(f"https://7tv.io/v3/users/twitch/{channel_id}")
         if response.status_code == 200:
-            # Handle successful response
             data = response.json()
             emotes = data["emote_set"]["emotes"]
+            process_emotes(emotes, "7TV", "id", "name",
+                           "https://cdn.7tv.app/emote/{}/4x.webp")
 
-            # Ensure the Emotes collection exists
-            emotes_collection = self.db['Emotes']
-
-            # Prepare batch insert
-            new_emotes = []
-            for emote in emotes:
-                emote_id = emote["id"]
-                name = emote["name"]
-                url = "https://cdn.7tv.app/emote/" + emote_id + "/4x.webp"
-
-                # Check if the emote already exists in the collection
-                if not emotes_collection.find_one({"emote_id": emote_id}):
-                    new_emotes.append({
-                        "emote_id": emote_id,
-                        "name": name,
-                        "url": url
-                    })
-
-            # Batch insert new emotes
-            if new_emotes:
-                emotes_collection.insert_many(new_emotes)
-            
-            end_time = time.time()  # End measuring time
-            elapsed_time = end_time - start_time  # Calculate elapsed time
-            
-            # Send success message with elapsed time
-            m = f"7 TV Channel Emotes reloaded successfully in {elapsed_time:.2f} seconds."
-            self.send_privmsg(message['command']['channel'], m)
-        else:
-            # Print error message
-            m = f"Error: {response.status_code} - {response.text}"
-            self.send_privmsg(message['command']['channel'], m)
-        
-def reload_ffz_channel(self, message):
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
-        self.state[message['source']['nick']] = time.time()
-
-        channel_id =  get_user_id(message['command']['channel']) 
-        if not channel_id:
-            m = f"Error: Could not retrieve channel ID for {message['command']['channel']}"
-            self.send_privmsg(message['command']['channel'], m)
-            return
-        start_time = time.time()  # Start measuring time
-        # Make GET request
-        response = requests.get(f"https://api.frankerfacez.com/v1/room/id/{channel_id}")
-
+        # FFZ emotes
+        response = requests.get(
+            f"https://api.frankerfacez.com/v1/room/id/{channel_id}")
         if response.status_code == 200:
-            # Handle successful response
             data = response.json()
-            
-            # Ensure the Emotes collection exists
-            emotes_collection = self.db['Emotes']
-
             ffz_id = data["room"]["set"]
-            # Prepare batch insert
-            new_emotes = []
-            for emote_set in data["sets"][str(ffz_id)]["emoticons"]:
-                emote_id = "FFZ-" + str(emote_set['id'])
-                name = emote_set['name']
-                url = "https://cdn.frankerfacez.com/emote/" + str(emote_set['id']) + "/4"
-                
-                # Check if the emote already exists in the collection
-                if not emotes_collection.find_one({"emote_id": emote_id}):
-                    new_emotes.append({
-                        "emote_id": emote_id,
-                        "name": name,
-                        "url": url
-                    })
+            emotes = data["sets"][str(ffz_id)]["emoticons"]
+            process_emotes(emotes, "FFZ", "id", "name",
+                           "https://cdn.frankerfacez.com/emote/{}/4")
 
-            # Batch insert new emotes
-            if new_emotes:
-                emotes_collection.insert_many(new_emotes)
-            
-            end_time = time.time()  # End measuring time
-            elapsed_time = end_time - start_time  # Calculate elapsed time
-            
-            # Send success message with elapsed time
-            m = f"FFZ Channel Emotes reloaded successfully in {elapsed_time:.2f} seconds."
-            self.send_privmsg(message['command']['channel'], m)
-        else:
-            # Print error message
-            m = f"Error: {response.status_code} - {response.text}"
-            self.send_privmsg(message['command']['channel'], m)
-
-def reload_bttv_channel(self, message):
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
-        self.state[message['source']['nick']] = time.time()
-
-        channel_id =  get_user_id(message['command']['channel']) 
-        if not channel_id:
-            m = f"Error: Could not retrieve channel ID for {message['command']['channel']}"
-            self.send_privmsg(message['command']['channel'], m)
-            return
-        start_time = time.time()  # Start measuring time
-        # Make GET request
-        response = requests.get(f"https://api.betterttv.net/3/cached/users/twitch/{channel_id}")
-
+        # BTTV emotes
+        response = requests.get(
+            f"https://api.betterttv.net/3/cached/users/twitch/{channel_id}")
         if response.status_code == 200:
-            # Handle successful response
             data = response.json()
-            emotes_list = data["channelEmotes"] + data["sharedEmotes"]
-            # Ensure the Emotes collection exists
-            emotes_collection = self.db['Emotes']
+            emotes = data["channelEmotes"] + data["sharedEmotes"]
+            process_emotes(emotes, "BTTV", "id", "code",
+                           "https://cdn.betterttv.net/emote/{}/3x")
 
-            # Prepare batch insert
-            new_emotes = []
-            for emote in emotes_list:
-                emote_id = emote["id"]
-                name = emote["code"]
-                url = "https://cdn.betterttv.net/emote/" + emote_id + "/3x"
-                
-                # Check if the emote already exists in the collection
-                if not emotes_collection.find_one({"emote_id": emote_id}):
-                    new_emotes.append({
-                        "emote_id": emote_id,
-                        "name": name,
-                        "url": url
-                    })
+        # Execute bulk upserts
+        if bulk_operations:
+            emotes_collection.bulk_write(bulk_operations)
 
-            # Batch insert new emotes
-            if new_emotes:
-                emotes_collection.insert_many(new_emotes)
-            
-            end_time = time.time()  # End measuring time
-            elapsed_time = end_time - start_time  # Calculate elapsed time
-            
-            # Send success message with elapsed time
-            m = f"BetterTTV Channel Emotes reloaded successfully in {elapsed_time:.2f} seconds."
-            self.send_privmsg(message['command']['channel'], m)
-        else:
-            self.send_privmsg(message['command']['channel'], f"Error: {response.status_code} - {response.text}")
+        # Delete emotes not in the current set across all platforms
+        emotes_collection.delete_many(
+            {"emote_id": {"$nin": list(current_emote_ids)}}
+        )
 
-def get_user_id(username):
-    headers = {
-            'Authorization': f"Bearer {config.user_access_token}",
-            'Client-ID': f'{config.client_id}',
-        }
-    params = {
-        'login': username,
-    }
-    response = requests.get('https://api.twitch.tv/helix/users', headers=headers, params=params)
-
-    if response.status_code == 200:
-        # Handle successful response
-        data = response.json()
-        if data['data']:
-            user_info = data['data'][0]
-            user_id = user_info['id']
-            return user_id
-        else:
-            return None
-    else:
-        # Handle error response
-        return None
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        self.send_privmsg(message['command']['channel'],
+                          f"Channel emotes reloaded successfully in {elapsed_time:.2f} seconds.")
