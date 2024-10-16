@@ -19,7 +19,7 @@ def reply_with_gemini_experimental(self, message):
     result = generate(prompt)
     for m in result:
         self.send_privmsg(message['command']['channel'], m)
-        time.sleep(1)
+        time.sleep(1.5)
 
 
 generation_config = {
