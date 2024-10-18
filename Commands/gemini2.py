@@ -9,8 +9,7 @@ def reply_with_gemini_experimental(self, message):
         self.state[message['source']['nick']] = time.time()
 
     if not message['command']['botCommandParams']:
-        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Uses grounding, which means it will \
-         use Google for its responses.  Model: gemini-1.5-flash-002, \
+        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-1.5-flash-002, \
             temperature: 2, top_p: 0.75"
         self.send_privmsg(message['command']['channel'], m)
         return
@@ -47,18 +46,18 @@ safety_settings = [
     ),
 ]
 
-tools = [
-    Tool.from_google_search_retrieval(
-        google_search_retrieval=grounding.GoogleSearchRetrieval()
-    ),
-]
+# tools = [
+#     Tool.from_google_search_retrieval(
+#         google_search_retrieval=grounding.GoogleSearchRetrieval()
+#     ),
+# ]
 
 
 def generate(prompt) -> list[str]:
     vertexai.init(project="bluepagmanbot", location="us-central1")
     model = GenerativeModel(
         "gemini-1.5-flash-002",
-        tools=tools,
+        # tools=tools,
         system_instruction=["""Please always provide a short and concise response. Do not ask the user follow up questions, 
                         because you are intended to provide a single response with no history and are not expected
                         any follow up prompts. If given a media file, please describe it. For GIFS/WEBP files describe all frames.
