@@ -159,3 +159,46 @@ def reply_with_ascii(bot, message):
         except UnidentifiedImageError:
             bot.send_privmsg(message['command']['channel'],
                              "The link was not a valid image. :Z")
+
+
+def first_frame(self, channel, emote_url):
+    # get first frame of ascii
+    try:
+        resp = requests.get(emote_url)
+        img_bytes = resp.content
+    except Exception as e:
+        print(e)
+        return e
+
+    try:
+        image = Image.open(BytesIO(img_bytes))
+        frames = []
+        if getattr(image, "is_animated", False):
+            total_frames = image.n_frames
+            max_frames = 20
+
+            if total_frames > max_frames:
+                # Calculate the interval to sample frames
+                interval = total_frames // max_frames
+            else:
+                interval = 1
+
+            # Extract frames based on the calculated interval
+            for i, frame in enumerate(ImageSequence.Iterator(image)):
+                if i % interval == 0:
+                    frame = frame.convert('RGBA')
+                    frames.append(frame)
+                    if len(frames) >= max_frames:
+                        break
+        else:
+            frames.append(image)
+
+        frame = frames[0]
+        frame = frame.convert("RGBA")
+        image_str = ""
+        image_str = braillecreate.treshold_dithering(
+            frame, width=60, height=60)
+        return image_str
+    except UnidentifiedImageError:
+        self.send_privmsg(channel,
+                          "The link was not a valid image. :Z")
