@@ -78,7 +78,6 @@ def reply_with_ascii(bot, message):
         try:
             args = parse_custom_args(input_arg[1:])
         except Exception as e:
-            bot.send_privmsg(message['command']['channel'], "Error parsing arguments: " + str(e) + f". Run {bot.command_prefix}ascii_help for more info.")
             return
 
         try:
