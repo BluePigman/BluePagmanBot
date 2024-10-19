@@ -48,7 +48,7 @@ def parse_custom_args(args):
         parsed_args = parser.parse_args(args)
         return vars(parsed_args)
     except argparse.ArgumentError as e:
-        raise argparse.ArgumentError(None, str(e))
+        raise
 
 
 def reply_with_ascii(bot, message):
@@ -125,10 +125,10 @@ def reply_with_ascii(bot, message):
                 image_str = ""
                 if args['d']:
                     image_str = braillecreate.floyd_steinberg_dithering(
-                        frame, color_treshold=args['tr'], fill_transparency=args['b'], dot_for_blank=args['e'], width=args['w'], height=args['h'])
+                        frame, color_threshold=args['tr'], fill_transparency=args['b'], dot_for_blank=args['e'], width=args['w'], height=args['h'])
                 else:
                     image_str = braillecreate.treshold_dithering(
-                        frame, color_treshold=args['tr'], dot_for_blank=args['e'], fill_transparency=args['b'], width=args['w'], height=args['h'])
+                        frame, color_threshold=args['tr'], dot_for_blank=args['e'], fill_transparency=args['b'], width=args['w'], height=args['h'])
 
                 image_str = brailletransform.invert(image_str, args['e'])
 
@@ -161,7 +161,7 @@ def reply_with_ascii(bot, message):
                              "The link was not a valid image. :Z")
 
 
-def first_frame(self, channel, emote_url):
+def first_frame(channel, emote_url):
     # get first frame of ascii
     try:
         resp = requests.get(emote_url)
@@ -200,5 +200,4 @@ def first_frame(self, channel, emote_url):
             frame, width=60, height=60)
         return image_str
     except UnidentifiedImageError:
-        self.send_privmsg(channel,
-                          "The link was not a valid image. :Z")
+        return "The link was not a valid image. :Z"

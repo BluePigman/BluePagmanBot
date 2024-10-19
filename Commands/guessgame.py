@@ -14,18 +14,18 @@ def reply_with_guess(self, message):
         if not self.guessGameActive:
             # Start the game
             self.guessGameActive = True
-            num_rounds = 5
-            globals = False
+            self.numRounds = 5
+            is_global = False
 
             # Check if the user wants global emotes
             if message['command']['botCommandParams']:
                 params = message['command']['botCommandParams']
                 if "global" in params:
-                    globals = True
+                    is_global = True
 
             # Fetch emotes (either from channel or globally)
             emotes_list = get_random_emotes(
-                self, channel_id, num_rounds, globals)
+                self, channel_id, self.numRounds, is_global)
 
             if not emotes_list:
                 self.send_privmsg(message['command']
@@ -33,8 +33,8 @@ def reply_with_guess(self, message):
                 self.guessGameActive = False
                 return
 
-            if len(emotes_list) < num_rounds:
-                num_rounds = len(emotes_list)
+            if len(emotes_list) < self.numRounds:
+                self.numRounds = len(emotes_list)
             mode = "Global Emotes" if globals else "Channel Emotes"
 
             self.send_privmsg(
@@ -65,7 +65,7 @@ def reply_with_guess(self, message):
             if self.currentRound + 1 == self.numRounds:
                 # end the game
                 self.send_privmsg(
-                    message['command']['channel'], f"Game has ended.")
+                    message['command']['channel'], "Game has ended.")
                 reset_game(self)
                 return
 
@@ -76,6 +76,15 @@ def start_new_round(self, channel):
     self.currentRound += 1
     currentEmote = self.gameEmotes[self.currentRound]
     emote_url = self.db['Emotes'].find_one({"name": currentEmote})["url"]
+    if not emote_url:
+        self.send_privmsg(
+            channel, "Emote was not found in database! Moving on to next round...")
+        if self.guessGameRoundTimer:
+            self.guessGameRoundTimer.cancel()
+        if self.hintTimer:
+            self.hintTimer.cancel()
+        start_new_round(self, channel)
+        return
     content_type = describe.get_content_type(emote_url)
     descr = "Give a description for this emote in 2 sentences. Start with 'This emote'"
     try:
@@ -122,7 +131,7 @@ def start_new_round(self, channel):
 
 def provide_hint(self, channel, emote_url):
     # Provide a hint from ascii
-    hint = ascii.first_frame(self, channel, emote_url)
+    hint = ascii.first_frame(channel, emote_url)
     self.send_privmsg(channel, hint)
 
 
@@ -133,7 +142,7 @@ def reveal_emote(self, channel, emote):
     if self.currentRound + 1 == self.numRounds:
         # End the game if all rounds are done
         self.send_privmsg(
-            channel, f"Game has ended.")
+            channel, "Game has ended.")
         reset_game(self)
     else:
         # Start the next round

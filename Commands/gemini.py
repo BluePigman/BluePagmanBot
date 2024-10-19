@@ -89,8 +89,7 @@ def generate_emote_description(prompt):
             stream=False,
         ).text.replace('\n', ' ')
         response = response.replace('*', ' ')
-        n = 495
         return response
     except Exception as e:
         print(e)
-        return ["Error: ", e[0:490]]
+        return "Error: ", e[0:390]
