@@ -7,7 +7,8 @@ from chess_game import ChessGame
 from pymongo.mongo_client import MongoClient
 from Commands import (bot_info, date, help_ascii, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
                       news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2,
-                      ascii, help_ascii, reloadglobals, reloadchannel, sparlerlink, suggest, poker, rm, olympics, summarize, describe, rottentomatoes, remind, eight_ball)
+                      ascii, reloadglobals, reloadchannel, sparlerlink, suggest, poker, rm, olympics, summarize, describe, rottentomatoes, remind, eight_ball,
+                      guessgame)
 
 
 class Bot:
@@ -40,6 +41,13 @@ class Bot:
         self.pokerPlayers = {}  # username : userid
         self.pokerGame = None
         self.pokerTimer = None
+        # guess game
+        self.guessGameActive = False
+        self.currentRound = 0
+        self.gameEmotes = []
+        self.numRounds = 5
+        self.guessGameRoundTimer = None
+        self.hintTimer = None
 
         # anyone can use these
         self.custom_commands = {
@@ -79,7 +87,8 @@ class Bot:
             'describe': describe.reply_with_describe,
             'rt': rottentomatoes.reply_with_rottentomatoes,
             'remind': remind.reply_with_reminder,
-            '8ball': eight_ball.reply_with_eight_ball
+            '8ball': eight_ball.reply_with_eight_ball,
+            'guess': guessgame.reply_with_guess
         }
 
         # only bot owner can use these commands
