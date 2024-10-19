@@ -168,7 +168,7 @@ def first_frame(channel, emote_url):
         img_bytes = resp.content
     except Exception as e:
         print(e)
-        return e
+        return f"An error occurred while retrieving the image: {str(e)}"
 
     try:
         image = Image.open(BytesIO(img_bytes))
@@ -177,11 +177,7 @@ def first_frame(channel, emote_url):
             total_frames = image.n_frames
             max_frames = 20
 
-            if total_frames > max_frames:
-                # Calculate the interval to sample frames
-                interval = total_frames // max_frames
-            else:
-                interval = 1
+            interval = total_frames // max_frames if total_frames > max_frames else 1
 
             # Extract frames based on the calculated interval
             for i, frame in enumerate(ImageSequence.Iterator(image)):

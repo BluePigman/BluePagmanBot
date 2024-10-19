@@ -92,4 +92,4 @@ def generate_emote_description(prompt):
         return response
     except Exception as e:
         print(e)
-        return "Error: ", e[0:390]
+        return None
