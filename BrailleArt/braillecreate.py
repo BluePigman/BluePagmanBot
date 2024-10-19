@@ -6,9 +6,9 @@ treshold = 0
 transparency = True
 
 
-def treshold_dithering(picture, color_treshold=128, line_delimiter=' ', dot_for_blank=True, fill_transparency=True, width=0, height=0):
+def treshold_dithering(picture, color_threshold=128, line_delimiter=' ', dot_for_blank=True, fill_transparency=True, width=0, height=0):
     global treshold, transparency
-    treshold = color_treshold
+    treshold = color_threshold
     transparency = fill_transparency
     picture = _resize_pic(picture, width, height)
     result_arr = []
@@ -25,11 +25,10 @@ def treshold_dithering(picture, color_treshold=128, line_delimiter=' ', dot_for_
         return line_delimiter.join(result_arr)
 
 
-
-def ordered_dithering(picture, color_treshold=128, line_delimiter=' ', dot_for_blank=True, fill_transparency=True, width=0, height=0):
+def ordered_dithering(picture, color_threshold=128, line_delimiter=' ', dot_for_blank=True, fill_transparency=True, width=0, height=0):
     picture = _resize_pic(picture, width, height)
 
-    change_factor = color_treshold/128
+    change_factor = color_threshold/128
     matrix = [[64*change_factor, 128*change_factor], [192*change_factor, 0]]
     for y in range(0, picture.height, 1):
         for x in range(0, picture.width, 1):
@@ -42,15 +41,14 @@ def ordered_dithering(picture, color_treshold=128, line_delimiter=' ', dot_for_b
     return treshold_dithering(picture, 128, line_delimiter, dot_for_blank, fill_transparency, 0, 0)
 
 
-
-def floyd_steinberg_dithering(picture, color_treshold=1, line_delimiter=' ', dot_for_blank=True, fill_transparency=True, width=0, height=0):
+def floyd_steinberg_dithering(picture, color_threshold=1, line_delimiter=' ', dot_for_blank=True, fill_transparency=True, width=0, height=0):
     picture = _resize_pic(picture, width, height)
 
     for y in range(0, picture.height, 1):
         for x in range(0, picture.width, 1):
             quant_error = list(picture.getpixel((x, y)))
             oldpixel = picture.getpixel((x, y))
-            percent = color_treshold/255
+            percent = color_threshold/255
             red_poly = ((1-percent) ** 2)
             green_poly = 2*(1-percent)*percent
             blue_poly = (percent ** 2)
@@ -67,12 +65,12 @@ def floyd_steinberg_dithering(picture, color_treshold=1, line_delimiter=' ', dot
                 if x+a < picture.width and x+a > 0 and y+b < picture.height:
                     new_colors = [''] * 3
                     for i in range(0, len(quant_error)-1, 1):
-                        new_colors[i] = int(picture.getpixel((x+a, y+b))[i] + (quant_error[i] * q / 16))
-                    picture.putpixel((x+a, y+b), (new_colors[0], new_colors[1], new_colors[2], picture.getpixel((x+a, y+b))[3]))
+                        new_colors[i] = int(picture.getpixel(
+                            (x+a, y+b))[i] + (quant_error[i] * q / 16))
+                    picture.putpixel(
+                        (x+a, y+b), (new_colors[0], new_colors[1], new_colors[2], picture.getpixel((x+a, y+b))[3]))
 
     return treshold_dithering(picture, 128, line_delimiter, dot_for_blank, fill_transparency, 0, 0)
-
-
 
 
 def _resize_pic(picture, width, height):
@@ -84,7 +82,7 @@ def _resize_pic(picture, width, height):
 
 def _get_braille_code(picture, x, y):
     braille_code = ""
-    braille_parts_arr = [   #(x, y, dot number in braille character)
+    braille_parts_arr = [  # (x, y, dot number in braille character)
         (0, 0, "1"),
         (0, 1, "2"),
         (0, 2, "3"),
