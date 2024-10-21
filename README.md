@@ -11,46 +11,22 @@ A Twitch chatbot running in Python.
 - Play Texas Hold'em poker with multiple people.
 - Summarize Youtube videos (sends transcript to Gemini).
 - Describe image and video links (uploads to Gemini and asks for description).
-## Prerequisites: 
-[Python 3.8+](https://www.python.org/downloads/)
 
-[chess](https://pypi.org/project/chess/)
-
-[feedparser](https://pypi.org/project/feedparser/)
-
-[requests](https://pypi.org/project/requests/)
-
-For versions 1.3 and higher:
-[pymongo](https://pypi.org/project/pymongo/)
-
-``pip install --upgrade google-cloud-aiplatform``
-
-
-``gcloud auth application-default login``
-
-``pip install pillow``
-
-``pip install texasholdem``
-
-``pip install beautifulsoup4``
-
-``pip install youtube_transcript_api``
-
-``pip install -U google-generativeai``
-
-``pip install selectolax``
-
+## Prerequisites
+[Python 3.9+](https://www.python.org/downloads/)
+[MongoDB](https://www.mongodb.com/try/download/community) Installed and running
 
 ## How to use: 
 
 IMPORTANT: If you don't want to set up a MongoDB, then use v1.2 in releases.
 
-1. Download the latest release and extract.
-2. Make a Twitch account if you do not already have one.
-3. Get the OAuth token of the Twitch account to be used as the bot [here](https://twitchapps.com/tmi/).
-4. Rename `config_example.py` to `config.py`, and fill in the details.
-5. Set up a Mongo database, add a database named "test" and a collection named "Users". Then add the connection string into `config.py` in db_uri.
-6. Run `bot.py`. The bot will now join the channels you put in `config.py`.
+1. Download the latest release and extract or clone this repository.
+2. Create a [python virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#create-and-use-virtual-environments) and run `pip install -e .` in the project's directory. (The `-e` flag installs the package in editable mode, which is useful for development.)
+3. Make a Twitch account if you do not already have one.
+4. Get the OAuth token of the Twitch account to be used as the bot [here](https://twitchapps.com/tmi/).
+5. Rename `config_example.py` to `config.py`, and fill in the details.
+6. Set up a Mongo database, add a database named "test" and a collection named "Users". Then add the connection string into `config.py` in db_uri.
+7. Run `bot.py`. The bot will now join the channels you put in `config.py`.
 
 ## Video Demo:
 https://github.com/BluePigman/BluePagmanBot/assets/82780692/6cab58f2-3a63-4344-9456-abce8bc93851

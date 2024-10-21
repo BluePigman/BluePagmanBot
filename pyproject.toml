@@ -1,0 +1,20 @@
+[project]
+name = "bluepagmanbot"
+version = "0.1.0"
+description = "A Twitch chatbot running in Python"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "beautifulsoup4>=4.12.3",
+    "chess>=1.11.1",
+    "feedparser>=6.0.11",
+    "google-generativeai>=0.8.3",
+    "pillow>=10.4.0",
+    "pymongo>=4.10.1",
+    "requests>=2.32.3",
+    "selectolax>=0.3.24",
+    "texasholdem>=0.11.0",
+    "vertexai>=1.70.0",
+    "youtube-transcript-api>=0.6.2",
+    "google-cloud-aiplatform>=1.70.0",
+]
