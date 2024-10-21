@@ -1,7 +1,7 @@
 [project]
 name = "bluepagmanbot"
 version = "0.1.0"
-description = "Add your description here"
+description = "A Twitch chatbot running in Python"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
@@ -16,4 +16,5 @@ dependencies = [
     "texasholdem>=0.11.0",
     "vertexai>=1.70.0",
     "youtube-transcript-api>=0.6.2",
+    "google-cloud-aiplatform>=1.70.0",
 ]
