@@ -369,6 +369,34 @@ class Bot:
                 self.custom_commands["help"](self, message)
                 self.time = time.time()
 
+        # check for emotes when guess game active
+        if message['command']['command'] == 'PRIVMSG' and self.guessGameActive:
+            if not message['parameters']:
+                return
+            guess = message['parameters'].replace('\U000e0000', '')
+            currentRoundEmote = guessgame.get_current_emote(self)
+            if currentRoundEmote and guess == currentRoundEmote:
+                if self.guessGameRoundTimer:
+                    self.guessGameRoundTimer.cancel()
+                if self.hintTimer:
+                    self.hintTimer.cancel()
+                self.send_privmsg(
+                    message['command']['channel'],
+                    f"{message['tags']['display-name']
+                       } guessed it right! It's {currentRoundEmote}"
+                )
+                time.sleep(1.1)
+                if self.currentRound + 1 == self.numRounds:
+                    # end the game
+                    self.send_privmsg(
+                        message['command']['channel'], "Game has ended.")
+                    guessgame.reset_game(self)
+                    return
+
+                guessgame.start_new_round(self, message['command']['channel'])
+            else:
+                return
+
     def loop_for_messages(self):
         while True:
             received_msgs = self.irc.recv(4096).decode(errors='ignore')

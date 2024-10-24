@@ -3,7 +3,6 @@ import time
 from threading import Timer
 from Commands import gemini, describe, ascii
 from vertexai.generative_models import Part
-from config import prefix
 
 
 def reply_with_guess(self, message):
@@ -116,7 +115,7 @@ def start_new_round(self, channel):
         return
 
     self.send_privmsg(
-        channel, f"Round {self.currentRound}: {description} Guess the emote with {prefix}guess")
+        channel, f"Round {self.currentRound}: {description} Guess the emote!")
 
     # Start the 40-second timer for this round
     self.guessGameRoundTimer = Timer(
@@ -148,6 +147,11 @@ def reveal_emote(self, channel, emote):
         # Start the next round
         time.sleep(1.1)
         start_new_round(self, channel)
+
+
+def get_current_emote(self):
+    if self.guessGameActive and self.gameEmotes:
+        return self.gameEmotes[self.currentRound]
 
 
 def reset_game(self):
