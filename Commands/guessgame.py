@@ -16,11 +16,14 @@ def reply_with_guess(self, message):
             self.numRounds = 5
             is_global = False
 
-            # Check if the user wants global emotes
+            # Check if the user wants global emotes or number to specify rounds (1 - 4)
             if message['command']['botCommandParams']:
                 params = message['command']['botCommandParams']
                 if "global" in params:
                     is_global = True
+                
+                if params.isdigit() and int(params) < 5 and int(params) > 0:
+                    self.numRounds = int(params)
 
             # Fetch emotes (either from channel or globally)
             emotes_list = get_random_emotes(
