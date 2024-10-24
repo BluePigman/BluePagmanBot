@@ -12,8 +12,7 @@ def reply_with_pyramid(self, message):
             emote = args[0]
             width = args[1]
             if not width.isnumeric():
-                text = f"Width must be an integer. Usage: {
-                    self.prefix}pyramid {{name}} {{width}}"
+                text = f"Width must be an integer. Usage: {self.prefix}pyramid {{name}} {{width}}"
                 self.send_privmsg(message['command']['channel'], text)
                 return
             width = int(width)

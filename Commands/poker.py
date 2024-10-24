@@ -58,8 +58,7 @@ def reply_with_poker(self, message):
     elif message['command']['botCommandParams'].lower() == "fold":
         if self.pokerGameActive and message['tags']['display-name'] in self.pokerPlayers:
             x = self.pokerGame.fold(message['tags']['display-name'])
-            self.send_privmsg(message['command']['channel'], f"{
-                              message['tags']['display-name']} has folded for this round.")
+            self.send_privmsg(message['command']['channel'], f"{message['tags']['display-name']} has folded for this round.")
             if x:
                 self.send_privmsg(message['command']
                                   ['channel'], f"{x} wins the pot.")
@@ -80,8 +79,7 @@ def reply_with_poker(self, message):
             amount = args[1]
             if amount.isdigit() and int(amount) > 0:
                 if not self.pokerGame.bet(message['tags']['display-name'], int(amount)):
-                    self.send_privmsg(message['command']['channel'], f"You don't have that many chips. Use {
-                                      self.prefix}poker chips to see your chips.")
+                    self.send_privmsg(message['command']['channel'], f"You don't have that many chips. Use {self.prefix}poker chips to see your chips.")
                     time.sleep(0.5)
                     return
                 if int(amount) < self.pokerGame.currentMaxBet:
@@ -89,36 +87,31 @@ def reply_with_poker(self, message):
                         message['command']['channel'], "Your bet must be at least the current max bet, " + str(self.pokerGame.currentMaxBet))
                     time.sleep(0.5)
                     return
-                self.send_privmsg(message['command']['channel'], f"{
-                                  message['tags']['display-name']} has bet {amount}. The pot is now {self.pokerGame.pot}.")
+                self.send_privmsg(message['command']['channel'], f"{message['tags']['display-name']} has bet {amount}. The pot is now {self.pokerGame.pot}.")
                 time.sleep(0.5)
 
             else:
                 self.send_privmsg(
                     message['command']['channel'], "Invalid bet. Must be a positive integer.")
                 time.sleep(1)
-                self.send_privmsg(message['command']['channel'], f"Your turn, {
-                                  self.pokerGame.get_turn()}")
+                self.send_privmsg(message['command']['channel'], f"Your turn, {self.pokerGame.get_turn()}")
 
     elif message['command']['botCommandParams'].lower() == "pot":
         if self.pokerGameActive and message['tags']['display-name'] in self.pokerPlayers:
-            self.send_privmsg(message['command']['channel'], f"The current pot is {
-                              self.pokerGame.pot}.")
+            self.send_privmsg(message['command']['channel'], f"The current pot is {self.pokerGame.pot}.")
             time.sleep(0.5)
         return
 
     elif message['command']['botCommandParams'].lower() == "chips":
         if self.pokerGameActive and message['tags']['display-name'] in self.pokerPlayers:
-            self.send_privmsg(message['command']['channel'], f"You have {
-                              self.pokerGame.get_chips(message['tags']['display-name'])} chips.")
+            self.send_privmsg(message['command']['channel'], f"You have {self.pokerGame.get_chips(message['tags']['display-name'])} chips.")
             time.sleep(0.5)
         return
 
     elif message['command']['botCommandParams'].lower() == "call":
         if self.pokerGameActive and message['tags']['display-name'] in self.pokerPlayers and self.pokerGame.get_turn() == message['tags']['display-name']:
             self.pokerGame.call(message['tags']['display-name'])
-            self.send_privmsg(message['command']['channel'], f"{
-                              message['tags']['display-name']} has called. The pot is now {self.pokerGame.pot}.")
+            self.send_privmsg(message['command']['channel'], f"{message['tags']['display-name']} has called. The pot is now {self.pokerGame.pot}.")
             time.sleep(0.5)
 
     elif message['command']['botCommandParams'].lower() == "check":
@@ -127,14 +120,12 @@ def reply_with_poker(self, message):
                 self.send_privmsg(
                     message['command']['channel'], "You cannot check, you must bet, fold or raise. The current max bet is " + str(self.pokerGame.currentMaxBet))
                 return
-            self.send_privmsg(message['command']['channel'], f"{
-                              message['tags']['display-name']} has checked.")
+            self.send_privmsg(message['command']['channel'], f"{message['tags']['display-name']} has checked.")
             time.sleep(0.5)
 
     elif message['command']['botCommandParams'].lower() == "chips":
         if self.pokerGameActive and message['tags']['display-name'] in self.pokerPlayers:
-            self.send_privmsg(message['command']['channel'], f"{message['tags']['display-name']} has {
-                              self.pokerGame.get_chips([message['tags']['display-name']])} chips.")
+            self.send_privmsg(message['command']['channel'], f"{message['tags']['display-name']} has {self.pokerGame.get_chips([message['tags']['display-name']])} chips.")
             time.sleep(1)
         return
 
@@ -145,21 +136,18 @@ def reply_with_poker(self, message):
             time.sleep(1)
             self.pokerGame.phase = "turn"
             self.pokerGame.deal_turn()
-            self.send_privmsg(message['command']['channel'], f"Cards dealt. The board is {
-                              self.pokerGame.pretty_print_emojis(self.pokerGame.board)}.")
+            self.send_privmsg(message['command']['channel'], f"Cards dealt. The board is {self.pokerGame.pretty_print_emojis(self.pokerGame.board)}.")
         elif self.pokerGame.phase == "turn":
             self.send_privmsg(
                 message['command']['channel'], "Everyone has bet. The pot is now " + str(self.pokerGame.pot) + ".")
             time.sleep(1)
             self.pokerGame.phase = "river"
             self.pokerGame.deal_river()
-            self.send_privmsg(message['command']['channel'], f"Cards dealt. The board is {
-                              self.pokerGame.pretty_print_emojis(self.pokerGame.board)}.")
+            self.send_privmsg(message['command']['channel'], f"Cards dealt. The board is {self.pokerGame.pretty_print_emojis(self.pokerGame.board)}.")
         elif self.pokerGame.phase == "river":
             # determine winner.
             winner, hand_name = self.pokerGame.get_winner()
-            self.send_privmsg(message['command']['channel'], f"The winner is {
-                              winner}, with a {hand_name}.")
+            self.send_privmsg(message['command']['channel'], f"The winner is {winner}, with a {hand_name}.")
             self.pokerGame.distribute_chips()
             time.sleep(1)
             if self.pokerGame.round == 5:
@@ -181,8 +169,7 @@ def reply_with_poker(self, message):
 
     else:
         if self.pokerGameActive:
-            self.send_privmsg(message['command']['channel'], f"Your turn, {self.pokerGame.get_turn(
-            )} Usage: {self.prefix}poker  fold, bet <amount>, call, or check.")
+            self.send_privmsg(message['command']['channel'], f"Your turn, {self.pokerGame.get_turn()} Usage: {self.prefix}poker  fold, bet <amount>, call, or check.")
 
 
 def pokerTimeout(self, channel):
@@ -219,20 +206,17 @@ def runPokerRound(self, channel, round):
     self.pokerGame.deal_to_all_players()
     for player in self.pokerPlayers:
         if not whisperCards(self, self.pokerPlayers[player], player):
-            self.send_privmsg(channel, f"Error, unable to whisper {
-                              player}'s poker cards. The game will end.")
+            self.send_privmsg(channel, f"Error, unable to whisper {player}'s poker cards. The game will end.")
             self.endPokerGame()
             return
         time.sleep(0.75)
 
     self.pokerGame.deal_flop()
 
-    self.send_privmsg(channel, f"Cards dealt. The board is {
-                      self.pokerGame.pretty_print_emojis(self.pokerGame.board)}.")
+    self.send_privmsg(channel, f"Cards dealt. The board is {self.pokerGame.pretty_print_emojis(self.pokerGame.board)}.")
     time.sleep(0.5)
 
-    self.send_privmsg(channel, f"Your turn, {self.pokerGame.get_turn()}. Use {
-                      self.prefix}poker fold, bet <amount>, call, or check")
+    self.send_privmsg(channel, f"Your turn, {self.pokerGame.get_turn()}. Use {self.prefix}poker fold, bet <amount>, call, or check")
 
     # The flop
 
