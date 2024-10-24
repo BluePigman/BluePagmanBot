@@ -34,7 +34,7 @@ def reply_with_guess(self, message):
 
             if len(emotes_list) < self.numRounds:
                 self.numRounds = len(emotes_list)
-            mode = "Global Emotes" if globals else "Channel Emotes"
+            mode = "Global Emotes" if is_global else "Channel Emotes"
 
             self.send_privmsg(
                 message['command']['channel'], f"Game started! Mode is {mode}")
