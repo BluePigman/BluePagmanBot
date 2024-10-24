@@ -1,6 +1,8 @@
 import time
 
 # https://stackoverflow.com/q/6266727
+
+
 def reply_with_pyramid(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
             self.cooldown):
@@ -10,7 +12,8 @@ def reply_with_pyramid(self, message):
             emote = args[0]
             width = args[1]
             if not width.isnumeric():
-                text = f"Width must be an integer. Usage: {self.command_prefix}pyramid {{name}} {{width}}"
+                text = f"Width must be an integer. Usage: {
+                    self.prefix}pyramid {{name}} {{width}}"
                 self.send_privmsg(message['command']['channel'], text)
                 return
             width = int(width)
@@ -30,5 +33,5 @@ def reply_with_pyramid(self, message):
                 self.send_privmsg(message['command']['channel'], text)
 
         else:
-            text = f"Usage: {self.command_prefix}pyramid {{name}} {{width}}"
+            text = f"Usage: {self.prefix}pyramid {{name}} {{width}}"
             self.send_privmsg(message['command']['channel'], text)

@@ -1,7 +1,9 @@
 import time
 
+
 def reply_with_help_ascii(self, message):
-    help_msg = f"usage: {self.command_prefix}ascii " + "[Emote] [-w] [-h] [-r {90,180,270}] [-tr] [-d] [-b] [-e] [-i] [-g] [-t]"
+    help_msg = f"usage: {self.prefix}ascii " + \
+        "[Emote] [-w] [-h] [-r {90,180,270}] [-tr] [-d] [-b] [-e] [-i] [-g] [-t]"
     help_msg2 = """Generate ascii art from emote link.
     Optional arguments:
     -w {int} width of ascii

@@ -20,7 +20,7 @@ class Bot:
         self.oauth_token = config.OAUTH_TOKEN
         self.username = config.username
         self.channels = config.channels
-        self.command_prefix = config.prefix
+        self.prefix = config.prefix
         self.state = {}  # dictionary for cooldown
         self.cooldown = 3  # default cooldown for commands
         self.time = time.time()
@@ -200,7 +200,7 @@ class Bot:
                 raw_parameters_component = raw_parameters_component + \
                     " " + parsed_message['tags']['reply-parent-msg-body']
 
-            if raw_parameters_component and raw_parameters_component[0] == self.command_prefix:
+            if raw_parameters_component and raw_parameters_component[0] == self.prefix:
                 parsed_message['command'] = self.parse_parameters(
                     raw_parameters_component, parsed_message['command'])
 
@@ -346,7 +346,7 @@ class Bot:
 
         # # Follow 1s cooldown
         if message['command']['command'] == 'PRIVMSG' and \
-                message['parameters'][0] == (self.command_prefix) \
+                message['parameters'][0] == (self.prefix) \
                 and time.time() - self.time > 1:
 
             if message['command']['botCommand'].lower() in self.custom_commands:
@@ -489,8 +489,7 @@ class Bot:
             time.sleep(2)
             self.player2 = message['source']['nick']
             self.gameAccepted = True
-            text = f"@{self.player1}, Choose a side: {self.command_prefix}white (white), {
-                self.command_prefix}black (black)"
+            text = f"@{self.player1}, Choose a side: {self.command_prefix}white (white), {self.command_prefix}black (black)"
             self.send_privmsg(message['command']['channel'], text)
             time.sleep(2)
 
@@ -518,7 +517,7 @@ class Bot:
                 time.sleep(2)
             else:
                 text = f"Invalid input, please enter \
-                either {self.command_prefix}white or {self.command_prefix}black."
+                either {self.prefix}white or {self.prefix}black."
                 self.send_privmsg(message['command']['channel'], text)
                 time.sleep(2)
 
@@ -539,12 +538,9 @@ class Bot:
                     else:
                         move = message['command']['botCommandParams']
                         if move == "resign":
-                            self.currentGame.resign(
-                                message['source']['nick'])  # will update pgn
-                            text = f"@{message['tags']['display-name']
-                                       } resigned. @{self.currentGame.player2} wins."
-                            self.send_privmsg(
-                                message['command']['channel'], text)
+                            self.currentGame.resign(message['source']['nick'])  # will update pgn
+                            text = f"@{message['tags']['display-name']} resigned. @{self.currentGame.player2} wins."
+                            self.send_privmsg(message['command']['channel'], text)
                             time.sleep(2)
                             # get pgn
                             pgn = self.currentGame.get_pgn()
@@ -589,7 +585,7 @@ class Bot:
 
                         else:  # move was unsuccessful
                             text = f"Invalid/illegal move, please try again. \
-                            For help refer to {self.command_prefix}help_chess."
+                            For help refer to {self.prefix}help_chess."
                             self.send_privmsg(
                                 message['command']['channel'], text)
                             time.sleep(2)
@@ -605,10 +601,8 @@ class Bot:
                         if move == "resign":
                             self.currentGame.resign(
                                 message['source']['nick'])  # will update pgn
-                            text = f"@{message['tags']['display-name']} resigned. @{
-                                self.currentGame.player1} wins! PogChamp"
-                            self.send_privmsg(
-                                message['command']['channel'], text)
+                            text = f"@{message['tags']['display-name']} resigned. @{self.currentGame.player1} wins! PogChamp"
+                            self.send_privmsg(message['command']['channel'], text)
                             time.sleep(2)
                             pgn = self.currentGame.get_pgn()
                             for m in pgn:
@@ -648,7 +642,7 @@ class Bot:
 
                         else:  # move was unsuccessful
                             text = f"Invalid/illegal move, please try again. \
-                            For help refer to {self.command_prefix}help_chess."
+                            For help refer to {self.prefix}help_chess."
                             self.send_privmsg(
                                 message['command']['channel'], text)
                             time.sleep(2)
