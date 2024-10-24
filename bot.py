@@ -380,11 +380,9 @@ class Bot:
                     self.guessGameRoundTimer.cancel()
                 if self.hintTimer:
                     self.hintTimer.cancel()
-                self.send_privmsg(
-                    message['command']['channel'],
-                    f"{message['tags']['display-name']
-                       } guessed it right! It's {currentRoundEmote}"
-                )
+                name = message['tags']['display-name']
+                m = f"{name} guessed it right! It's {currentRoundEmote}"
+                self.send_privmsg(message['command']['channel'], m)
                 time.sleep(1.1)
                 if self.currentRound + 1 == self.numRounds:
                     # end the game
