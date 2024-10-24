@@ -67,14 +67,14 @@ def reply_with_guess(self, message):
                     message['command']['channel'], "Game has ended.")
                 reset_game(self)
                 return
-
+            self.currentRound += 1
             start_new_round(self, message['command']['channel'])
 
 
 def start_new_round(self, channel):
-    self.currentRound += 1
     currentEmote = self.gameEmotes[self.currentRound]
     emote_url = self.db['Emotes'].find_one({"name": currentEmote})["url"]
+    
     if not emote_url:
         self.send_privmsg(
             channel, "Emote was not found in database! Moving on to next round...")
@@ -82,8 +82,11 @@ def start_new_round(self, channel):
             self.guessGameRoundTimer.cancel()
         if self.hintTimer:
             self.hintTimer.cancel()
+        # Increment here only if the emote is not found, to avoid skipping the round
+        self.currentRound += 1
         start_new_round(self, channel)
         return
+
     content_type = describe.get_content_type(emote_url)
     descr = "Give a description for this emote in 2 sentences. Start with 'This emote'"
     try:
@@ -102,8 +105,10 @@ def start_new_round(self, channel):
             self.guessGameRoundTimer.cancel()
         if self.hintTimer:
             self.hintTimer.cancel()
+        self.currentRound += 1
         start_new_round(self, channel)
         return
+
     if not description:
         self.send_privmsg(
             channel, "Emote description could not be generated. Moving on to next round...")
@@ -111,11 +116,12 @@ def start_new_round(self, channel):
             self.guessGameRoundTimer.cancel()
         if self.hintTimer:
             self.hintTimer.cancel()
+        self.currentRound += 1
         start_new_round(self, channel)
         return
 
     self.send_privmsg(
-        channel, f"Round {self.currentRound}: {description} Guess the emote!")
+        channel, f"Round {self.currentRound + 1}: {description} Guess the emote!")  # Display round as 1-based
 
     # Start the 40-second timer for this round
     self.guessGameRoundTimer = Timer(
@@ -146,6 +152,7 @@ def reveal_emote(self, channel, emote):
     else:
         # Start the next round
         time.sleep(1.1)
+        self.currentRound += 1
         start_new_round(self, channel)
 
 
