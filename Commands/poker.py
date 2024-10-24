@@ -169,8 +169,7 @@ def reply_with_poker(self, message):
 
     else:
         if self.pokerGameActive:
-            self.send_privmsg(message['command']['channel'], f"Your turn, {self.pokerGame.get_turn(
-            )} Usage: {self.prefix}poker  fold, bet <amount>, call, or check.")
+            self.send_privmsg(message['command']['channel'], f"Your turn, {self.pokerGame.get_turn()} Usage: {self.prefix}poker  fold, bet <amount>, call, or check.")
 
 
 def pokerTimeout(self, channel):
