@@ -390,7 +390,7 @@ class Bot:
                         message['command']['channel'], "Game has ended.")
                     guessgame.reset_game(self)
                     return
-
+                self.currentRound += 1
                 guessgame.start_new_round(self, message['command']['channel'])
             else:
                 return
