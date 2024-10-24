@@ -463,7 +463,8 @@ class Bot:
             time.sleep(2)
             self.player2 = message['source']['nick']
             self.gameAccepted = True
-            text = f"@{self.player1}, Choose a side: {self.command_prefix}white (white), {self.command_prefix}black (black)"
+            text = f"@{self.player1}, Choose a side: {self.command_prefix}white (white), {
+                self.command_prefix}black (black)"
             self.send_privmsg(message['command']['channel'], text)
             time.sleep(2)
 
@@ -514,7 +515,8 @@ class Bot:
                         if move == "resign":
                             self.currentGame.resign(
                                 message['source']['nick'])  # will update pgn
-                            text = f"@{message['tags']['display-name']} resigned. @{self.currentGame.player2} wins."
+                            text = f"@{message['tags']['display-name']
+                                       } resigned. @{self.currentGame.player2} wins."
                             self.send_privmsg(
                                 message['command']['channel'], text)
                             time.sleep(2)
@@ -577,7 +579,8 @@ class Bot:
                         if move == "resign":
                             self.currentGame.resign(
                                 message['source']['nick'])  # will update pgn
-                            text = f"@{message['tags']['display-name']} resigned. @{self.currentGame.player1} wins! PogChamp"
+                            text = f"@{message['tags']['display-name']} resigned. @{
+                                self.currentGame.player1} wins! PogChamp"
                             self.send_privmsg(
                                 message['command']['channel'], text)
                             time.sleep(2)
