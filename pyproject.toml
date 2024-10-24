@@ -17,6 +17,7 @@ dependencies = [
     "vertexai>=1.70.0",
     "youtube-transcript-api>=0.6.2",
     "google-cloud-aiplatform>=1.70.0",
+    "tzdata>=2024.2",
 ]
 
 [tool.setuptools]
