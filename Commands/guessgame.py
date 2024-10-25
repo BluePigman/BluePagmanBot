@@ -61,8 +61,8 @@ def reply_with_guess(self, message):
 
             # user guessed emote right, move to next round
             self.send_privmsg(
-                message['command']['channel'], f"{message['tags']['display-name']} guessed it right! It's {currentEmote}")
-
+                message['command']['channel'], f"{message['tags']['display-name']} guessed it right! (+ 25 Pigga Coins) It's {currentEmote}")
+            reward(self, message)
             time.sleep(1.1)
             if self.currentRound + 1 == self.numRounds:
                 # end the game
@@ -136,6 +136,12 @@ def start_new_round(self, channel):
         20, provide_hint, (self, channel, emote_url))
     self.hintTimer.start()
 
+def reward(self, message):
+    # reward 25 coins for correct answer
+    user_data = self.users.find_one({'user': message['source']['nick']})
+    if not user_data: # add new user
+        self.users.insert_one({'user': message['source']['nick'] , 'points': 0 })
+    self.users.update_one({'user': message['source']['nick']}, {'$inc': {'points': 25}})
 
 def provide_hint(self, channel, emote_url):
     # Provide a hint from ascii

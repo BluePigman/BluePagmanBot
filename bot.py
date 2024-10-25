@@ -381,7 +381,8 @@ class Bot:
                 if self.hintTimer:
                     self.hintTimer.cancel()
                 name = message['tags']['display-name']
-                m = f"{name} guessed it right! It's {currentRoundEmote}"
+                m = f"{name} guessed it right! (+25 Pigga Coins) It's {currentRoundEmote}"
+                guessgame.reward(self, message)
                 self.send_privmsg(message['command']['channel'], m)
                 time.sleep(1.1)
                 if self.currentRound + 1 == self.numRounds:
