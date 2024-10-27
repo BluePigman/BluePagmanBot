@@ -2,7 +2,6 @@ import pymongo
 import requests
 import time
 
-
 def reload_channel(self, message):
     if (message['source']['nick'] not in self.state or
             time.time() - self.state[message['source']['nick']] > self.cooldown):
@@ -11,77 +10,74 @@ def reload_channel(self, message):
         channel_id = message["tags"]["room-id"]
         start_time = time.time()
 
-        # Combined current emote set for all platforms
-        current_emote_ids = set()
-
         emotes_collection = self.db['Emotes']
         channel_emotes_collection = self.db['ChannelEmotes']
-        bulk_emote_operations = []
-        bulk_channel_operations = []
 
-        # Helper function to process emotes from different platforms
-        def process_emotes(emotes, emote_type, id_key="id", name_key="name", url_template=""):
+        # Set to track all new emote IDs across platforms for this channel
+        all_new_emote_ids = set()
+
+        # Function to sync emotes for a specific platform
+        def sync_platform_emotes(emotes, emote_type, url_template, id_key="id", name_key="name"):
+            new_emote_details = []
+            new_channel_emote_relations = []
+            new_emote_ids = set()
+
             for emote in emotes:
                 emote_id = emote[id_key]
                 name = emote[name_key]
                 url = url_template.format(emote_id)
 
-                # Upsert emote in the Emotes collection
-                bulk_emote_operations.append(
+                new_emote_ids.add(emote_id)
+                all_new_emote_ids.add(emote_id)
+
+                new_emote_details.append(
                     pymongo.UpdateOne(
                         {"emote_id": emote_id},
                         {"$set": {"name": name, "url": url, "emote_type": emote_type}},
                         upsert=True
                     )
                 )
-                current_emote_ids.add(emote_id)
-
-                # Upsert channel-emote relationship
-                bulk_channel_operations.append(
+                new_channel_emote_relations.append(
                     pymongo.UpdateOne(
                         {"channel_id": channel_id, "emote_id": emote_id},
-                        {"$set": {"channel_id": channel_id, "emote_id": emote_id}},
+                        {"$set": {"channel_id": channel_id, "emote_id": emote_id, "emote_type": emote_type}},
                         upsert=True
                     )
                 )
 
-        # 7TV emotes
+            if new_emote_details:
+                emotes_collection.bulk_write(new_emote_details)
+            if new_channel_emote_relations:
+                channel_emotes_collection.bulk_write(new_channel_emote_relations)
+
+        # Fetch and sync emotes for 7TV
         response = requests.get(f"https://7tv.io/v3/users/twitch/{channel_id}")
         if response.status_code == 200:
             data = response.json()
             emotes = data["emote_set"]["emotes"]
-            process_emotes(emotes, "7TV", "id", "name",
-                           "https://cdn.7tv.app/emote/{}/4x.webp")
+            sync_platform_emotes(emotes, "7TV", "https://cdn.7tv.app/emote/{}/4x.webp")
 
-        # FFZ emotes
-        response = requests.get(
-            f"https://api.frankerfacez.com/v1/room/id/{channel_id}")
+        # Fetch and sync emotes for FFZ
+        response = requests.get(f"https://api.frankerfacez.com/v1/room/id/{channel_id}")
         if response.status_code == 200:
             data = response.json()
             ffz_id = data["room"]["set"]
             emotes = data["sets"][str(ffz_id)]["emoticons"]
-            process_emotes(emotes, "FFZ", "id", "name",
-                           "https://cdn.frankerfacez.com/emote/{}/4")
+            sync_platform_emotes(emotes, "FFZ", "https://cdn.frankerfacez.com/emote/{}/4")
 
-        # BTTV emotes
-        response = requests.get(
-            f"https://api.betterttv.net/3/cached/users/twitch/{channel_id}")
+        # Fetch and sync emotes for BTTV
+        response = requests.get(f"https://api.betterttv.net/3/cached/users/twitch/{channel_id}")
         if response.status_code == 200:
             data = response.json()
             emotes = data["channelEmotes"] + data["sharedEmotes"]
-            process_emotes(emotes, "BTTV", "id", "code",
-                           "https://cdn.betterttv.net/emote/{}/3x")
+            sync_platform_emotes(emotes, "BTTV", "https://cdn.betterttv.net/emote/{}/3x", "id", "code")
 
-        # Execute bulk upserts for emotes and channel emotes
-        if bulk_emote_operations:
-            emotes_collection.bulk_write(bulk_emote_operations)
-        if bulk_channel_operations:
-            channel_emotes_collection.bulk_write(bulk_channel_operations)
-
-        # Delete emotes not in the current set for this channel
+        # Delete emotes no longer in the new set, excluding global Twitch emotes
         channel_emotes_collection.delete_many(
-            {"channel_id": channel_id, "emote_id": {
-                "$nin": list(current_emote_ids)}}
+            {"channel_id": channel_id, "emote_id": {"$nin": list(all_new_emote_ids)}}
+        )
+        emotes_collection.delete_many(
+            {"emote_id": {"$nin": list(all_new_emote_ids)}, "emote_type": {"$ne": "Twitch"}}
         )
 
         end_time = time.time()
