@@ -85,7 +85,12 @@ def start_new_round(self, channel):
             self.guessGameRoundTimer.cancel()
         if self.hintTimer:
             self.hintTimer.cancel()
-        # Increment here only if the emote is not found, to avoid skipping the round
+        if self.currentRound + 1 == self.numRounds:
+                # end the game
+                self.send_privmsg(
+                    channel, "Game has ended.")
+                reset_game(self)
+                return
         self.currentRound += 1
         start_new_round(self, channel)
         return
