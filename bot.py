@@ -384,14 +384,15 @@ class Bot:
                 m = f"{name} guessed it right! (+25 Pigga Coins) It's {currentRoundEmote}"
                 guessgame.reward(self, message)
                 self.send_privmsg(message['command']['channel'], m)
-                time.sleep(1.1)
                 if self.currentRound + 1 == self.numRounds:
                     # end the game
+                    time.sleep(1.1) 
                     self.send_privmsg(
                         message['command']['channel'], "Game has ended.")
                     guessgame.reset_game(self)
                     return
                 self.currentRound += 1
+                time.sleep(1.1)
                 guessgame.start_new_round(self, message['command']['channel'])
             else:
                 return

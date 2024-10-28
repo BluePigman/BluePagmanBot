@@ -165,8 +165,8 @@ def reveal_emote(self, channel, emote):
         reset_game(self)
     else:
         # Start the next round
-        time.sleep(1.1)
         self.currentRound += 1
+        time.sleep(1.1)
         start_new_round(self, channel)
 
 
