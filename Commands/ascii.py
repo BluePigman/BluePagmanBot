@@ -51,42 +51,59 @@ def parse_custom_args(args):
         raise
 
 
-def reply_with_ascii(bot, message):
-    if message['source']['nick'] not in bot.state or time.time() - bot.state[message['source']['nick']] > bot.cooldown:
-        bot.state[message['source']['nick']] = time.time()
+def reply_with_ascii(self, message):
+    if message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown:
+        self.state[message['source']['nick']] = time.time()
 
         # Validate if the first argument is a URL or an emote name
         if not message['command']['botCommandParams']:
             m = f"@{message['tags']['display-name']}, please provide a URL of the image or a global emote name."
-            bot.send_privmsg(message['command']['channel'], m)
+            self.send_privmsg(message['command']['channel'], m)
             return
         if "\U000e0000" in message['command']['botCommandParams']:
             message['command']['botCommandParams'].remove("\U000e0000")
         input_arg = message['command']['botCommandParams'].split()
+        channel_id = message["tags"]["room-id"]
+        user_display_name = message['tags']['display-name']
+        
+        # Check if the input is a URL
         if re.match(r'((ftp|http|https)://.+)|(\./frames/.+)', input_arg[0]):
+            # Set image_url directly if input is a URL
             image_url = input_arg[0]
+        
         else:
-            # Check if the input is an emote name and retrieve the URL from the database
-            emote = bot.db['Emotes'].find_one({"name": input_arg[0]})
+            # Check if the input is an emote name in the Emotes collection
+            emote = self.db['Emotes'].find_one({"name": input_arg[0]})
             if emote:
-                image_url = emote['url']
+                emote_id = emote['emote_id']
+                is_global = emote.get("is_global", False)
+                
+                # Verify that the emote is either global or associated with the specified channel
+                if is_global or self.db['ChannelEmotes'].find_one({"channel_id": channel_id, "emote_id": emote_id}):
+                    # Set image_url if emote is valid as global or channel-specific
+                    image_url = emote['url']
+                else:
+                    # Emote is not available in the specified channel
+                    m = f"@{user_display_name}, the emote '{input_arg[0]}' is not available as a global/channel emote."
+                    self.send_privmsg(message['command']['channel'], m)
+                    return
             else:
-                m = f"@{message['tags']['display-name']}, could not find the emote '{input_arg[0]}' in the database. Try the link instead."
-                bot.send_privmsg(message['command']['channel'], m)
+                # Emote not found in the Emotes collection
+                m = f"@{user_display_name}, could not find the emote '{input_arg[0]}' in the database. Try using a URL instead."
+                self.send_privmsg(message['command']['channel'], m)
                 return
-
         try:
             args = parse_custom_args(input_arg[1:])
         except Exception as e:
-            bot.send_privmsg(message['command']['channel'], "Error parsing arguments: " + str(
-                e) + f". Run {bot.command_prefix}help_ascii for more info.")
+            self.send_privmsg(message['command']['channel'], "Error parsing arguments: " + str(
+                e) + f". Run {self.command_prefix}help_ascii for more info.")
             return
 
         try:
             resp = requests.get(image_url)
             img_bytes = resp.content
         except Exception:
-            bot.send_privmsg(message['command']['channel'],
+            self.send_privmsg(message['command']['channel'],
                              f"Error, URL was invalid. FailFish")
             return
 
@@ -135,7 +152,7 @@ def reply_with_ascii(bot, message):
                 if len(image_str) > 499:
                     m = "The image is too long to display in a message. :Z Try using smaller values for -w and/or -h. \
                     If you tried negative values, please use positive ones. Staring "
-                    bot.send_privmsg(message['command']['channel'], m)
+                    self.send_privmsg(message['command']['channel'], m)
                     break
 
                 if args['i']:
@@ -153,11 +170,11 @@ def reply_with_ascii(bot, message):
                 if args['t']:
                     image_str += f"\n{args['t']}"
 
-                bot.send_privmsg(message['command']['channel'], image_str)
+                self.send_privmsg(message['command']['channel'], image_str)
                 time.sleep(0.1)
 
         except UnidentifiedImageError:
-            bot.send_privmsg(message['command']['channel'],
+            self.send_privmsg(message['command']['channel'],
                              "The link was not a valid image. :Z")
 
 

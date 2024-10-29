@@ -80,19 +80,33 @@ def reply_with_describe(self, message):
         return
 
     prompt = message['command']['botCommandParams']
-    # Check if input is an emote name
-    emote = self.db['Emotes'].find_one({"name": prompt})
-    if emote:
-        media_url = emote['url']
+    channel_id = message["tags"]["room-id"]
+    user_display_name = message['tags']['display-name']
+    
+    # Check if the prompt is a URL
+    if re.match(r'((ftp|http|https)://.+)|(\./frames/.+)', prompt):
+        # Set media_url and content_type directly if prompt is a URL
+        media_url = prompt
         content_type = get_content_type(media_url)
-
     else:
-        # Regex to check if the URL is for an image or video
-        if re.match(r'((ftp|http|https)://.+)|(\./frames/.+)', prompt):
-            media_url = prompt
-            content_type = get_content_type(media_url)
+        # Check if the prompt is an emote name in the Emotes collection
+        emote = self.db['Emotes'].find_one({"name": prompt})
+        if emote:
+            emote_id = emote['emote_id']
+            is_global = emote.get("is_global", False)
+                
+            # Verify that the emote is either global or associated with the specified channel
+            if is_global or self.db['ChannelEmotes'].find_one({"channel_id": channel_id, "emote_id": emote_id}):
+                # Set image_url if emote is valid as global or channel-specific
+                media_url = emote['url']
+                content_type = get_content_type(media_url)
+            else:
+                m = f"@{user_display_name}, the provided input is not a valid URL or available as a global/channel emote."
+                self.send_privmsg(message['command']['channel'], m)
+                return
         else:
-            m = f"@{message['tags']['display-name']}, the provided input either is an invalid URL or the emote is not a global/channel emote."
+            # Emote not found in the Emotes collection
+            m = f"@{user_display_name}, the provided input is not a valid URL or available as a global/channel emote."
             self.send_privmsg(message['command']['channel'], m)
             return
 
