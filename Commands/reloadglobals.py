@@ -1,11 +1,6 @@
 import config
-import random
 import time
 import requests
-import sys
-import os
-sys.path.insert(0, os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..')))
 
 headers = {
     'Authorization': f"Bearer {config.user_access_token}",
@@ -29,16 +24,15 @@ def reload_global_emotes(self, message):
 
 
 def reload_twitch_global(self, message):
-    start_time = time.time()  # Start measuring time
-
+    start_time = time.time()
     response = requests.get(
         'https://api.twitch.tv/helix/chat/emotes/global', headers=headers)
 
     if response.status_code == 200:
         data = response.json()
-
         emotes_collection = self.db['Emotes']
         new_emotes = []
+
         for emote in data['data']:
             emote_id = emote['id']
             name = emote['name']
@@ -50,7 +44,8 @@ def reload_twitch_global(self, message):
                     "emote_id": emote_id,
                     "name": name,
                     "url": url,
-                    "emote_type": "Twitch"
+                    "emote_type": "Twitch",
+                    "is_global": True
                 })
 
         if new_emotes:
@@ -69,26 +64,26 @@ def reload_twitch_global(self, message):
 
 
 def reload_bttv_global(self, message):
-    start_time = time.time()  # Start measuring time
+    start_time = time.time()
     response = requests.get('https://api.betterttv.net/3/cached/emotes/global')
 
     if response.status_code == 200:
         data = response.json()
-
         emotes_collection = self.db['Emotes']
         new_emotes = []
+
         for emote_set in data:
             emote_id = emote_set['id']
             name = emote_set['code']
-            url = "https://cdn.betterttv.net/emote/" + emote_id + "/3x"
+            url = f"https://cdn.betterttv.net/emote/{emote_id}/3x"
 
-            # Check if emote with the same emote_id and type already exists
             if not emotes_collection.find_one({"emote_id": emote_id, "emote_type": "BTTV"}):
                 new_emotes.append({
                     "emote_id": emote_id,
                     "name": name,
                     "url": url,
-                    "emote_type": "BTTV"
+                    "emote_type": "BTTV",
+                    "is_global": True
                 })
 
         if new_emotes:
@@ -103,70 +98,59 @@ def reload_bttv_global(self, message):
 
 
 def reload_ffz_global(self, message):
-    start_time = time.time()  # Start measuring time
-    # Make GET request
+    start_time = time.time()
     response = requests.get('https://api.frankerfacez.com/v1/set/global/ids')
 
     if response.status_code == 200:
-        # Handle successful response
         data = response.json()
-
-        # Ensure the Emotes collection exists
         emotes_collection = self.db['Emotes']
-
-        # Prepare batch insert
         new_emotes = []
-        for emote_set in data["sets"]["3"]["emoticons"]:
-            emote_id = "FFZ-" + str(emote_set['id'])
-            name = emote_set['name']
-            url = "https://cdn.frankerfacez.com/emote/" + \
-                str(emote_set['id']) + "/4"
 
-            # Check if the emote already exists in the collection
+        for emote_set in data["sets"]["3"]["emoticons"]:
+            emote_id = f"FFZ-{emote_set['id']}"
+            name = emote_set['name']
+            url = f"https://cdn.frankerfacez.com/emote/{emote_set['id']}/4"
+
             if not emotes_collection.find_one({"emote_id": emote_id}):
                 new_emotes.append({
                     "emote_id": emote_id,
                     "name": name,
-                    "url": url
+                    "url": url,
+                    "emote_type": "FFZ",
+                    "is_global": True
                 })
-
-        # Batch insert new emotes
         if new_emotes:
             emotes_collection.insert_many(new_emotes)
 
-        end_time = time.time()  # End measuring time
-        elapsed_time = end_time - start_time  # Calculate elapsed time
-
-        # Send success message with elapsed time
+        elapsed_time = time.time() - start_time
         m = f"FFZ Global Emotes reloaded successfully in {elapsed_time:.2f} seconds."
         self.send_privmsg(message['command']['channel'], m)
     else:
-        # Print error message
         m = f"Error: {response.status_code} - {response.text}"
         self.send_privmsg(message['command']['channel'], m)
 
 
 def reload_7tv_global(self, message):
-    start_time = time.time()  # Start measuring time
+    start_time = time.time()
     response = requests.get("https://7tv.io/v3/emote-sets/global")
 
     if response.status_code == 200:
         data = response.json()
-
         emotes_collection = self.db['Emotes']
         new_emotes = []
+
         for emote_set in data["emotes"]:
             emote_id = emote_set["id"]
             name = emote_set['name']
-            url = "https://cdn.7tv.app/emote/" + emote_id + "/4x.webp"
+            url = f"https://cdn.7tv.app/emote/{emote_id}/4x.webp"
 
-            # Check if emote with the same emote_id and type already exists
             if not emotes_collection.find_one({"emote_id": emote_id, "emote_type": "7TV"}):
                 new_emotes.append({
                     "emote_id": emote_id,
                     "name": name,
                     "url": url,
-                    "emote_type": "7TV"
+                    "emote_type": "7TV",
+                    "is_global": True
                 })
 
         if new_emotes:
