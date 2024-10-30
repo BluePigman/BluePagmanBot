@@ -30,7 +30,7 @@ def generate(prompt) -> list[str]:
         return [response[i:i+n] for i in range(0, len(response), n)]
     except Exception as e:
         print(e)
-        return ["Error: ", e[0:495]]
+        return ["Error: ", str(e)[0:495]]
 
 def reply_with_groq(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
