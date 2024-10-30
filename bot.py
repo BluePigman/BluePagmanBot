@@ -5,7 +5,7 @@ import time
 import config
 from chess_game import ChessGame
 from pymongo.mongo_client import MongoClient
-from Commands import (bot_info, date, help_ascii, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
+from Commands import (bot_info, date, groq_command, help_ascii, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
                       news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2,
                       ascii, reloadglobals, reloadchannel, sparlerlink, suggest, poker, rm, olympics, summarize, describe, rottentomatoes, remind, eight_ball,
                       guessgame)
@@ -88,7 +88,8 @@ class Bot:
             'rt': rottentomatoes.reply_with_rottentomatoes,
             'remind': remind.reply_with_reminder,
             '8ball': eight_ball.reply_with_eight_ball,
-            'guess': guessgame.reply_with_guess
+            'guess': guessgame.reply_with_guess,
+            'groq': groq_command.reply_with_groq
         }
 
         # only bot owner can use these commands

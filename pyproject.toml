@@ -18,6 +18,7 @@ dependencies = [
     "youtube-transcript-api>=0.6.2",
     "google-cloud-aiplatform>=1.70.0",
     "tzdata>=2024.2",
+    "groq>=0.11.0",
 ]
 
 [tool.setuptools]
