@@ -2,6 +2,9 @@ import time
 from groq import Groq
 import config
 
+if not config.GROQ_API_KEY:
+    raise ValueError("Valid GROQ_API_KEY must be provided, Get one at https://console.groq.com/")
+
 client = Groq(
     api_key=config.GROQ_API_KEY
 )
