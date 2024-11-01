@@ -337,9 +337,9 @@ class Bot:
             self.send_command('PONG :tmi.twitch.tv')
 
         if message['command']['command'] == 'RECONNECT':
-            for channel in self.channels:
-                self.send_privmsg(
-                    channel, "The Twitch server needs to terminate the connection for maintenance. Reconnecting...")
+            # for channel in self.channels:
+            #     self.send_privmsg(
+            #         channel, "The Twitch server needs to terminate the connection for maintenance. Reconnecting...")
             self.irc.shutdown(socket.SHUT_RDWR)
             self.irc.close()
             time.sleep(1)
