@@ -85,6 +85,11 @@ def get_transcript(video_id):
     except TranscriptsDisabled:
         return None
 
+    except Exception as e:
+        # Log unexpected errors
+        print(f"Unexpected error for video {video_id}: {e}")
+        return " ".join(str(e))
+
     # Merge all text into a single string and remove newline characters
     merged_text = " ".join([item['text'].replace('\n', ' ')
                            for item in transcript])
