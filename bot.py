@@ -347,7 +347,7 @@ class Bot:
 
         # # Follow 1s cooldown
         if message['command']['command'] == 'PRIVMSG' and \
-                message['parameters'][0] == (self.prefix) \
+                message['parameters'][0] and message['parameters'][0] == (self.prefix) \
                 and time.time() - self.time > 1:
 
             if message['command']['botCommand'].lower() in self.custom_commands:
