@@ -9,7 +9,7 @@ from Commands import (bot_info, date, groq_command, help_ascii, ping, help_chess
                       news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2,
                       ascii, reloadglobals, reloadchannel, sparlerlink, suggest, poker, rm, olympics, summarize, describe, rottentomatoes, remind, eight_ball,
                       guessgame)
-
+import redirectLinks
 
 class Bot:
 
@@ -397,6 +397,15 @@ class Bot:
                 guessgame.start_new_round(self, message['command']['channel'])
             else:
                 return
+            
+        if message['command']['command'] == 'PRIVMSG' and message['parameters'] and "instagram.com/" in  message['parameters']:
+            words = message['parameters'].split()
+            instagram_link = next((word for word in words if "instagram.com/" in word), None)
+            
+            if instagram_link:
+                imginn_link = redirectLinks.convert_instagram_link(instagram_link)
+                self.send_privmsg(message['command']['channel'], imginn_link)
+                time.sleep(1.1)
 
     def loop_for_messages(self):
         while True:
