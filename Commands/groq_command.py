@@ -16,7 +16,7 @@ def generate(prompt) -> list[str]:
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a helpful human that will respond to any request"
+                    "content": "You are a helpful human that will respond to any request. Answer should be at most 990 characters."
                 },
                 {
                     "role": "user",
