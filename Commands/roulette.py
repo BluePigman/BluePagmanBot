@@ -27,6 +27,7 @@ def reply_with_roulette(self, message):
                 elif not amount.isdigit() or int(amount) <= 0:
                     m = f"@{message['tags']['display-name']}, please enter a positive number or 'all'."
                     self.send_privmsg(message['command']['channel'], m)
+                    return
 
                 amount = int(amount)
 
