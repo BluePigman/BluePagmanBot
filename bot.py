@@ -502,7 +502,7 @@ class Bot:
             time.sleep(2)
             self.player2 = message['source']['nick']
             self.gameAccepted = True
-            text = f"@{self.player1}, Choose a side: {self.command_prefix}white (white), {self.command_prefix}black (black)"
+            text = f"@{self.player1}, Choose a side: {self.prefix}white (white), {self.prefix}black (black)"
             self.send_privmsg(message['command']['channel'], text)
             time.sleep(2)
 

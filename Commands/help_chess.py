@@ -16,8 +16,8 @@ def reply_with_chesshelp(bot, message):
         text3 = f"""UCI moves follow the format: original coordinate of piece, new coordinate of piece. \
             For castling, use the king's coordinates. UCI Input must be in lowercase and contain no spaces.\
             For example, if you want to start by moving the e pawn to e4, \
-            you type {bot.command_prefix}move e4 OR {bot.command_prefix}move e2e4 \
-            To resign type {bot.command_prefix}move resign"""
+            you type {bot.prefix}move e4 OR {bot.prefix}move e2e4 \
+            To resign type {bot.prefix}move resign"""
 
         if (message['source']['nick'] not in bot.state or time.time() - bot.state[message['source']['nick']] >
                 bot.cooldown):
