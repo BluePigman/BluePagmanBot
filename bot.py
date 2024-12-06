@@ -347,66 +347,63 @@ class Bot:
             self.connect()
 
         # # Follow 1s cooldown
-        if message['command']['command'] == 'PRIVMSG' and \
-                message['parameters'][0] and message['parameters'][0] == (self.prefix) \
+        if message['command']['command'] == 'PRIVMSG':
+            if not message['parameters']:
+                return
+    
+            if message['parameters'][0] and message['parameters'][0] == (self.prefix) \
                 and time.time() - self.time > 1:
 
-            if message['command']['botCommand'].lower() in self.custom_commands:
-                self.custom_commands[message['command']
-                                     ['botCommand'].lower()](self, message)
-                self.time = time.time()
+                if message['command']['botCommand'].lower() in self.custom_commands:
+                    self.custom_commands[message['command']['botCommand'].lower()](self, message)
+                    self.time = time.time()
 
-            if message['command']['botCommand'].lower() in self.private_commands:
-                self.private_commands[message['command']
-                                      ['botCommand'].lower()](message)
-                self.time = time.time()
+                if message['command']['botCommand'].lower() in self.private_commands:
+                    self.private_commands[message['command']['botCommand'].lower()](message)
+                    self.time = time.time()
 
-            if message['command']['botCommand'].lower() in self.chess_commands:
-                self.chess_commands[message['command']
-                                    ['botCommand'].lower()](message)
-                self.time = time.time()
+                if message['command']['botCommand'].lower() in self.chess_commands:
+                    self.chess_commands[message['command']['botCommand'].lower()](message)
+                    self.time = time.time()
 
             # Aliases.
             if message['command']['botCommand'].lower() == "commands":
                 self.custom_commands["help"](self, message)
                 self.time = time.time()
 
-        # check for emotes when guess game active
-        if message['command']['command'] == 'PRIVMSG' and self.guessGameActive:
-            if not message['parameters']:
-                return
-            guess = message['parameters'].replace('\U000e0000', '')
-            currentRoundEmote = guessgame.get_current_emote(self)
-            if currentRoundEmote and guess == currentRoundEmote:
-                if self.guessGameRoundTimer:
-                    self.guessGameRoundTimer.cancel()
-                if self.hintTimer:
-                    self.hintTimer.cancel()
-                name = message['tags']['display-name']
-                m = f"{name} guessed it right! (+25 Pigga Coins) It's {currentRoundEmote}"
-                guessgame.reward(self, message)
-                self.send_privmsg(message['command']['channel'], m)
-                if self.currentRound + 1 == self.numRounds:
-                    # end the game
-                    time.sleep(1.1) 
-                    self.send_privmsg(
-                        message['command']['channel'], "Game has ended.")
-                    guessgame.reset_game(self)
+            if "instagram.com/" in message['parameters']:
+                words = message['parameters'].split()
+                instagram_link = next((word for word in words if "instagram.com/" in word), None)         
+                if instagram_link:
+                    imginn_link = redirectLinks.convert_instagram_link(instagram_link)
+                    self.send_privmsg(message['command']['channel'], imginn_link)
+                    time.sleep(1.1)
+            
+            # check for emotes when guess game active
+            if self.guessGameActive:
+                guess = message['parameters'].replace('\U000e0000', '')
+                currentRoundEmote = guessgame.get_current_emote(self)
+                if currentRoundEmote and guess == currentRoundEmote:
+                    if self.guessGameRoundTimer:
+                        self.guessGameRoundTimer.cancel()
+                    if self.hintTimer:
+                        self.hintTimer.cancel()
+                    name = message['tags']['display-name']
+                    m = f"{name} guessed it right! (+25 Pigga Coins) It's {currentRoundEmote}"
+                    guessgame.reward(self, message)
+                    self.send_privmsg(message['command']['channel'], m)
+                    if self.currentRound + 1 == self.numRounds:
+                        # end the game
+                        time.sleep(1.1) 
+                        self.send_privmsg(
+                            message['command']['channel'], "Game has ended.")
+                        guessgame.reset_game(self)
+                        return
+                    self.currentRound += 1
+                    time.sleep(1.1)
+                    guessgame.start_new_round(self, message['command']['channel'])
+                else:
                     return
-                self.currentRound += 1
-                time.sleep(1.1)
-                guessgame.start_new_round(self, message['command']['channel'])
-            else:
-                return
-            
-        if message['command']['command'] == 'PRIVMSG' and message['parameters'] and "instagram.com/" in  message['parameters']:
-            words = message['parameters'].split()
-            instagram_link = next((word for word in words if "instagram.com/" in word), None)
-            
-            if instagram_link:
-                imginn_link = redirectLinks.convert_instagram_link(instagram_link)
-                self.send_privmsg(message['command']['channel'], imginn_link)
-                time.sleep(1.1)
 
     def loop_for_messages(self):
         while True:
