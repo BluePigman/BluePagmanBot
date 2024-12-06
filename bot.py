@@ -350,7 +350,7 @@ class Bot:
             if not message['parameters']:
                 return
     
-            if message['parameters'][0] and message['parameters'][0] == (self.prefix) and time.time() - self.time > 1:
+            if message['parameters'][0] == (self.prefix) and time.time() - self.time > 1:
 
                 if message['command']['botCommand'].lower() in self.custom_commands:
                     self.custom_commands[message['command']['botCommand'].lower()](self, message)
