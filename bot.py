@@ -199,8 +199,7 @@ class Bot:
                     1:]
                 raw_parameters_component = " ".join(raw_parameters_component)
                 parsed_message['parameters'] = raw_parameters_component
-                raw_parameters_component = raw_parameters_component + \
-                    " " + parsed_message['tags']['reply-parent-msg-body']
+                raw_parameters_component = raw_parameters_component + " " + parsed_message['tags']['reply-parent-msg-body']
 
             if raw_parameters_component and raw_parameters_component[0] == self.prefix:
                 parsed_message['command'] = self.parse_parameters(
@@ -351,8 +350,7 @@ class Bot:
             if not message['parameters']:
                 return
     
-            if message['parameters'][0] and message['parameters'][0] == (self.prefix) \
-                and time.time() - self.time > 1:
+            if message['parameters'][0] and message['parameters'][0] == (self.prefix) and time.time() - self.time > 1:
 
                 if message['command']['botCommand'].lower() in self.custom_commands:
                     self.custom_commands[message['command']['botCommand'].lower()](self, message)
@@ -526,16 +524,14 @@ class Bot:
                 self.currentGame = ChessGame(self.player2, self.player1)
                 time.sleep(2)
             else:
-                text = f"Invalid input, please enter \
-                either {self.prefix}white or {self.prefix}black."
+                text = f"Invalid input, please enter either {self.prefix}white or {self.prefix}black."
                 self.send_privmsg(message['command']['channel'], text)
                 time.sleep(2)
 
     # Start the game
 
     def move(self, message):
-        if self.currentGame and \
-           ("move" not in self.state or time.time() - self.state["move"] > 2):
+        if self.currentGame and ("move" not in self.state or time.time() - self.state["move"] > 2):
 
             self.state["move"] = time.time()
 
@@ -594,8 +590,7 @@ class Bot:
                                 message['command']['channel'], f"@{self.currentGame.player2} it is your turn.")
 
                         else:  # move was unsuccessful
-                            text = f"Invalid/illegal move, please try again. \
-                            For help refer to {self.prefix}help_chess."
+                            text = f"Invalid/illegal move, please try again. For help refer to {self.prefix}help_chess."
                             self.send_privmsg(
                                 message['command']['channel'], text)
                             time.sleep(2)
@@ -651,8 +646,7 @@ class Bot:
                                 message['command']['channel'], f"@{self.currentGame.player1} it is your turn.")
 
                         else:  # move was unsuccessful
-                            text = f"Invalid/illegal move, please try again. \
-                            For help refer to {self.prefix}help_chess."
+                            text = f"Invalid/illegal move, please try again. For help refer to {self.prefix}help_chess."
                             self.send_privmsg(
                                 message['command']['channel'], text)
                             time.sleep(2)
