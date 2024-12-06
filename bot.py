@@ -90,7 +90,8 @@ class Bot:
             '8ball': eight_ball.reply_with_eight_ball,
             'guess': guessgame.reply_with_guess,
             'groq': groq_command.reply_with_groq,
-            'x': x.reply_with_x
+            'x': x.reply_with_x,
+            'commands': help.list_commands
         }
 
         # only bot owner can use these commands
@@ -363,11 +364,6 @@ class Bot:
                 if message['command']['botCommand'].lower() in self.chess_commands:
                     self.chess_commands[message['command']['botCommand'].lower()](message)
                     self.time = time.time()
-
-            # Aliases.
-            if message['command']['botCommand'].lower() == "commands":
-                self.custom_commands["help"](self, message)
-                self.time = time.time()
 
             if "instagram.com/" in message['parameters']:
                 words = message['parameters'].split()
