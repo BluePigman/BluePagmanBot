@@ -11,7 +11,7 @@ def reply_with_gemini(self, message):
         self.state[message['source']['nick']] = time.time()
 
     if not message['command']['botCommandParams']:
-        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-1.5-flash-002, \
+        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-2.0-flash-exp, \
             temperature: 1.1, top_p: 0.95"
         self.send_privmsg(message['command']['channel'], m)
         return
@@ -54,7 +54,7 @@ def generate(prompt) -> list[str]:
         if isinstance(prompt, str):
             prompt = [prompt]
         model = GenerativeModel(
-            "gemini-1.5-flash-002",
+            "gemini-2.0-flash-exp",
             system_instruction=["""Please always provide a short and concise response. Do not ask the user follow up questions, 
                         because you are intended to provide a single response with no history and are not expected
                         any follow up prompts. If given a media file, please describe it. For GIFS/WEBP files describe all frames.

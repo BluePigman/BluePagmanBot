@@ -9,7 +9,7 @@ def reply_with_gemini_experimental(self, message):
         self.state[message['source']['nick']] = time.time()
 
     if not message['command']['botCommandParams']:
-        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-1.5-flash-002, \
+        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-2.0-flash-exp, \
             temperature: 2, top_p: 0.75"
         self.send_privmsg(message['command']['channel'], m)
         return
@@ -56,7 +56,7 @@ safety_settings = [
 def generate(prompt) -> list[str]:
     vertexai.init(project="bluepagmanbot", location="us-central1")
     model = GenerativeModel(
-        "gemini-1.5-flash-002",
+        "gemini-2.0-flash-exp",
         # tools=tools,
         system_instruction=["""Please always provide a short and concise response. Do not ask the user follow up questions, 
                         because you are intended to provide a single response with no history and are not expected
