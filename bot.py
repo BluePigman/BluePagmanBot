@@ -121,8 +121,7 @@ class Bot:
         if text == self.last_msg and (time.time() - self.last_msg_time) < 30:
             text += ' \U000e0000'
         self.send_command(f'PRIVMSG #{channel} : {text}')
-        self.last_msg_time = time.time()
-        self.last_msg = text
+        self.last_msg_time, self.last_msg = time.time(), text
 
     def send_command(self, command):
         if 'PASS' not in command:
@@ -316,16 +315,11 @@ class Bot:
 
     def parse_parameters(self, raw_parameters_component, command):
         command_parts = raw_parameters_component[1:].strip()
-        params_idx = command_parts.find(' ')
-
-        if params_idx == -1:
-            command['botCommand'] = command_parts
-            command['botCommandParams'] = None
-        else:
-            command['botCommand'] = command_parts[:params_idx]
-            command['botCommandParams'] = command_parts[params_idx:].strip()
+        bot_command, _, bot_command_params = command_parts.partition(' ')
+        command['botCommand'] = bot_command
+        command['botCommandParams'] = bot_command_params.strip() if bot_command_params else None
         return command
-
+    
     def handle_message(self, received_msg):
         if received_msg == "None" or not received_msg:
             return
@@ -338,13 +332,12 @@ class Bot:
             self.send_command('PONG :tmi.twitch.tv')
 
         if message['command']['command'] == 'RECONNECT':
-            # for channel in self.channels:
-            #     self.send_privmsg(
-            #         channel, "The Twitch server needs to terminate the connection for maintenance. Reconnecting...")
+            print("The Twitch server needs to terminate the connection for maintenance. Reconnecting...")
             self.irc.shutdown(socket.SHUT_RDWR)
             self.irc.close()
             time.sleep(1)
             self.connect()
+            print("Reconnected.")
 
         # # Follow 1s cooldown
         if message['command']['command'] == 'PRIVMSG':
@@ -413,19 +406,11 @@ class Bot:
             for channel in self.channels:
                 self.send_privmsg(channel, text)
             sys.exit()
-        else:
-            if ("leave" not in self.state or time.time() - self.state["leave"] >
-                    self.cooldown):
-                self.state["leave"] = time.time()
-                self.send_privmsg(message['command']
-                                  ['channel'], "NOIDONTTHINKSO")
 
     def say(self, message):
         if message['source']['nick'] == config.bot_owner:
             self.send_privmsg(
                 message['command']['channel'], message['command']['botCommandParams'])
-        else:
-            self.send_privmsg(message['command']['channel'], "No")
 
     # Use: #echo CHANNEL text, will send message text in specified channel.
     def echo(self, message):
@@ -437,18 +422,17 @@ class Bot:
                 if message['source']['nick'] == config.bot_owner:
                     self.send_privmsg(channel, text)
 
-    # Work in progress.
     def join_channel(self, message):
         if message['source']['nick'] == config.bot_owner:
             newChannel = message['command']['botCommandParams']
             self.send_command(f'JOIN #{newChannel}')
-            self.send_privmsg(newChannel, "forsenEnter")
+            self.send_privmsg(newChannel, config.initial_msg)
             self.send_privmsg(message['command']['channel'], "Success")
 
     def part_channel(self, message):
         if message['source']['nick'] == config.bot_owner:
             newChannel = message['command']['botCommandParams']
-            self.send_privmsg(newChannel, "forsenLeave")
+            self.send_privmsg(newChannel, "🤖 Bot is leaving this channel.")
             self.send_command(f'PART #{newChannel}')
 
             self.send_privmsg(message['command']['channel'], "Success")
