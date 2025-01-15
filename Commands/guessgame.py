@@ -1,8 +1,11 @@
+import io
 import random
 import time
 from threading import Timer
+
+import requests
 from Commands import gemini, describe, ascii
-from vertexai.generative_models import Part
+from PIL import Image
 
 
 def reply_with_guess(self, message):
@@ -95,13 +98,13 @@ def start_new_round(self, channel):
         start_new_round(self, channel)
         return
 
-    content_type = describe.get_content_type(emote_url)
     descr = "Give a description for this emote in 2 sentences. Start with 'This emote'"
     try:
-        image = Part.from_uri(
-            mime_type=content_type,
-            uri=emote_url
-        )
+        if describe.is_chunked(emote_url):
+            image_content = requests.get(emote_url, stream=True).content
+            image = Image.open(io.BytesIO(image_content)).convert("RGB")
+        else:
+            image = Image.open(requests.get(emote_url, stream=True).raw)
         description = gemini.generate_emote_description([image, descr])
     except Exception as e:
         print(e)

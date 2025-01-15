@@ -1,9 +1,8 @@
 import time
-import vertexai
-from vertexai.generative_models import GenerativeModel, SafetySetting
-
-vertexai.init(project="bluepagmanbot", location="us-central1")
-
+import google.generativeai as genai
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
+import config
+genai.configure(api_key=config.GOOGLE_API_KEY)
 
 def reply_with_gemini(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
@@ -29,41 +28,33 @@ generation_config = {
     "top_p": 0.95,
 }
 
-safety_settings = [
-    SafetySetting(
-        category=SafetySetting.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-        threshold=SafetySetting.HarmBlockThreshold.BLOCK_NONE
-    ),
-    SafetySetting(
-        category=SafetySetting.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-        threshold=SafetySetting.HarmBlockThreshold.BLOCK_NONE
-    ),
-    SafetySetting(
-        category=SafetySetting.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-        threshold=SafetySetting.HarmBlockThreshold.BLOCK_NONE
-    ),
-    SafetySetting(
-        category=SafetySetting.HarmCategory.HARM_CATEGORY_HARASSMENT,
-        threshold=SafetySetting.HarmBlockThreshold.BLOCK_NONE
-    ),
-]
 
+safety_settings = {
+    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+}
+
+system_instruction=["""Please always provide a short and concise response. Do not ask the user follow up questions, 
+                        because you are intended to provide a single response with no history and are not expected
+                        any follow up prompts. If given a media file, please describe it. For GIFS/WEBP files describe all frames.
+                        Answer should be at most 990 characters."""]
+
+
+model = genai.GenerativeModel(
+  model_name="gemini-2.0-flash-exp",
+  generation_config=generation_config,
+  safety_settings=safety_settings,
+  system_instruction=system_instruction
+)
 
 def generate(prompt) -> list[str]:
     try:
         if isinstance(prompt, str):
             prompt = [prompt]
-        model = GenerativeModel(
-            "gemini-2.0-flash-exp",
-            system_instruction=["""Please always provide a short and concise response. Do not ask the user follow up questions, 
-                        because you are intended to provide a single response with no history and are not expected
-                        any follow up prompts. If given a media file, please describe it. For GIFS/WEBP files describe all frames.
-                        Answer should be at most 990 characters."""]
-        )
         response = model.generate_content(
             prompt,
-            generation_config=generation_config,
-            safety_settings=safety_settings,
             stream=False,
         ).text.replace('\n', ' ')
         response = response.replace('*', ' ')
@@ -78,8 +69,8 @@ def generate_emote_description(prompt):
     system_instruction = [
         "You don't need to say Here's a description, just say the result."]
     try:
-        model = GenerativeModel(
-            "gemini-1.5-flash-002",
+        model = genai.GenerativeModel(
+            "gemini-2.0-flash-exp",
             system_instruction=system_instruction
         )
         response = model.generate_content(
