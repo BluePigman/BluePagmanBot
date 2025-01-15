@@ -5,6 +5,24 @@ import config
 genai.configure(api_key=config.GOOGLE_API_KEY)
 
 def reply_with_gemini(self, message):
+    """
+    Handles generating and sending Gemini AI responses to a chat message.
+    
+    Manages user cooldown and AI response generation for a chat command. If the user is not on cooldown or their last request was sufficiently long ago, it processes their prompt and sends AI-generated responses to the channel.
+    
+    Parameters:
+        self (object): The instance of the chat bot handling the interaction
+        message (dict): A dictionary containing message metadata including user, channel, and command details
+    
+    Behavior:
+        - Checks and updates user cooldown state
+        - Validates presence of a prompt
+        - Generates AI responses using the `generate` function
+        - Sends generated responses to the channel with a 1-second delay between messages
+    
+    Raises:
+        No explicit exceptions, but may indirectly raise exceptions during AI response generation
+    """
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
             self.cooldown):
         self.state[message['source']['nick']] = time.time()
@@ -50,6 +68,21 @@ model = genai.GenerativeModel(
 )
 
 def generate(prompt) -> list[str]:
+    """
+    Generate content from a given prompt using the configured generative AI model.
+    
+    Generates a response from the AI model, formats the text by replacing newlines and asterisks, 
+    and splits the response into chunks of 495 characters.
+    
+    Parameters:
+        prompt (str or list[str]): Input text or list of texts to generate content from
+    
+    Returns:
+        list[str]: A list of response text chunks, each 495 characters or less
+    
+    Raises:
+        Exception: If content generation fails, returns a list with an error message
+    """
     try:
         if isinstance(prompt, str):
             prompt = [prompt]
@@ -66,6 +99,20 @@ def generate(prompt) -> list[str]:
 
 
 def generate_emote_description(prompt):
+    """
+    Generate a concise description for a given prompt using the Gemini AI model.
+    
+    Generates a description without introductory phrases, focusing on direct content generation. Handles potential errors during content generation.
+    
+    Args:
+        prompt (str): The input text for which a description is to be generated.
+    
+    Returns:
+        str or None: A formatted description of the prompt, or None if generation fails.
+    
+    Raises:
+        Exception: Prints and suppresses any errors during content generation.
+    """
     system_instruction = [
         "You don't need to say Here's a description, just say the result."]
     try:

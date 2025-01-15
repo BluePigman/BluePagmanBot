@@ -5,6 +5,27 @@ import config
 genai.configure(api_key=config.GOOGLE_API_KEY)
 
 def reply_with_gemini_experimental(self, message):
+    """
+    Generates a response from the Gemini AI model for a user's prompt in a chat environment.
+    
+    This method handles user interaction with an experimental Gemini AI model, managing cooldown periods and sending AI-generated responses to a chat channel.
+    
+    Parameters:
+        message (dict): A dictionary containing message metadata including:
+            - 'source': User information
+            - 'tags': User display name
+            - 'command': Command details with bot parameters
+            - 'command']['channel']: Target chat channel
+    
+    Behavior:
+        - Enforces a cooldown period between user interactions
+        - Validates the presence of a user prompt
+        - Generates AI responses using the `generate` function
+        - Sends AI responses to the chat channel with a 1.5-second delay between messages
+    
+    Raises:
+        No explicit exceptions are raised within the method
+    """
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
             self.cooldown):
         self.state[message['source']['nick']] = time.time()
@@ -48,6 +69,25 @@ model = genai.GenerativeModel(
 )
 
 def generate(prompt) -> list[str]:
+    """
+    Generate a response from the Gemini AI model by processing the given prompt.
+    
+    Parameters:
+        prompt (str or list[str]): The input text or list of texts to generate a response for.
+    
+    Returns:
+        list[str]: A list of response chunks, each no longer than 495 characters. 
+                   If an error occurs, returns a list with an error message.
+    
+    Raises:
+        Handles any exceptions during content generation, printing the error and 
+        returning an error message as a list.
+    
+    Notes:
+        - Converts single string prompts to a list
+        - Removes newline and asterisk characters from the response
+        - Splits long responses into chunks of 495 characters
+    """
     try:
         if isinstance(prompt, str):
             prompt = [prompt]

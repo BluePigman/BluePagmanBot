@@ -9,6 +9,29 @@ from PIL import Image
 
 
 def reply_with_guess(self, message):
+    """
+    Manages the emote guessing game, handling game initialization, user guesses, and game progression.
+    
+    Handles multiple game scenarios:
+    - Initializing a new game with configurable rounds and emote sources
+    - Processing user guesses for the current emote
+    - Tracking game state and managing rounds
+    - Supporting global or channel-specific emote selection
+    
+    Parameters:
+        message (dict): Twitch chat message containing game command and metadata
+    
+    Behavior:
+        - Starts a new game if no active game exists
+        - Allows configuring game rounds (1-4) and emote source (global/channel)
+        - Validates user guesses against current emote
+        - Rewards correct guesses with points
+        - Manages game progression and termination
+        - Implements cooldown mechanism to prevent rapid command triggering
+    
+    Raises:
+        Handles potential errors in emote retrieval and game initialization internally
+    """
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > 0.4):
         self.state[message['source']['nick']] = time.time()
         channel_id = message["tags"]["room-id"]
@@ -78,6 +101,29 @@ def reply_with_guess(self, message):
 
 
 def start_new_round(self, channel):
+    """
+    Starts a new round of the emote guessing game for a specific channel.
+    
+    This method handles the initialization of a new game round by:
+    1. Retrieving the current emote from the game's emote list
+    2. Fetching the emote's URL from the database
+    3. Generating a description for the emote using image recognition
+    4. Sending the emote description to the channel
+    5. Starting timers for round duration and hint provision
+    
+    Parameters:
+        channel (str): The IRC channel where the game is being played
+    
+    Behavior:
+        - Handles cases where emote URL is missing or description generation fails
+        - Automatically advances to the next round or ends the game if issues occur
+        - Starts a 40-second round timer
+        - Triggers a hint after 20 seconds
+        - Sends descriptive messages to guide players
+    
+    Raises:
+        Handles potential exceptions during image processing and description generation
+    """
     currentEmote = self.gameEmotes[self.currentRound]
     emote_url = self.db['Emotes'].find_one({"name": currentEmote})["url"]
     

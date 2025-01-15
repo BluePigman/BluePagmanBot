@@ -60,6 +60,26 @@ def generate_gemini_description(media, input_text):
 
 
 def gemini_for_video(media, input_text):
+    """
+    Generate a description for a video using the Gemini AI model.
+    
+    Generates a content description for a video by calling the Gemini API and processing the response.
+    
+    Parameters:
+        media (bytes): The video file content to be analyzed
+        input_text (str): Additional context or prompt for description generation
+    
+    Returns:
+        list: A list of description chunks (each 495 characters long) or None if generation fails
+    
+    Raises:
+        Handles internal exceptions and returns None if description generation encounters an error
+    
+    Notes:
+        - Uses the "gemini-2.0-flash-exp" model for content generation
+        - Applies predefined safety settings to filter potentially harmful content
+        - Breaks long descriptions into chunks of 495 characters for easier handling
+    """
     try:
         response = genai.GenerativeModel(
             "gemini-2.0-flash-exp", safety_settings=safety_settings).generate_content([media, input_text])
@@ -73,6 +93,27 @@ def gemini_for_video(media, input_text):
 
 
 def reply_with_describe(self, message):
+    """
+    Handles user commands to describe media content using Gemini AI.
+    
+    Processes URLs or emote names for images, videos, and PDFs, generating AI-powered descriptions. Supports various media types with robust error handling and cooldown mechanism.
+    
+    Parameters:
+        self (object): The instance of the bot class
+        message (dict): A dictionary containing message metadata including command, user, and channel information
+    
+    Behavior:
+        - Enforces a cooldown between user commands
+        - Validates input as URL or emote name
+        - Supports media types: JPEG, PNG, WebP, GIF, MP4, PDF
+        - Generates descriptions using Gemini AI
+        - Handles chunked and non-chunked media transfers
+        - Sends description in multiple messages if needed
+        - Provides user feedback for processing errors
+    
+    Raises:
+        Various exceptions during media processing, which are caught and reported to the user
+    """
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
         self.state[message['source']['nick']] = time.time()
 
