@@ -46,6 +46,7 @@ def reply_with_guess(self, message):
             currentEmote = self.gameEmotes[self.currentRound]
             print(self.gameEmotes)
             start_new_round(self, message['command']['channel'])
+            return
 
         # users will guess emotes using <guess EMOTE_NAME
         if not message['command']['botCommandParams']:
@@ -64,10 +65,9 @@ def reply_with_guess(self, message):
                 message['command']['channel'], f"{message['tags']['display-name']} guessed it right! (+ 25 Pigga Coins) It's {currentEmote}")
             reward(self, message)
             time.sleep(1.1)
-            if self.currentRound + 1 == self.numRounds:
+            if is_game_over(self.currentRound, self.numRounds):
                 # end the game
-                self.send_privmsg(
-                    message['command']['channel'], "Game has ended.")
+                self.send_privmsg(message['command']['channel'], "Game has ended.")
                 reset_game(self)
                 return
             self.currentRound += 1
@@ -81,16 +81,16 @@ def start_new_round(self, channel):
     if not emote_url:
         self.send_privmsg(
             channel, "Emote was not found in database! Moving on to next round...")
+        time.sleep(0.5)
         if self.guessGameRoundTimer:
             self.guessGameRoundTimer.cancel()
         if self.hintTimer:
             self.hintTimer.cancel()
-        if self.currentRound + 1 == self.numRounds:
-                # end the game
-                self.send_privmsg(
-                    channel, "Game has ended.")
-                reset_game(self)
-                return
+        if is_game_over(self.currentRound, self.numRounds):
+            # end the game
+            self.send_privmsg(channel, "Game has ended.")
+            reset_game(self)
+            return
         self.currentRound += 1
         start_new_round(self, channel)
         return
@@ -109,10 +109,16 @@ def start_new_round(self, channel):
         time.sleep(0.5)
         self.send_privmsg(
             channel, "Emote was not found in database! Moving on to next round...")
+        time.sleep(0.5)
         if self.guessGameRoundTimer:
             self.guessGameRoundTimer.cancel()
         if self.hintTimer:
             self.hintTimer.cancel()
+        if is_game_over(self.currentRound, self.numRounds):
+            # end the game
+            self.send_privmsg(channel, "Game has ended.")
+            reset_game(self)
+            return
         self.currentRound += 1
         start_new_round(self, channel)
         return
@@ -120,10 +126,16 @@ def start_new_round(self, channel):
     if not description:
         self.send_privmsg(
             channel, "Emote description could not be generated. Moving on to next round...")
+        time.sleep(0.5)
         if self.guessGameRoundTimer:
             self.guessGameRoundTimer.cancel()
         if self.hintTimer:
             self.hintTimer.cancel()
+        if is_game_over(self.currentRound, self.numRounds):
+            # end the game
+            self.send_privmsg(channel, "Game has ended.")
+            reset_game(self)
+            return
         self.currentRound += 1
         start_new_round(self, channel)
         return
@@ -153,15 +165,16 @@ def provide_hint(self, channel, emote_url):
     hint = ascii.first_frame(channel, emote_url)
     self.send_privmsg(channel, hint)
 
+def is_game_over(current_round, num_rounds):
+    return current_round + 1 == num_rounds
 
 def reveal_emote(self, channel, emote):
     self.send_privmsg(
         channel, f"The emote was {emote} Disappointing performance :Z")
 
-    if self.currentRound + 1 == self.numRounds:
+    if is_game_over(self.currentRound, self.numRounds):
         # End the game if all rounds are done
-        self.send_privmsg(
-            channel, "Game has ended.")
+        self.send_privmsg(channel, "Game has ended.")
         reset_game(self)
     else:
         # Start the next round
