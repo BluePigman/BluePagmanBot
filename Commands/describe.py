@@ -7,6 +7,8 @@ import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from Commands import gemini
 from vertexai.generative_models import Part
+from PIL import Image
+import io
 
 
 genai.configure(api_key=config.GOOGLE_API_KEY)
@@ -60,7 +62,7 @@ def generate_gemini_description(media, input_text):
 def gemini_for_video(media, input_text):
     try:
         response = genai.GenerativeModel(
-            "gemini-1.5-flash-002", safety_settings=safety_settings).generate_content([media, input_text])
+            "gemini-2.0-flash-exp", safety_settings=safety_settings).generate_content([media, input_text])
         if response.prompt_feedback.block_reason:
             return None
         response = response.text.replace('\n', ' ')
@@ -112,10 +114,12 @@ def reply_with_describe(self, message):
 
     if content_type in ['image/jpeg', 'image/png', 'image/webp', 'image/gif']:
         try:
-            image = Part.from_uri(
-                mime_type=content_type,
-                uri=media_url
-            )
+            if is_chunked(media_url):
+                image_content = requests.get(media_url, stream=True).content
+                image = Image.open(io.BytesIO(image_content)).convert("RGB")
+            else:
+                image = Image.open(requests.get(media_url, stream=True).raw)
+
             input_text = "Give me a concise description of this image/gif, ideally under 100 words, translating to English if needed."
             description = generate_gemini_description(image, input_text)
 
