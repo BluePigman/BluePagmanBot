@@ -357,14 +357,6 @@ class Bot:
                 if message['command']['botCommand'].lower() in self.chess_commands:
                     self.chess_commands[message['command']['botCommand'].lower()](message)
                     self.time = time.time()
-
-            if "instagram.com/" in message['parameters']:
-                words = message['parameters'].split()
-                instagram_link = next((word for word in words if "instagram.com/" in word), None)         
-                if instagram_link:
-                    imginn_link = redirectLinks.convert_instagram_link(instagram_link)
-                    self.send_privmsg(message['command']['channel'], imginn_link)
-                    time.sleep(1.1)
             
             # check for emotes when guess game active
             if self.guessGameActive:
