@@ -6,7 +6,6 @@ import config
 import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from Commands import gemini
-from vertexai.generative_models import Part
 from PIL import Image
 import io
 
@@ -167,12 +166,17 @@ def reply_with_describe(self, message):
 
     elif content_type == 'application/pdf':
         try:
-            pdf = Part.from_uri(
-                mime_type=content_type,
-                uri=media_url
-            )
+            pdf_file_name = "temp_pdf.pdf"
+            pdf_response = requests.get(media_url)
+            with open(pdf_file_name, 'wb') as pdf_file:
+                pdf_file.write(pdf_response.content)
+            pdf_file = genai.upload_file(pdf_file_name, mime_type="application/pdf")
+            self.send_privmsg(message['command']['channel'], "Document is being uploaded to Gemini, please wait 10 seconds.")
+            time.sleep(10)
+
             input_text = "Summarize this pdf, translating to English if needed."
-            description = generate_gemini_description(pdf, input_text)
+            description = generate_gemini_description(pdf_file, input_text)
+            os.remove(pdf_file_name)
 
         except Exception as e:
             print(e)
@@ -187,8 +191,7 @@ def reply_with_describe(self, message):
         return
 
     if not description:
-        self.send_privmsg(message['command']['channel'],
-                          "The video could not be processed.")
+        self.send_privmsg(message['command']['channel'],"There was an error processing the content.")
         return
 
     for m in description:
