@@ -162,3 +162,47 @@ def reload_7tv_global(self, message):
     else:
         m = f"Error: {response.status_code} - {response.text}"
         self.send_privmsg(message['command']['channel'], m)
+
+
+def delete_emotes_from_database(self, message):
+    if not message['command']['botCommandParams']:
+        self.send_privmsg(message['command']['channel'], "No emotes provided for deletion.")
+        return
+    emotes_to_delete = message['command']['botCommandParams'].split()
+    emotes_collection = self.db['Emotes']
+    channel_emotes_collection = self.db['ChannelEmotes']
+
+    # Delete emotes from the Emotes collection
+    emotes_deletion_result = emotes_collection.delete_many({"name": {"$in": emotes_to_delete}})
+    self.send_privmsg(message['command']['channel'], f"Deleted {emotes_deletion_result.deleted_count} emotes from the Emotes collection.")
+
+    # Delete emote-channel relationships from the ChannelEmotes collection
+    channel_emotes_deletion_result = channel_emotes_collection.delete_many({"name": {"$in": emotes_to_delete}})
+    self.send_privmsg(message['command']['channel'], f"Deleted {channel_emotes_deletion_result.deleted_count} emotes from the ChannelEmotes collection.")
+
+
+def delete_global_emotes(self, message):
+    emotes_collection = self.db['Emotes']
+    channel_emotes_collection = self.db['ChannelEmotes']
+
+    # Find all global emotes
+    global_emotes = emotes_collection.find({"is_global": True}, {"emote_id": 1})
+    global_emote_ids = [emote["emote_id"] for emote in global_emotes]
+
+    if not global_emote_ids:
+        self.send_privmsg(message['command']['channel'], "No global emotes found for deletion.")
+        return
+
+    # Delete global emotes from the Emotes collection
+    emotes_deletion_result = emotes_collection.delete_many({"is_global": True})
+    self.send_privmsg(
+        message['command']['channel'],
+        f"Deleted {emotes_deletion_result.deleted_count} global emotes from the Emotes collection."
+    )
+
+    # Delete corresponding entries from the ChannelEmotes collection
+    channel_emotes_deletion_result = channel_emotes_collection.delete_many({"emote_id": {"$in": global_emote_ids}})
+    self.send_privmsg(
+        message['command']['channel'],
+        f"Deleted {channel_emotes_deletion_result.deleted_count} entries from the ChannelEmotes collection."
+    )

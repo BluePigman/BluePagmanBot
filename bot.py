@@ -102,8 +102,8 @@ class Bot:
             'join_channel': self.join_channel,
             'leave_channel': self.part_channel,
             'reset_chess': self.reset_chess,
-            'reset_poker': self.reset_poker
-
+            'reset_poker': self.reset_poker,
+            'delete': self.delete_emotes
         }
 
         # commands for playing chess
@@ -451,6 +451,13 @@ class Bot:
             self.pokerGame = None
             self.pokerTimer = None
             time.sleep(0.9)
+
+    def delete_emotes(self, message):
+        if message['source']['nick'] == config.bot_owner and message['command']['botCommandParams']:
+            if message['command']['botCommandParams'] == "globals":
+                reloadglobals.delete_global_emotes(self, message)
+            else:
+                reloadglobals.delete_emotes_from_database(self, message)
 
     # Runs if no one accepts chess challenge after 30s.
     def gameTimeout(self, channel):
