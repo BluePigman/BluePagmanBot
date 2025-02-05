@@ -35,14 +35,12 @@ def get_random_news_item(keyword=None):
     ]
     if any(domain in final_url for domain in paywalled):
         final_url = f"https://archive.today/?run=1&url={final_url}"
-    return_str = f"{news_item.title}, published on {gmt_to_est(news_item.published)}, {final_url}"
+    return_str = f"{news_item.title}, published on {parse_date(news_item.published)}, {final_url}"
     return return_str
 
-def gmt_to_est(gmt_time_str):
-    gmt_time = datetime.strptime(gmt_time_str, '%a, %d %b %Y %H:%M:%S GMT')
-    gmt_time = gmt_time.replace(tzinfo=ZoneInfo('GMT'))
-    est_time = gmt_time.astimezone(ZoneInfo('America/New_York'))
-    return est_time.strftime('%a, %d %b %Y %I:%M:%S %p EST')
+def parse_date(time_str):
+    gmt_time = datetime.strptime(time_str, '%a, %d %b %Y %H:%M:%S GMT')
+    return gmt_time.strftime('%b %d %Y')
 
 def get_redirect_url(url):
     response = requests.get(url, allow_redirects=True)
