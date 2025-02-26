@@ -5,7 +5,7 @@ def reply_with_olympics(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
         self.state[message['source']['nick']] = time.time()
         
-        link = "https://api.olympics.kevle.xyz/medals"
+        link = "https://bluepigman.github.io/2024-olympics/medals.json"
         if message['command']['botCommandParams']:
             countryCode = message['command']['botCommandParams'].split()[0]
             if len(countryCode) != 3:
