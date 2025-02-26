@@ -61,7 +61,7 @@ def generate(prompt) -> list[str]:
         return [response[i:i+n] for i in range(0, len(response), n)]
     except Exception as e:
         print(e)
-        return ["Error: ", e[0:490]]
+        return ["Error: ", str(e[0:490])]
 
 
 def generate_emote_description(prompt):
