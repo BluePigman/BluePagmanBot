@@ -69,7 +69,7 @@ def generate_emote_description(prompt):
         "You don't need to say Here's a description, just say the result."]
     try:
         model = genai.GenerativeModel(
-            "gemini-2.0-flash-lite-preview-02-05",
+            "gemini-2.0-flash-lite",
             system_instruction=system_instruction
         )
         response = model.generate_content(

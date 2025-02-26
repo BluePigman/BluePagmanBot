@@ -41,7 +41,7 @@ system_instruction=["""Please always provide a short and concise response. Do no
                         Answer should be at most 990 characters."""]
 
 model = genai.GenerativeModel(
-  model_name="gemini-2.0-flash-lite-preview-02-05",
+  model_name="gemini-2.0-flash-lite-latest",
   generation_config=generation_config,
   safety_settings=safety_settings,
   system_instruction=system_instruction
