@@ -10,7 +10,7 @@ def reply_with_gemini(self, message):
         self.state[message['source']['nick']] = time.time()
 
     if not message['command']['botCommandParams']:
-        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-2.0-flash-lite-preview-02-05, \
+        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-2.0-flash-lite, \
             temperature: 1.1, top_p: 0.95"
         self.send_privmsg(message['command']['channel'], m)
         return
@@ -42,7 +42,7 @@ system_instruction=["""Please always provide a short and concise response. Do no
 
 
 model = genai.GenerativeModel(
-  model_name="gemini-2.0-flash-lite-preview-02-05",
+  model_name="gemini-2.0-flash-lite",
   generation_config=generation_config,
   safety_settings=safety_settings,
   system_instruction=system_instruction
