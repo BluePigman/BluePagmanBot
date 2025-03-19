@@ -13,19 +13,26 @@ def reply_with_genius(self, message):
             return
 
         query = (message['command']['botCommandParams'])
-        request = genius.search(query)
-        if not request["hits"]:
-            m = "No results found. Try a different search."
-            self.send_privmsg(message['command']['channel'], m)
+        try:
+            request = genius.search(query)
+            if not request["hits"]:
+                m = "No results found. Try a different search."
+                self.send_privmsg(message['command']['channel'], m)
+                return
+            self.state["genius-lyrics"] = time.time()
+            songId = request["hits"][0]["result"]["id"]
+            lyrics = genius.lyrics(song_id=songId)
+            lyrics = lyrics.replace("\\n", " ")
+            lyrics = str(re.sub(r'\n+', ' ', lyrics).strip())
+            lyrics = [lyrics[i:i+495] for i in range(0, len(lyrics), 495)]
+            for m in lyrics:
+                self.send_privmsg(message['command']['channel'], m)
+                time.sleep(0.6)
+
+        except Exception as e:
+            error_msg = f"Error: {str(e)[:490]}"
+            self.send_privmsg(message['command']['channel'], error_msg)
             return
         
-        self.state["genius-lyrics"] = time.time()
-        songId = request["hits"][0]["result"]["id"]
-        lyrics = genius.lyrics(song_id=songId)
-        lyrics = lyrics.replace("\\n", " ")
-        lyrics = str(re.sub(r'\n+', ' ', lyrics).strip())
-        lyrics = [lyrics[i:i+495] for i in range(0, len(lyrics), 495)]
-        for m in lyrics:
-            self.send_privmsg(message['command']['channel'], m)
-            time.sleep(0.4)
+        
 
