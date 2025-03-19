@@ -24,7 +24,7 @@ def reply_with_genius(self, message):
             lyrics = genius.lyrics(song_id=songId)
             lyrics = lyrics.replace("\\n", " ")
             lyrics = str(re.sub(r'\n+', ' ', lyrics).strip())
-            lyrics = [lyrics[i:i+495] for i in range(0, len(lyrics), 495)]
+            lyrics = [lyrics[i:i+480] for i in range(0, len(lyrics), 480)]
             for m in lyrics:
                 self.send_privmsg(message['command']['channel'], m)
                 time.sleep(0.6)
