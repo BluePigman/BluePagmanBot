@@ -1,7 +1,7 @@
 import time
 
 def convert_twitter_link(link:str):
-    return link.replace("x.com", "xcancel.com")
+    return link.replace("x.com", "nitter.net")
 
 
 def reply_with_x(self, message):
@@ -18,5 +18,5 @@ def reply_with_x(self, message):
         twitter_link = next((word for word in words if "x.com/" in word), None)
         
         if twitter_link:
-            xcancel_link = twitter_link.replace("x.com", "xcancel.com")
+            xcancel_link = twitter_link.replace("x.com", "nitter.net")
             self.send_privmsg(message['command']['channel'], xcancel_link)
