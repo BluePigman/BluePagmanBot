@@ -201,6 +201,17 @@ class Bot:
                 parsed_message['parameters'] = raw_parameters_component
                 raw_parameters_component = raw_parameters_component + " " + parsed_message['tags']['reply-parent-msg-body']
 
+                # Truncate message so it can fit within single message IRC byte limits (assuming its 2048 bytes)
+                encoded = raw_parameters_component.encode('utf-8')
+                if len(encoded) > 1024:
+                    truncated = encoded[:1024]
+                    while truncated:
+                        try:
+                            raw_parameters_component = truncated.decode('utf-8')  # Try decoding
+                            break  
+                        except UnicodeDecodeError:
+                            truncated = truncated[:-1]  # Remove last byte if invalid
+
             if raw_parameters_component and raw_parameters_component[0] == self.prefix:
                 parsed_message['command'] = self.parse_parameters(
                     raw_parameters_component, parsed_message['command'])
@@ -385,11 +396,20 @@ class Bot:
                     return
 
     def loop_for_messages(self):
+        buffer = ""  # Store partial messages
         while True:
-            received_msgs = self.irc.recv(4096).decode(errors='ignore')
-            for received_msg in received_msgs.split('\r\n'):
-                self.handle_message(received_msg)
+            received_msgs = self.irc.recv(8192).decode(errors='ignore')
+            buffer += received_msgs  # Append new data to buffer
 
+            # Split messages using \r\n
+            messages = buffer.split("\r\n")
+
+            # Check if the last message is incomplete (does not end in \r\n)
+            buffer = messages.pop() if received_msgs[-2:] != "\r\n" else ""
+
+            for received_msg in messages:
+                self.handle_message(received_msg)
+    
     """Private commands"""
 
     def leave(self, message):
