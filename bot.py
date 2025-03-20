@@ -396,11 +396,20 @@ class Bot:
                     return
 
     def loop_for_messages(self):
+        buffer = ""  # Store partial messages
         while True:
-            received_msgs = self.irc.recv(4096).decode(errors='ignore')
-            for received_msg in received_msgs.split('\r\n'):
-                self.handle_message(received_msg)
+            received_msgs = self.irc.recv(8192).decode(errors='ignore')
+            buffer += received_msgs  # Append new data to buffer
 
+            # Split messages using \r\n
+            messages = buffer.split("\r\n")
+
+            # Check if the last message is incomplete (does not end in \r\n)
+            buffer = messages.pop() if received_msgs[-2:] != "\r\n" else ""
+
+            for received_msg in messages:
+                self.handle_message(received_msg)
+    
     """Private commands"""
 
     def leave(self, message):
