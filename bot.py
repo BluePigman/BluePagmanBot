@@ -201,6 +201,17 @@ class Bot:
                 parsed_message['parameters'] = raw_parameters_component
                 raw_parameters_component = raw_parameters_component + " " + parsed_message['tags']['reply-parent-msg-body']
 
+                # Truncate message so it can fit within single message IRC byte limits (assuming its 2048 bytes)
+                encoded = raw_parameters_component.encode('utf-8')
+                if len(encoded) > 1024:
+                    truncated = encoded[:1024]
+                    while truncated:
+                        try:
+                            raw_parameters_component = truncated.decode('utf-8')  # Try decoding
+                            break  
+                        except UnicodeDecodeError:
+                            truncated = truncated[:-1]  # Remove last byte if invalid
+
             if raw_parameters_component and raw_parameters_component[0] == self.prefix:
                 parsed_message['command'] = self.parse_parameters(
                     raw_parameters_component, parsed_message['command'])
