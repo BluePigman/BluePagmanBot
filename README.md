@@ -18,8 +18,6 @@ A Twitch chatbot running in Python.
 
 ## How to use: 
 
-IMPORTANT: If you don't want to set up a MongoDB, then use v1.2 in releases.
-
 1. Download the latest release and extract or clone this repository.
 2. Create a [python virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#create-and-use-virtual-environments) and run `pip install -e .` in the project's directory. (The `-e` flag installs the package in editable mode, which is useful for development.)
 3. Make a Twitch account if you do not already have one.
@@ -27,6 +25,9 @@ IMPORTANT: If you don't want to set up a MongoDB, then use v1.2 in releases.
 5. Rename `config_example.py` to `config.py`, and fill in the details.
 6. Set up a Mongo database, add a database named "test" and a collection named "Users". Then add the connection string into `config.py` in db_uri.
 7. Run `bot.py`. The bot will now join the channels you put in `config.py`.
+
+## Maintenance:
+`uv add` to add packages. Then `pip install -e .` to update.
 
 ## Video Demo:
 https://github.com/BluePigman/BluePagmanBot/assets/82780692/6cab58f2-3a63-4344-9456-abce8bc93851
