@@ -1,7 +1,8 @@
 from lyricsgenius import Genius
 import config
 import re
-genius = Genius(config.GENIUS_TOKEN)
+userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+genius = Genius(access_token=config.GENIUS_TOKEN, user_agent=userAgent)
 
 request = genius.search("motion sickness")
 if not request["hits"]:
