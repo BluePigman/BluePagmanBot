@@ -2,6 +2,7 @@ import time
 from google import genai
 from google.genai import types
 import requests
+import io
 from config import GOOGLE_API_KEY
 
 
@@ -64,8 +65,9 @@ def generate_image(prompt) -> str:
             return "Image was not generated. Please try again."
         if chunk.candidates[0].content.parts[0].inline_data:
             inline_data = chunk.candidates[0].content.parts[0].inline_data
+            file_data = io.BytesIO(inline_data.data)  # Convert bytes to file-like object
             files = {
-                'file': inline_data.data # bytestring
+                'file': ('image.png', file_data, 'image/png')  # Name the file and specify MIME type
             }
             response = requests.post('https://kappa.lol/api/upload',files=files)
             time.sleep(1)
