@@ -8,7 +8,7 @@ from pymongo.mongo_client import MongoClient
 from Commands import (bot_info, date, groq_command, help_ascii, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
                       news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2,
                       ascii, reloadglobals, reloadchannel, sparlerlink, suggest, poker, rm, olympics, summarize, describe, rottentomatoes, remind, eight_ball,
-                      guessgame, x, genius)
+                      guessgame, x, genius, generate_image)
 
 class Bot:
 
@@ -91,7 +91,8 @@ class Bot:
             'groq': groq_command.reply_with_groq,
             'x': x.reply_with_x,
             'commands': help.list_commands,
-            'genius': genius.reply_with_genius
+            'genius': genius.reply_with_genius,
+            'generate': generate_image.reply_with_generate
         }
 
         # only bot owner can use these commands
