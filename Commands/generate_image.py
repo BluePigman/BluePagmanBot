@@ -1,3 +1,4 @@
+import base64
 import time
 from google import genai
 from google.genai import types
@@ -63,13 +64,15 @@ def generate_image(prompt) -> str:
         
         result = response.candidates
         if not result:
-            return "NONE"
+            return "Image could not be generated."
         inline_data = result[0].content.parts[0].inline_data
-        mimetype = mimetypes.guess_extension(inline_data.mime_type)
-
+        if not inline_data:
+            return "Image could not be generated, the prompt was likely blocked."
+        image_bytes = base64.b64decode(inline_data.data) # for linux
         files = {
-                'file': inline_data.data # bytestring
-            }
+            'file': ('generated_image' + ".png", image_bytes, "image/png")
+        }
+
         try:
             response = requests.post('https://kappa.lol/api/upload',files=files)
             time.sleep(1)
