@@ -1,16 +1,11 @@
+import base64
 import io
 import time
 import requests
 import mimetypes
 from google import genai
 from google.genai import types
-import base64
 from config import GOOGLE_API_KEY
-import re
-
-def is_base64(data):
-    # A simple regex to check if the data looks like Base64-encoded
-    return bool(re.match(r'^[A-Za-z0-9+/=]+$', data))
 
 def generate():
     client = genai.Client(api_key=GOOGLE_API_KEY)
@@ -28,10 +23,11 @@ def generate():
         top_k=40,
         max_output_tokens=8192,
         response_modalities=["image", "text"],
-        safety_settings=[types.SafetySetting(category="HARM_CATEGORY_CIVIC_INTEGRITY", threshold="OFF")],
+        safety_settings=[
+            types.SafetySetting(category="HARM_CATEGORY_CIVIC_INTEGRITY", threshold="OFF")
+        ],
         response_mime_type="text/plain",
     )
-
     try:
         response = client.models.generate_content(
             model=model,
@@ -44,25 +40,12 @@ def generate():
             return "NONE"
         
         inline_data = result[0].content.parts[0].inline_data
-        
-        # Decode Base64 if necessary
-        if isinstance(inline_data.data, str) and is_base64(inline_data.data):
-            image_bytes = base64.b64decode(inline_data.data)
-        else:
-            image_bytes = inline_data.data  # Use raw bytes if it's not a Base64 string
-
         file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".png"
         print(f"Detected file extension: {file_extension}")
-
-        # Save image to verify its integrity
-        with open("generated_image_test.png", "wb") as img_file:
-            img_file.write(image_bytes)
-
-        print(f"Image saved locally as generated_image_test.png")
-
-        # Prepare the files for upload
+        file_bytes = base64.b64decode(inline_data.data) if isinstance(inline_data.data, str) else inline_data.data
+        # file_data = io.BytesIO(inline_data.data)  # Convert bytes to file-like object
         files = {
-            'file': ('generated_image' + file_extension, image_bytes, inline_data.mime_type)
+             'file': file_bytes # bytestring
         }
 
         # 🔥 Log request details
