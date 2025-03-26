@@ -40,12 +40,11 @@ def generate():
             return "NONE"
         
         inline_data = result[0].content.parts[0].inline_data
-        image_bytes = base64.b64decode(inline_data.data)
+        image_bytes = base64.b64decode(inline_data.data) if isinstance(inline_data.data, str) else inline_data.data
+        
         print(f"Type of data: {type(inline_data.data)}")
         file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".png"
         print(f"Detected file extension: {file_extension}")
-
-        file_data = io.BytesIO(inline_data.data)  # Convert bytes to file-like object
         files = {
             'file': ('generated_image' + file_extension, image_bytes, inline_data.mime_type)
         }
