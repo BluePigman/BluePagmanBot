@@ -84,4 +84,4 @@ def generate_image(prompt) -> str:
             return f"Error, {str(e)}"
     except Exception as e:
         print(e)
-        return f"Error, {str(e)}"
+        return "Error, the prompt was likely blocked."
