@@ -3,6 +3,7 @@ from google import genai
 from google.genai import types
 import requests
 import io
+import mimetypes
 from config import GOOGLE_API_KEY
 
 
@@ -53,29 +54,31 @@ def generate_image(prompt) -> str:
         ],
         response_mime_type="text/plain",
     )
-    
 
+    try:
+        response = client.models.generate_content(
+            model=model,
+            contents=contents,
+            config=generate_content_config,)
+        
+        result = response.candidates
+        if not result:
+            return "NONE"
+        inline_data = result[0].content.parts[0].inline_data
+        mimetype = mimetypes.guess_extension(inline_data.mime_type)
 
-    for chunk in client.models.generate_content_stream(
-        model=model,
-        contents=contents,
-        config=generate_content_config,
-    ):
-        if not chunk.candidates or not chunk.candidates[0].content or not chunk.candidates[0].content.parts:
-            return "Image was not generated. Please try again."
-        if chunk.candidates[0].content.parts[0].inline_data:
-            inline_data = chunk.candidates[0].content.parts[0].inline_data
-            file_data = io.BytesIO(inline_data.data)  # Convert bytes to file-like object
-            files = {
-                'file': ('image.png', file_data, 'image/png')  # Name the file and specify MIME type
+        files = {
+                'file': inline_data.data # bytestring
             }
+        try:
             response = requests.post('https://kappa.lol/api/upload',files=files)
             time.sleep(1)
             response = response.json()
-            try:
-                if response["link"]:
-                    return response["link"]
-            except Exception as e:
-                return str(e)[:490]
-        else:
-            return "The prompt was blocked, please try again."
+            if response["link"]:
+                return response["link"]
+        except Exception as e:
+            print(e)
+            return f"Error, {str(e)}"
+    except Exception as e:
+        print(e)
+        return f"Error, {str(e)}"

@@ -36,42 +36,32 @@ def generate():
         ],
         response_mime_type="text/plain",
     )
-    
-
-
-    for chunk in client.models.generate_content_stream(
-        model=model,
-        contents=contents,
-        config=generate_content_config,
-    ):
-        if not chunk.candidates or not chunk.candidates[0].content or not chunk.candidates[0].content.parts:
-            continue
-        if chunk.candidates[0].content.parts[0].inline_data:
-            file_name = "ENTER_FILE_NAME"
-            inline_data = chunk.candidates[0].content.parts[0].inline_data
-            file_extension = mimetypes.guess_extension(inline_data.mime_type)
-            # save_binary_file(
-            #     f"{file_name}{file_extension}", inline_data.data
-            # )
-            files = {
+    try:
+        response = client.models.generate_content(
+            model=model,
+            contents=contents,
+            config=generate_content_config,)
+        
+        result = response.candidates
+        if not result:
+            return "NONE"
+        inline_data = result[0].content.parts[0].inline_data
+        # print(mimetypes.guess_extension(inline_data.mime_type))
+        files = {
                 'file': inline_data.data # bytestring
             }
+        try:
             response = requests.post('https://kappa.lol/api/upload',files=files)
             time.sleep(1)
             response = response.json()
-            try:
-                print(response)
-                print(response["link"])
-                print(response["delete"])
-            except Exception as e:
-                print(e)
-            # print(
-            #     "File of mime type"
-            #     f" {inline_data.mime_type} saved"
-            #     f"to: {file_name}"
-            # )
-        else:
-            print(chunk.text)
-
+            print(response)
+            print(response["link"])
+            print(response["delete"])
+        except Exception as e:
+            print(e)
+    except Exception as e:
+        print(e)
+        return None
+   
 if __name__ == "__main__":
     generate()
