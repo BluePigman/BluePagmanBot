@@ -68,15 +68,13 @@ def generate_image(prompt) -> str:
         inline_data = result[0].content.parts[0].inline_data
         if not inline_data:
             return "Image could not be generated, the prompt was likely blocked."
-        image_bytes = base64.b64decode(inline_data.data) # for linux
+        image_bytes = base64.b64decode(inline_data.data) if inline_data.data.startswith(b'iVBORw') else inline_data.data
         files = {
             'file': ('generated_image' + ".png", image_bytes, "image/png")
         }
 
         try:
-            response = requests.post('https://kappa.lol/api/upload',files=files)
-            time.sleep(1)
-            response = response.json()
+            response = requests.post('https://kappa.lol/api/upload',files=files).json()
             if response["link"]:
                 return response["link"]
         except Exception as e:

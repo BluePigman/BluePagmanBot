@@ -1,5 +1,3 @@
-import io
-import time
 import requests
 import mimetypes
 from google import genai
@@ -40,8 +38,7 @@ def generate():
             return "NONE"
         
         inline_data = result[0].content.parts[0].inline_data
-        image_bytes = base64.b64decode(inline_data.data) # for linux
-        # image_bytes = inline_data.data # for windows
+        image_bytes = base64.b64decode(inline_data.data) if inline_data.data.startswith(b'iVBORw') else inline_data.data
         
         file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".png"
         files = {
@@ -61,7 +58,6 @@ def generate():
 
             response = session.send(prepared)  # Actually send the request
 
-        time.sleep(1)
         response_json = response.json()
         print("\n🔹 Response:")
         print(response_json)
