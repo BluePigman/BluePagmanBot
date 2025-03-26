@@ -54,6 +54,13 @@ def generate():
         file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".png"
         print(f"Detected file extension: {file_extension}")
 
+        # Save image to verify its integrity
+        with open("generated_image_test.png", "wb") as img_file:
+            img_file.write(image_bytes)
+
+        print(f"Image saved locally as generated_image_test.png")
+
+        # Prepare the files for upload
         files = {
             'file': ('generated_image' + file_extension, image_bytes, inline_data.mime_type)
         }
