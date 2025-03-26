@@ -1,10 +1,10 @@
-import base64
 import io
 import time
 import requests
 import mimetypes
 from google import genai
 from google.genai import types
+import base64
 from config import GOOGLE_API_KEY
 
 def generate():
@@ -40,12 +40,12 @@ def generate():
             return "NONE"
         
         inline_data = result[0].content.parts[0].inline_data
+        image_bytes = base64.b64decode(inline_data.data) # for linux
+        # image_bytes = inline_data.data # for windows
+        
         file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".png"
-        print(f"Detected file extension: {file_extension}")
-        file_bytes = base64.b64decode(inline_data.data) if isinstance(inline_data.data, str) else inline_data.data
-        # file_data = io.BytesIO(inline_data.data)  # Convert bytes to file-like object
         files = {
-             'file': file_bytes # bytestring
+            'file': ('generated_image' + file_extension, image_bytes, inline_data.mime_type)
         }
 
         # 🔥 Log request details
