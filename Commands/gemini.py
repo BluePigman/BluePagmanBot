@@ -10,7 +10,7 @@ def reply_with_gemini(self, message):
         self.state[message['source']['nick']] = time.time()
 
     if not message['command']['botCommandParams']:
-        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-2.5-pro-exp-03-25, \
+        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-2.0-flash, \
             temperature: 1.1, top_p: 0.95"
         self.send_privmsg(message['command']['channel'], m)
         return
@@ -42,7 +42,7 @@ system_instruction=["""Please always provide a short and concise response. Do no
 
 
 model = genai.GenerativeModel(
-  model_name="gemini-2.5-pro-exp-03-25",
+  model_name="gemini-2.0-flash",
   generation_config=generation_config,
   safety_settings=safety_settings,
   system_instruction=system_instruction
@@ -69,7 +69,7 @@ def generate_emote_description(prompt):
         "You don't need to say Here's a description, just say the result."]
     try:
         model = genai.GenerativeModel(
-            "gemini-2.0-flash-lite",
+            "gemini-2.0-flash",
             system_instruction=system_instruction
         )
         response = model.generate_content(
