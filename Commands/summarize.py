@@ -42,6 +42,7 @@ def extract_youtube_id(text):
     youtube_regex = r"(https?://)?(www\.|m\.)?(youtube\.com|youtu\.be)/.+$"
 
     match = re.search(youtube_regex, text)
+    video_id = None
     if match:
         if "youtube.com/watch" in text:
             video_id = text.split("v=")[-1].split("&")[0]
@@ -49,9 +50,7 @@ def extract_youtube_id(text):
             video_id = text.split("/shorts/")[-1].split("?")[0]
         elif "youtu.be" in text:
             video_id = text.split("/")[-1].split("?")[0]
-        return video_id
-    else:
-        return None
+    return video_id
 
 
 def get_transcript(video_id):
