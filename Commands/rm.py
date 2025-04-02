@@ -1,4 +1,4 @@
-import json
+from datetime import datetime
 import random
 import time
 import requests
@@ -28,71 +28,85 @@ def reply_with_rm(self, message):
 
 
 def scrape_subreddit(subreddit):
-    url = f"https://l.opnxng.com/r/{subreddit}"
+    url = f"https://redlib.catsarch.com/r/{subreddit}"
     response = requests.get(url)
     html_content = response.content
 
     # Parse the HTML content using BeautifulSoup
-    soup = BeautifulSoup(html_content, features="html.parser",from_encoding='utf-8')
+    soup = BeautifulSoup(html_content, features="html.parser", from_encoding='utf-8')
 
     # Find all posts
     posts = soup.find_all("div", class_="post")
 
     post_data = []
     for post in posts:
-        if "post stickied" == " ".join(post.get("class", [])):
+        # Skip stickied posts
+        if "stickied" in post.get("class", []):
             continue
-        title_links = post.find("h2", class_="post_title").find_all("a")
-        if len(title_links) == 1:
-            title = title_links[0].get_text(strip=True)
-        elif len(title_links) > 1:
-            title = title_links[1].get_text(strip=True)
-        else:
-            title = None
-        title = title.replace("\u2019", "'") if title else None
-        title = title.replace('\u201c', '"') if title else None
-        title = title.replace('\u201d', '"') if title else None
 
-        media_link = post.find("div", class_="post_media_content")
-        thumbnail_link = post.find("a", class_="post_thumbnail")
-        
-        if media_link:
-            link = media_link.find("a")["href"]
-            link = f"https://l.opnxng.com{link}"
-        elif thumbnail_link:
-            link = thumbnail_link["href"]
-            link = link
-        elif len(title_links) > 0:
-            link = title_links[0]["href"]
-            link = link
-        else:
-            link = None
+        # Get title and link
+        title_element = post.find("h2", class_="post_title")
+        if title_element:
+            # Get all links and take the last one (skipping flairs)
+            title_links = title_element.find_all("a")
+            if title_links:
+                # Skip flair links by checking for post_flair class
+                post_link = None
+                for link in title_links:
+                    if 'post_flair' not in link.get('class', []):
+                        post_link = link
+                
+                if post_link:
+                    title = post_link.get_text(strip=True)
+                    link = post_link["href"]
+                    # Add domain if it's a relative URL
+                    if link.startswith("/"):
+                        link = f"https://redlib.catsarch.com{link}"
+                    
+                    # Clean up title
+                    title = title.replace("\u2019", "'")
+                    title = title.replace('\u201c', '"')
+                    title = title.replace('\u201d', '"')
 
-        if link and link.startswith("/r/"):
-            link = f"https://l.opnxng.com{link}"
-        
-        if link.startswith("/gallery"):
-            link = f"https://reddit.com{link}"
+                    # Get time posted and format it
+                    time_element = post.find("span", class_="created")
+                    if time_element and "title" in time_element.attrs:
+                        timestamp_str = time_element["title"]
+                        try:
+                            # Parse the timestamp string to datetime object
+                            dt = datetime.strptime(timestamp_str, "%b %d %Y, %H:%M:%S UTC")
+                            # Convert to Unix timestamp
+                            created_utc = dt.timestamp()
+                            time_posted = format_time_ago(created_utc)
+                        except ValueError:
+                            time_posted = time_element.get_text(strip=True)
+                    else:
+                        time_posted = None
 
-        # Extract the time posted and score
-        time_posted = post.find("span", class_="created")["title"] if post.find("span", class_="created") else None
-        score = post.find("div", class_="post_score").get_text(strip=True).replace(' Upvotes', '') if post.find("div", class_="post_score") else None
-        score = score.replace('Upvotes', '') if score else None
-        score = score.replace("\u2022", "Idk ") if score else None
-        
-        subreddit = post.find("a", class_="post_subreddit").get_text(strip=True)
-        # Create a dictionary for the post
-        post_dict = {
-            "title": title,
-            "link": link,
-            "time_posted": time_posted,
-            "score": score,
-            "subreddit": subreddit
-        }
-        post_data.append(post_dict)
+                    # Get score
+                    score_element = post.find("div", class_="post_score")
+                    if score_element:
+                        score = score_element.get_text(strip=True)
+                        score = score.replace("Upvotes", "").strip()
+                        score = score.replace("\u2022", "")
+
+                    # Get subreddit
+                    subreddit_element = post.find("a", class_="post_subreddit")
+                    subreddit = subreddit_element.get_text(strip=True) if subreddit_element else None
+
+                    # Create post dictionary
+                    post_dict = {
+                        "title": title,
+                        "link": link,
+                        "time_posted": time_posted,
+                        "score": score,
+                        "subreddit": subreddit
+                    }
+                    post_data.append(post_dict)
+
     if not post_data:
         return None
-    return(random.choice(post_data))
+    return random.choice(post_data)
 
 def format_time_ago(created_utc):
     now = time.time()
