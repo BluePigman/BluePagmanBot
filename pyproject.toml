@@ -20,6 +20,7 @@ dependencies = [
     "groq==0.20.0",
     "lyricsgenius>=3.3.1",
     "google-genai>=1.7.0",
+    "googlenewsdecoder>=0.1.7",
 ]
 
 [tool.setuptools]
