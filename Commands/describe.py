@@ -43,16 +43,6 @@ def get_content_type(url):
         print(f"Error fetching content type: {e}")
         return None
 
-
-def is_chunked(url):
-    try:
-        response = requests.get(url)
-        return response.headers.get('Transfer-Encoding') == 'chunked'
-    except Exception as e:
-        print(f"Error checking for chunked transfer encoding: {e}")
-        return False
-
-
 def generate_gemini_description(media, input_text):
     response = gemini.generate([media, input_text])
     return response
@@ -114,17 +104,28 @@ def reply_with_describe(self, message):
 
     if content_type in ['image/jpeg', 'image/png', 'image/webp', 'image/gif']:
         try:
-            if is_chunked(media_url):
-                print("Chunked")
-                image_content = requests.get(media_url, stream=True).content
-                image = Image.open(io.BytesIO(image_content)).convert("RGB")
-            else:
-                print("Not chunked")
-                image = Image.open(requests.get(media_url, stream=True).raw)
+            # Download the image
+            image_response = requests.get(media_url, stream=True)
+            
+            extension_map = {
+                'image/jpeg': 'jpg',
+                'image/png': 'png',
+                'image/webp': 'webp',
+                'image/gif': 'gif'
+            }
+            extension = extension_map.get(content_type, 'jpg')
 
+            image_file_name = f"temp_image.{extension}"
+            with open(image_file_name, 'wb') as image_file:
+                image_file.write(image_response.content)
+
+            image_file = genai.upload_file(image_file_name, mime_type=content_type)
+            time.sleep(1)
             input_text = "Give me a concise description of this image/gif, ideally under 100 words, translating to English if needed."
             print("Getting description...")
-            description = generate_gemini_description(image, input_text)
+            description = generate_gemini_description(image_file, input_text)
+
+            os.remove(image_file_name)
 
         except Exception as e:
             print(e)
