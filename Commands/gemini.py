@@ -52,10 +52,12 @@ def generate(prompt) -> list[str]:
     try:
         if isinstance(prompt, str):
             prompt = [prompt]
+            print("Prompt:", prompt)
         response = model.generate_content(
             prompt,
             stream=False,
         ).text.replace('\n', ' ')
+        print("Got response.")
         response = response.replace('*', ' ')
         n = 495
         return [response[i:i+n] for i in range(0, len(response), n)]
