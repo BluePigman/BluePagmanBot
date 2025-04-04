@@ -89,6 +89,7 @@ def reply_with_describe(self, message):
         # Set media_url and content_type directly if prompt is a URL
         media_url = prompt
         content_type = get_content_type(media_url)
+        print("Content type: ", content_type)
     else:
         # Check if the prompt is an emote name in the Emotes collection
         emote = self.db['Emotes'].find_one({"name": prompt})
@@ -114,12 +115,15 @@ def reply_with_describe(self, message):
     if content_type in ['image/jpeg', 'image/png', 'image/webp', 'image/gif']:
         try:
             if is_chunked(media_url):
+                print("Chunked")
                 image_content = requests.get(media_url, stream=True).content
                 image = Image.open(io.BytesIO(image_content)).convert("RGB")
             else:
+                print("Not chunked")
                 image = Image.open(requests.get(media_url, stream=True).raw)
 
             input_text = "Give me a concise description of this image/gif, ideally under 100 words, translating to English if needed."
+            print("Getting description...")
             description = generate_gemini_description(image, input_text)
 
         except Exception as e:
