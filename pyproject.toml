@@ -14,7 +14,7 @@ dependencies = [
     "requests>=2.32.3",
     "selectolax>=0.3.24",
     "texasholdem>=0.11.0",
-    "youtube-transcript-api>=0.6.2",
+    "youtube-transcript-api==1.0.3",
     "google-cloud-aiplatform>=1.70.0",
     "tzdata>=2024.2",
     "groq==0.20.0",
@@ -25,3 +25,9 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["Commands", "BrailleArt"]
+
+[tool.uv]
+dev-dependencies = [
+    "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.5",
+]
