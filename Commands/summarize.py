@@ -54,21 +54,16 @@ def extract_youtube_id(text):
 
 
 def get_transcript(video_id: str) -> str | None:
-    """Get the best available transcript for a video and return the merged text."""
+    # Try getting English transcript, fallback on translated transcript
     try:
-        print(f"Fetching transcript list for video ID: {video_id}")
         transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
 
-        # Try to get manually created English transcript first
-        print("Attempting to get manually created 'en-GB' transcript...")
         try:
             transcript = transcript_list.find_transcript(['en-GB'])
         except NoTranscriptFound:
-            print("No 'en-GB' transcript found, trying auto-generated 'en' transcript...")
             try:
                 transcript = transcript_list.find_transcript(['en'])
             except NoTranscriptFound:
-                print("No English transcript found, attempting translation from another language...")
                 for t in transcript_list:
                     try:
                         transcript = t.translate('en')
@@ -76,12 +71,10 @@ def get_transcript(video_id: str) -> str | None:
                     except Exception:
                         continue
                 else:
-                    print("No translatable transcripts available.")
                     return None
 
-        # Fetch the transcript text
         fetched = transcript.fetch()
-        merged_text = " ".join([item['text'].replace('\n', ' ') for item in fetched])
+        merged_text = " ".join(snippet.text.replace(r'\'', "'") for snippet in fetched.snippets)
         return merged_text
 
     except (NoTranscriptFound, TranscriptsDisabled):
@@ -89,4 +82,4 @@ def get_transcript(video_id: str) -> str | None:
         return None
     except Exception as e:
         print(f"Unexpected error for video {video_id}: {e}")
-        return " ".join(str(e))
+        return None
