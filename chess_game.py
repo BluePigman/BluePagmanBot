@@ -160,7 +160,7 @@ class ChessManager:
 
 
     def gameTimeout(self, channel):
-        self._send_message(channel, f"No one accepted the challenge. :(")
+        self._send_message(channel, "No one accepted the challenge. :(")
         self.chessGameActive = False
 
 
@@ -168,9 +168,8 @@ class ChessManager:
         """Dispatches chess commands to the appropriate methods."""
         command_func = self.commands.get(command_name.lower())
         if command_func:
-            if not self.chessGameActive and command_name != 'join':
-                 if not (command_name == 'join' and self.chessGameActive and not self.gameAccepted):
-                    return
+            if not self.chessGameActive or (command_name == 'join' and self.gameAccepted):
+                return
             try:
                 command_func(message)
             except Exception as e:
