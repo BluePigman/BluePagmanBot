@@ -3,7 +3,7 @@ import sys
 import ssl
 import time
 import config
-from chess_game import ChessGame
+from chess_game import ChessManager
 from pymongo.mongo_client import MongoClient
 from Commands import (bot_info, date, groq_command, help_ascii, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
                       news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2,
@@ -25,15 +25,7 @@ class Bot:
         self.time = time.time()
         self.last_msg = ''
         self.last_msg_time = time.time()
-        # chess params
-        self.chessGameActive = False
-        self.gameAccepted = False
-        self.player1 = ''
-        self.player2 = ''
-        self.choseSidePlayer1 = False
-        self.currentGame = None  # hold the chess game
-        self.chessTimer = None  # chess game pending timer
-        self.start_time = None  # to measure bot uptime
+        self.chess_manager = ChessManager(self)
         # poker params
         self.pokerGameActive = False
         self.pokerGamePending = False
@@ -102,18 +94,10 @@ class Bot:
             'echo': self.echo,
             'join_channel': self.join_channel,
             'leave_channel': self.part_channel,
-            'reset_chess': self.reset_chess,
             'reset_poker': self.reset_poker,
             'delete': self.delete_emotes
         }
 
-        # commands for playing chess
-        self.chess_commands = {
-            'white': self.chooseSidePlayer1,
-            'black': self.chooseSidePlayer1,
-            'move': self.move,
-            'join': self.join
-        }
         self.dbClient = MongoClient(config.db_uri)
         self.db = self.dbClient['test']
         self.users = self.db['Users']
@@ -366,8 +350,8 @@ class Bot:
                     self.private_commands[message['command']['botCommand'].lower()](message)
                     self.time = time.time()
 
-                if message['command']['botCommand'].lower() in self.chess_commands:
-                    self.chess_commands[message['command']['botCommand'].lower()](message)
+                if message['command']['botCommand'].lower() in self.chess_manager.commands:
+                    self.chess_manager.handle_command(message['command']['botCommand'].lower(), message)
                     self.time = time.time()
             
             # check for emotes when guess game active
@@ -450,19 +434,6 @@ class Bot:
 
             self.send_privmsg(message['command']['channel'], "Success")
 
-    def reset_chess(self, message):
-        if message['source']['nick'] == self.player1 or message['source']['nick'] == self.player2:
-            self.chessGameActive = False
-            self.gameAccepted = False
-            self.send_privmsg(
-                message['command']['channel'], "Chess game has been reset.")
-            self.player1 = ""
-            self.player2 = ""
-            self.chessGameActive = False
-            self.choseSidePlayer1 = False
-            self.currentGame = None
-            time.sleep(2)
-
     def reset_poker(self, message):
         if message['tags']['display-name'] in self.pokerPlayers:
             self.send_privmsg(
@@ -479,178 +450,6 @@ class Bot:
                 reloadglobals.delete_global_emotes(self, message)
             else:
                 reloadglobals.delete_emotes_from_database(self, message)
-
-    # Runs if no one accepts chess challenge after 30s.
-    def gameTimeout(self, channel):
-        text = "No one accepted the challenge. :("
-        self.send_privmsg(channel, text)
-        self.chessGameActive = False
-        self.player1 = ""
-
-    """Functions for chess"""
-
-    def join(self, message):  # join game
-        if message['source']['nick'] != self.player1 and self.chessGameActive and not self.gameAccepted:
-            self.chessTimer.cancel()
-            text = f"@{message['tags']['display-name']} has joined the game."
-            self.send_privmsg(message['command']['channel'], text)
-            time.sleep(2)
-            self.player2 = message['source']['nick']
-            self.gameAccepted = True
-            text = f"@{self.player1}, Choose a side: {self.prefix}white (white), {self.prefix}black (black)"
-            self.send_privmsg(message['command']['channel'], text)
-            time.sleep(2)
-
-    def chooseSidePlayer1(self, message):
-        # Player who started game chooses side first.
-        if self.chessGameActive and self.player2 and message['source']['nick'] == self.player1 and not self.choseSidePlayer1:
-
-            if message['command']['botCommand'].lower() == "white":
-                self.choseSidePlayer1 = True
-                text = f"@{self.player1}, you will play as white"
-                self.send_privmsg(message['command']['channel'], text)
-                time.sleep(2)
-                text = f"@{self.player1}, you are starting, enter start move."
-                self.send_privmsg(message['command']['channel'], text)
-                self.currentGame = ChessGame(self.player1, self.player2)
-                time.sleep(2)
-
-            elif message['command']['botCommand'].lower() == "black":
-                text = f"@{self.player1}, you will play as black"
-                self.send_privmsg(message['command']['channel'], text)
-                time.sleep(2)
-                text = f"@{self.player2}, you are starting, enter start move."
-                self.send_privmsg(message['command']['channel'], text)
-                self.currentGame = ChessGame(self.player2, self.player1)
-                time.sleep(2)
-            else:
-                text = f"Invalid input, please enter either {self.prefix}white or {self.prefix}black."
-                self.send_privmsg(message['command']['channel'], text)
-                time.sleep(2)
-
-    # Start the game
-
-    def move(self, message):
-        if self.currentGame and ("move" not in self.state or time.time() - self.state["move"] > 2):
-
-            self.state["move"] = time.time()
-
-            # White to play
-            if self.currentGame.current_side == 'w':
-                if message['source']['nick'] == self.currentGame.player1:
-                    if not message['command']['botCommandParams']:
-                        self.send_privmsg(
-                            message['command']['channel'], f'@{self.currentGame.player1}, please enter a move!')
-                    else:
-                        move = message['command']['botCommandParams']
-                        if move == "resign":
-                            self.currentGame.resign(message['source']['nick'])  # will update pgn
-                            text = f"@{message['tags']['display-name']} resigned. @{self.currentGame.player2} wins."
-                            self.send_privmsg(message['command']['channel'], text)
-                            time.sleep(2)
-                            # get pgn
-                            pgn = self.currentGame.get_pgn()
-                            for m in pgn:
-                                self.send_privmsg(
-                                    message['command']['channel'], m)
-                                time.sleep(2)
-                            # reset chess vars.
-                            self.chessGameActive = False
-                            self.gameAccepted = False
-                            self.choseSidePlayer1 = False
-                            self.currentGame = None
-                            self.player1 = ""
-                            self.player2 = ""
-                            return
-                        moveSuccesful = self.currentGame.move(move)
-                        # do the move
-                        if moveSuccesful:
-                            if self.currentGame.game_over():
-                                result = self.currentGame.result()
-                                self.send_privmsg(
-                                    message['command']['channel'], result)
-                                time.sleep(2)
-                                for m in self.currentGame.get_pgn():  # print PGN
-                                    self.send_privmsg(
-                                        message['command']['channel'], m)
-                                    time.sleep(2)
-                                self.chessGameActive = False
-                                self.choseSidePlayer1 = False
-                                self.gameAccepted = False
-                                self.currentGame = None
-                                self.player1 = ""
-                                self.player2 = ""
-                                return
-                            # if game not over, print PGN, black to play.
-                            for m in self.currentGame.get_pgn():
-                                self.send_privmsg(
-                                    message['command']['channel'], m)
-                                time.sleep(2)
-                            self.send_privmsg(
-                                message['command']['channel'], f"@{self.currentGame.player2} it is your turn.")
-
-                        else:  # move was unsuccessful
-                            text = f"Invalid/illegal move, please try again. For help refer to {self.prefix}help_chess."
-                            self.send_privmsg(
-                                message['command']['channel'], text)
-                            time.sleep(2)
-
-            elif self.currentGame.current_side == 'b':
-
-                if message['source']['nick'] == self.currentGame.player2:
-                    if not message['command']['botCommandParams']:
-                        self.send_privmsg(
-                            message['command']['channel'], f'@{self.currentGame.player2}, please enter a move!')
-                    else:
-                        move = message['command']['botCommandParams']
-                        if move == "resign":
-                            self.currentGame.resign(
-                                message['source']['nick'])  # will update pgn
-                            text = f"@{message['tags']['display-name']} resigned. @{self.currentGame.player1} wins! PogChamp"
-                            self.send_privmsg(message['command']['channel'], text)
-                            time.sleep(2)
-                            pgn = self.currentGame.get_pgn()
-                            for m in pgn:
-                                self.send_privmsg(
-                                    message['command']['channel'], m)
-                                time.sleep(2)
-                            self.chessGameActive = False
-                            self.choseSidePlayer1 = False
-                            self.gameAccepted = False
-                            self.currentGame = None
-                            self.player1 = ""
-                            self.player2 = ""
-                            return
-                        moveSuccesful = self.currentGame.move(move)
-                        if moveSuccesful:
-                            if self.currentGame.game_over():
-                                result = self.currentGame.result()
-                                self.send_privmsg(
-                                    message['command']['channel'], result)
-                                for m in self.currentGame.get_pgn():  # print PGN
-                                    self.send_privmsg(
-                                        message['command']['channel'], m)
-                                    time.sleep(2)
-                                self.chessGameActive = False
-                                self.gameAccepted = False
-                                self.choseSidePlayer1 = False
-                                self.currentGame = None
-                                self.player1 = ""
-                                self.player2 = ""
-                                return
-                            for m in self.currentGame.get_pgn():
-                                self.send_privmsg(
-                                    message['command']['channel'], m)
-                                time.sleep(2)
-                            self.send_privmsg(
-                                message['command']['channel'], f"@{self.currentGame.player1} it is your turn.")
-
-                        else:  # move was unsuccessful
-                            text = f"Invalid/illegal move, please try again. For help refer to {self.prefix}help_chess."
-                            self.send_privmsg(
-                                message['command']['channel'], text)
-                            time.sleep(2)
-
 
 def main():
     bot = Bot()
