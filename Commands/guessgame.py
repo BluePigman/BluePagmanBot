@@ -1,12 +1,7 @@
-import io
 import random
 import time
 from threading import Timer
-
-import requests
 from Commands import gemini, describe, ascii
-from PIL import Image
-
 
 def reply_with_guess(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > 0.4):
@@ -100,12 +95,10 @@ def start_new_round(self, channel):
 
     descr = "Give a description for this emote in 2 sentences. Start with 'This emote'"
     try:
-        if describe.is_chunked(emote_url):
-            image_content = requests.get(emote_url, stream=True).content
-            image = Image.open(io.BytesIO(image_content)).convert("RGB")
-        else:
-            image = Image.open(requests.get(emote_url, stream=True).raw)
+        content_type = describe.get_content_type(emote_url)
+        image = describe.upload_img_gemini(emote_url, content_type)
         description = gemini.generate_emote_description([image, descr])
+
     except Exception as e:
         print(e)
         self.send_privmsg(channel, str(e)[0:400])
