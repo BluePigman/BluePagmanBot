@@ -25,7 +25,7 @@ def generate(prompt) -> list[str]:
                 }
             ],
             temperature=0.75,
-            max_tokens=400,
+            max_completion_tokens=400,
             top_p=0.65,
             stream=False,
             stop=None,
