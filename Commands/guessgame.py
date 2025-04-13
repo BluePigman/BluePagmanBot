@@ -1,12 +1,7 @@
-import io
 import random
 import time
 from threading import Timer
-
-import requests
 from Commands import gemini, describe, ascii
-from PIL import Image
-
 
 def reply_with_guess(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > 0.4):
