@@ -61,6 +61,28 @@ def gemini_for_video(media, input_text):
         return None
 
 
+def upload_img_gemini(media_url, content_type):
+    """Upload image to gemini to be used for prompts"""
+    # Download the image
+    image_response = requests.get(media_url, stream=True)
+    
+    extension_map = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+        'image/gif': 'gif'
+    }
+    extension = extension_map.get(content_type, 'jpg')
+
+    image_file_name = f"temp_image.{extension}"
+    with open(image_file_name, 'wb') as image_file:
+        image_file.write(image_response.content)
+
+    image_file = genai.upload_file(image_file_name, mime_type=content_type)
+    time.sleep(1)
+    os.remove(image_file_name)
+    return image_file
+
 def reply_with_describe(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
         self.state[message['source']['nick']] = time.time()
@@ -104,28 +126,11 @@ def reply_with_describe(self, message):
 
     if content_type in ['image/jpeg', 'image/png', 'image/webp', 'image/gif']:
         try:
-            # Download the image
-            image_response = requests.get(media_url, stream=True)
-            
-            extension_map = {
-                'image/jpeg': 'jpg',
-                'image/png': 'png',
-                'image/webp': 'webp',
-                'image/gif': 'gif'
-            }
-            extension = extension_map.get(content_type, 'jpg')
-
-            image_file_name = f"temp_image.{extension}"
-            with open(image_file_name, 'wb') as image_file:
-                image_file.write(image_response.content)
-
-            image_file = genai.upload_file(image_file_name, mime_type=content_type)
+            image_file = upload_img_gemini(media_url, content_type)
             time.sleep(1)
             input_text = "Give me a concise description of this image/gif, ideally under 100 words, translating to English if needed."
             print("Getting description...")
             description = generate_gemini_description(image_file, input_text)
-
-            os.remove(image_file_name)
 
         except Exception as e:
             print(e)
