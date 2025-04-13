@@ -51,4 +51,4 @@ def reply_with_groq(self, message):
     result = generate(prompt)
     for m in result:
         self.send_privmsg(message['command']['channel'], str(m))
-        time.sleep(1)
+        time.sleep(1.2)
