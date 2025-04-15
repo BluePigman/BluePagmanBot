@@ -43,7 +43,8 @@ def get_lyrics(song_url=None, remove_section_headers=False):
 
 
 def reply_with_genius(self, message, timeout=30):
-    if "genius-lyrics" in self.state and self.state["genius-lyrics"] <= timeout:
+    last_call = self.state.get("genius-lyrics")
+    if last_call and last_call > time.time() - timeout:
         return
 
     if not message['command']['botCommandParams']:
