@@ -32,10 +32,10 @@ def get_lyrics(song_url: str):
     for c in lyrics_containers:
         for container in c.find_all("div", {"data-exclude-from-selection": "true"}):
             container.decompose()
-        lyrics= "".join([container.get_text() for container in lyrics_containers])
-
-    return lyrics.strip()
-
+    lyrics = " ".join([container.get_text() for container in lyrics_containers])
+    lyrics = re.sub(r'\s+\n', '\n', lyrics)
+    lyrics = re.sub(r'\n\s+', '\n', lyrics)
+    return lyrics.strip().replace("\n", " ")
 
 
 def reply_with_genius(self, message, timeout=30):
@@ -51,22 +51,27 @@ def reply_with_genius(self, message, timeout=30):
     query = (message['command']['botCommandParams'])
     try:
         request = search(query)
-        if not request["hits"]:
+        hits = request["hits"]
+        if not hits:
             m = "No results found. Try a different search."
             self.send_privmsg(message['command']['channel'], m)
             return
-        self.state["genius-lyrics"] = time.time()
-        song_url = request["hits"][0]["result"]["url"]
-        lyrics = get_lyrics(song_url)
 
+        first_hit = hits[0]["result"]
+        song_url = first_hit["url"]
+        lyrics = get_lyrics(song_url)
         if not lyrics:
             self.send_privmsg(message['command']['channel'], "Lyrics not found!")
             return
 
-        lyrics = lyrics.replace("\n", " ")
-        lyrics = [lyrics[i:i + 480] for i in range(0, len(lyrics), 480)]
-        for m in lyrics:
-            self.send_privmsg(message['command']['channel'], m)
+        title = first_hit["full_title"]
+        lyrics = title + " " + lyrics
+        lyric_msgs = [lyrics[i:i + 480] for i in range(0, len(lyrics), 480)]
+
+        self.state["genius-lyrics"] = time.time()
+
+        for msg in lyric_msgs:
+            self.send_privmsg(message['command']['channel'], msg)
             time.sleep(0.6)
 
     except Exception as e:
