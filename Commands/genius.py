@@ -21,25 +21,34 @@ def search(query: str) -> dict:
     return get_request(f"https://genius.com/api/search?q={query}").get("response")
 
 
-def get_lyrics(song_url=None, remove_section_headers=False):
-    # Scrape the song lyrics from the HTML
+def get_lyrics(song_url=None):
     html = BeautifulSoup(
         get_request(song_url, web=True).replace('<br/>', '\n'),
         "html.parser"
     )
 
-    # Determine the class of the div
+    # Extract clean song title
+    title_tag = html.find("h2", class_=re.compile(r"LyricsHeader__Title"))
+    song_title = title_tag.get_text(strip=True) if title_tag else ""
+
+    # Scrape the lyrics from appropriate <div> blocks
     divs = html.find_all("div", class_=re.compile(r"^Lyrics-\w{2}.\w+.[1]|Lyrics__Container"))
-    if divs is None or len(divs) <= 0:
+
+    if not divs:
         return None
 
-    lyrics = "\n".join([div.get_text() for div in divs])
+    lyrics = "\n".join([div.get_text(separator="\n").strip() for div in divs])
 
-    # Remove [Verse], [Bridge], etc.
-    if remove_section_headers:
-        lyrics = re.sub(r'(\[.*?\])*', '', lyrics)
-        lyrics = re.sub('\n{2}', '\n', lyrics)  # Gaps between verses
-    return lyrics.strip("\n")
+    # Clean up extra html text"
+    if song_title and lyrics.startswith(song_title) is False:
+        # Look for and trim everything before the real title
+        lyrics_parts = lyrics.split(song_title, 1)
+        if len(lyrics_parts) == 2:
+            lyrics = f"{song_title}\n{lyrics_parts[1].strip()}"
+    elif song_title:
+        lyrics = f"{song_title}\n{lyrics}"
+
+    return lyrics.strip()
 
 
 def reply_with_genius(self, message, timeout=30):
@@ -62,8 +71,12 @@ def reply_with_genius(self, message, timeout=30):
         self.state["genius-lyrics"] = time.time()
         song_url = request["hits"][0]["result"]["url"]
         lyrics = get_lyrics(song_url)
-        lyrics = lyrics.replace("\\n", " ")
-        lyrics = str(re.sub(r'\n+', ' ', lyrics).strip())
+
+        if not lyrics:
+            self.send_privmsg(message['command']['channel'], "Lyrics not found!")
+            return
+
+        lyrics = lyrics.replace("\n", " ")
         lyrics = [lyrics[i:i + 480] for i in range(0, len(lyrics), 480)]
         for m in lyrics:
             self.send_privmsg(message['command']['channel'], m)
