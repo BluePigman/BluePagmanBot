@@ -60,14 +60,16 @@ class DankPokerGame:
         if self.players[player]["chips"] < amount:
             return False
         
+        total_bet = self.players[player]["bet"] + amount
+        if total_bet < self.currentMaxBet:
+            return False
+            
         self.players[player]["bet"] += amount
         self.pot += amount
         self.players[player]["chips"] -= amount
         self.players[player]["acted"] = True
-        if self.players[player]["bet"] > self.currentMaxBet:
-            self.currentMaxBet = self.players[player]["bet"]
+        self.currentMaxBet = total_bet
         self.next_turn()
-
         return True
 
     def call(self, player: str) -> bool:
