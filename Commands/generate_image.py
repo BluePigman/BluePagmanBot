@@ -3,10 +3,7 @@ import time
 from google import genai
 from google.genai import types
 import requests
-import io
-import mimetypes
 from config import GOOGLE_API_KEY
-
 
 
 def reply_with_generate(self, message):
@@ -23,8 +20,6 @@ def reply_with_generate(self, message):
         result = generate_image(f"Generate an image of {prompt}. If prompt is unclear then the interpretation is up to you, be creative. Always generate an image, don't ask any clarifying questions.")
         
         self.send_privmsg(message['command']['channel'], f"@{message['tags']['display-name']}, {result}")
-
-
 
 
 def generate_image(prompt) -> str:

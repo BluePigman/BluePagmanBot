@@ -6,9 +6,6 @@ import config
 import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from Commands import gemini
-from PIL import Image
-import io
-
 
 genai.configure(api_key=config.GOOGLE_API_KEY)
 

@@ -1,7 +1,6 @@
 import random
 """
-This module contains functions for getting random chess openings, 
-chess 960 FENs, and jokes.
+This module contains functions for getting random chess openings and chess 960 FENs.
 """
 
 
@@ -46,18 +45,6 @@ def getRandomOpeningSpecific(name, side=None):
                 return "No openings found."
             result = random.choice(targets)
             return result.rstrip()
-
-
-def getJoke(x):  # return setup and punchline.
-    setups = open('Joke Setup.txt')
-    punchlines = open('Joke Punchline.txt')
-    #x = random.randint(0,84)
-
-    # read the content of the file opened
-    setup = setups.readlines()
-    punchline = punchlines.readlines()
-
-    return (setup[x], punchline[x])
 
 
 def getRandom960():  # Get random 960 position.

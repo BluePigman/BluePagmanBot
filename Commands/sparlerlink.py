@@ -6,13 +6,9 @@ def reply_with_sparlerlink(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
         self.state[message['source']['nick']] = time.time()
 
-        
         url = "https://pr0gramm.com/api/items/get?flags=1"
         
-        
-
         if (message['command']['botCommandParams']):
-            
             input_text = message['command']['botCommandParams']
 
             if "-p" in input_text:
@@ -38,5 +34,6 @@ def reply_with_sparlerlink(self, message):
                 random_item = data[random.randint(0, len(data) - 1)]
                 text = f"https://vid.pr0gramm.com/{random_item['image']}"
                 self.send_privmsg(message['command']['channel'], text)
+
         except Exception as e:
             self.send_privmsg(message['command']['channel'], "No link for @Sparler :( (something went wrong)")

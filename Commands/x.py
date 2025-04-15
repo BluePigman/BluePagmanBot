@@ -1,11 +1,8 @@
-import time
-
 def convert_twitter_link(link:str):
     return link.replace("x.com", "nitter.net")
 
 
 def reply_with_x(self, message):
-
     if not message['command']['botCommandParams']:
         m = "Please provide a Twitter link, or reply to a message containing a Twitter link with this command."
         self.send_privmsg(message['command']['channel'], m)

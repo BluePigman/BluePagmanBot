@@ -1,2 +1,2 @@
-def play_chess(self, message):  # start a game of chess
+def play_chess(self, message):
     self.chess_manager.start_game(message)

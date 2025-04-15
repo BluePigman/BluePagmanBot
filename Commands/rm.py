@@ -26,7 +26,6 @@ def reply_with_rm(self, message):
         self.send_privmsg(message['command']['channel'], msg)
 
 
-
 def scrape_subreddit(subreddit):
     url = f"https://redlib.catsarch.com/r/{subreddit}"
     response = requests.get(url)
