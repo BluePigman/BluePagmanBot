@@ -22,7 +22,7 @@ def search(query: str) -> dict:
     return get_request(f"https://genius.com/api/search?q={encoded_query}").get("response")
 
 
-def get_lyrics(song_url=None):
+def get_lyrics(song_url: str):
     html = BeautifulSoup(
         get_request(song_url, web=True).replace('<br/>', '\n'),
         "html.parser"
