@@ -3,7 +3,7 @@ import time
 
 import requests
 from bs4 import BeautifulSoup
-
+from urllib.parse import quote
 import config
 
 
@@ -18,7 +18,8 @@ def get_request(url: str, web: bool = False):
 
 
 def search(query: str) -> dict:
-    return get_request(f"https://genius.com/api/search?q={query}").get("response")
+    encoded_query = quote(query)
+    return get_request(f"https://genius.com/api/search?q={encoded_query}").get("response")
 
 
 def get_lyrics(song_url=None):
