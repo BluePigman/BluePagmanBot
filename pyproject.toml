@@ -21,6 +21,7 @@ dependencies = [
     "lyricsgenius>=3.3.1",
     "google-genai>=1.7.0",
     "googlenewsdecoder>=0.1.7",
+    "html2text>=2025.4.15",
 ]
 
 [tool.setuptools]
