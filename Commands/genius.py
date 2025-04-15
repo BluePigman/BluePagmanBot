@@ -28,28 +28,14 @@ def get_lyrics(song_url=None):
         "html.parser"
     )
 
-    # Extract clean song title
-    title_tag = html.find("h2", class_=re.compile(r"LyricsHeader__Title"))
-    song_title = title_tag.get_text(strip=True) if title_tag else ""
-
-    # Scrape the lyrics from appropriate <div> blocks
-    divs = html.find_all("div", class_=re.compile(r"^Lyrics-\w{2}.\w+.[1]|Lyrics__Container"))
-
-    if not divs:
-        return None
-
-    lyrics = "\n".join([div.get_text(separator="\n").strip() for div in divs])
-
-    # Clean up extra html text"
-    if song_title and lyrics.startswith(song_title) is False:
-        # Look for and trim everything before the real title
-        lyrics_parts = lyrics.split(song_title, 1)
-        if len(lyrics_parts) == 2:
-            lyrics = f"{song_title}\n{lyrics_parts[1].strip()}"
-    elif song_title:
-        lyrics = f"{song_title}\n{lyrics}"
+    lyrics_containers = html.find_all("div", {"data-lyrics-container": "true"})
+    for c in lyrics_containers:
+        for container in c.find_all("div", {"data-exclude-from-selection": "true"}):
+            container.decompose()
+        lyrics= "".join([container.get_text() for container in lyrics_containers])
 
     return lyrics.strip()
+
 
 
 def reply_with_genius(self, message, timeout=30):
