@@ -12,7 +12,7 @@ client = Groq(
 def generate(prompt) -> list[str]:
     try:
         response = client.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            model="meta-llama/llama-4-maverick-17b-128e-instruct",
             messages=[
                 {
                     "role": "system",
@@ -42,7 +42,7 @@ def reply_with_groq(self, message):
         self.state[message['source']['nick']] = time.time()
 
     if not message['command']['botCommandParams']:
-        m = f"@{message['tags']['display-name']}, please provide a prompt for Groq. Model: meta-llama/llama-4-scout-17b-16e-instruct, \
+        m = f"@{message['tags']['display-name']}, please provide a prompt for Groq. Model: meta-llama/llama-4-maverick-17b-128e-instruct, \
             temperature: 0.75, top_p: 0.65"
         self.send_privmsg(message['command']['channel'], m)
         return
