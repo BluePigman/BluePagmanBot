@@ -1,6 +1,5 @@
 import time
 import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import config
 genai.configure(api_key=config.GOOGLE_API_KEY)
 
@@ -28,25 +27,16 @@ generation_config = {
     "top_p": 0.95,
 }
 
-
-safety_settings = {
-    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-}
-
 system_instruction=["""Please always provide a short and concise response. Do not ask the user follow up questions, 
                         because you are intended to provide a single response with no history and are not expected
                         any follow up prompts. Answer should be at most 990 characters."""]
 
-
 model = genai.GenerativeModel(
   model_name="gemini-2.0-flash",
   generation_config=generation_config,
-  safety_settings=safety_settings,
   system_instruction=system_instruction
 )
+
 
 def generate(prompt) -> list[str]:
     try:
@@ -77,10 +67,10 @@ def generate_emote_description(prompt):
         response = model.generate_content(
             prompt,
             generation_config=generation_config,
-            safety_settings=safety_settings,
             stream=False,
         ).text.replace('\n', ' ')
         response = response.replace('*', ' ')
+        response = response.replace(r'\&', '&')
         return response
     except Exception as e:
         print(e)

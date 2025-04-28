@@ -1,6 +1,5 @@
 import time
 import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import config
 genai.configure(api_key=config.GOOGLE_API_KEY)
 
@@ -28,13 +27,6 @@ generation_config = {
     "top_p": 0.75,
 }
 
-safety_settings = {
-    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-}
-
 system_instruction=["""Please always provide a short and concise response. Do not ask the user follow up questions, 
                         because you are intended to provide a single response with no history and are not expected
                         any follow up prompts. If given a media file, please describe it. For GIFS/WEBP files describe all frames.
@@ -43,7 +35,6 @@ system_instruction=["""Please always provide a short and concise response. Do no
 model = genai.GenerativeModel(
   model_name="gemini-2.0-flash",
   generation_config=generation_config,
-  safety_settings=safety_settings,
   system_instruction=system_instruction
 )
 

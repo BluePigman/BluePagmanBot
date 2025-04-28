@@ -16,14 +16,7 @@ def generate():
         )
     ]
     generate_content_config = types.GenerateContentConfig(
-        temperature=1,
-        top_p=0.95,
-        top_k=40,
-        max_output_tokens=8192,
         response_modalities=["image", "text"],
-        safety_settings=[
-            types.SafetySetting(category="HARM_CATEGORY_CIVIC_INTEGRITY", threshold="OFF")
-        ],
         response_mime_type="text/plain",
     )
     try:

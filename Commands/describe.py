@@ -4,17 +4,9 @@ import time
 import re
 import config
 import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from Commands import gemini
 
 genai.configure(api_key=config.GOOGLE_API_KEY)
-
-safety_settings = {
-    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE
-}
 
 # Maximum file size in bytes (1 GB)
 MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024
@@ -48,7 +40,7 @@ def generate_gemini_description(media, input_text):
 def gemini_for_video(media, input_text):
     try:
         response = genai.GenerativeModel(
-            "gemini-2.0-flash-lite", safety_settings=safety_settings).generate_content([media, input_text])
+            "gemini-2.0-flash-lite").generate_content([media, input_text])
         if response.prompt_feedback.block_reason:
             return None
         response = response.text.replace('\n', ' ')

@@ -42,12 +42,6 @@ def generate_image(prompt) -> str:
             "image",
             "text",
         ],
-        safety_settings=[
-            types.SafetySetting(
-                category="HARM_CATEGORY_CIVIC_INTEGRITY",
-                threshold="OFF",  # Off
-            ),
-        ],
         response_mime_type="text/plain",
     )
 
