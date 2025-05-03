@@ -8,8 +8,8 @@ import config
 
 
 def get_request(url: str, web: bool = False):
-    if config.GENIUS_PROXY:
-        req = requests.get(config.GENIUS_PROXY, headers={"url": url})
+    if config.PROXY:
+        req = requests.get(config.PROXY, headers={"url": url})
     else:
         req = requests.get(url)
     if web:
