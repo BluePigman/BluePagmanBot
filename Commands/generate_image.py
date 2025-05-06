@@ -17,7 +17,7 @@ def reply_with_generate(self, message):
         
         self.state[message['source']['nick']] = time.time()
         prompt = message['command']['botCommandParams']
-        result = generate_image(f"Generate an image of {prompt}. If prompt is unclear then the interpretation is up to you, be creative. Always generate an image, don't ask any clarifying questions.")
+        result = generate_image(prompt)
         
         self.send_privmsg(message['command']['channel'], f"@{message['tags']['display-name']}, {result}")
 
@@ -34,10 +34,6 @@ def generate_image(prompt) -> str:
         )
     ]
     generate_content_config = types.GenerateContentConfig(
-        temperature=1,
-        top_p=0.95,
-        top_k=40,
-        max_output_tokens=8192,
         response_modalities=[
             "image",
             "text",
@@ -46,29 +42,35 @@ def generate_image(prompt) -> str:
     )
 
     try:
-        response = client.models.generate_content(
-            model=model,
-            contents=contents,
-            config=generate_content_config,)
-        
-        result = response.candidates
-        if not result:
-            return "Image could not be generated."
-        inline_data = result[0].content.parts[0].inline_data
-        if not inline_data:
-            return "Image could not be generated, the prompt was likely blocked."
-        image_bytes = base64.b64decode(inline_data.data) if inline_data.data.startswith(b'iVBORw') else inline_data.data
-        files = {
-            'file': ('generated_image' + ".png", image_bytes, "image/png")
-        }
+        for chunk in client.models.generate_content_stream(
+        model=model,
+        contents=contents,
+        config=generate_content_config,
+        ):
+            if (
+                chunk.candidates is None
+                or chunk.candidates[0].content is None
+                or chunk.candidates[0].content.parts is None
+                or chunk.candidates[0].content.parts[0].inline_data is None
+            ):
+                continue
+            
+            inline_data = chunk.candidates[0].content.parts[0].inline_data
+            image_bytes = base64.b64decode(inline_data.data) if inline_data.data.startswith(b'iVBORw') else inline_data.data
+            files = {
+                'file': ('generated_image' + ".png", image_bytes, "image/png")
+            }
 
-        try:
-            response = requests.post('https://kappa.lol/api/upload',files=files).json()
-            if response["link"]:
-                return response["link"]
-        except Exception as e:
-            print(e)
-            return f"Error, {str(e)}"
+            try:
+                response = requests.post('https://kappa.lol/api/upload',files=files).json()
+                if response["link"]:
+                    return response["link"]
+            except Exception as e:
+                print(e)
+                return f"Error, {str(e)}"
+        
+        return "Image could not be generated."
+                
     except Exception as e:
         print(e)
         return "Error, the prompt was likely blocked."

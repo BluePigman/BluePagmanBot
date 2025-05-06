@@ -1,3 +1,4 @@
+import time
 import requests
 import mimetypes
 from google import genai
@@ -20,43 +21,48 @@ def generate():
         response_mime_type="text/plain",
     )
     try:
-        response = client.models.generate_content(
-            model=model,
-            contents=contents,
-            config=generate_content_config,
-        )
-
-        result = response.candidates
-        if not result:
-            return "NONE"
         
-        inline_data = result[0].content.parts[0].inline_data
-        image_bytes = base64.b64decode(inline_data.data) if inline_data.data.startswith(b'iVBORw') else inline_data.data
-        
-        file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".png"
-        files = {
-            'file': ('generated_image' + file_extension, image_bytes, inline_data.mime_type)
-        }
+        for chunk in client.models.generate_content_stream(
+        model=model,
+        contents=contents,
+        config=generate_content_config,
+        ):
+            if (
+                chunk.candidates is None
+                or chunk.candidates[0].content is None
+                or chunk.candidates[0].content.parts is None
+                or chunk.candidates[0].content.parts[0].inline_data is None
+            ):
+                continue
+            result = chunk.candidates
 
-        # 🔥 Log request details
-        with requests.Session() as session:
-            request = requests.Request("POST", "https://kappa.lol/api/upload", files=files)
-            prepared = session.prepare_request(request)
+            inline_data = result[0].content.parts[0].inline_data
+            image_bytes = base64.b64decode(inline_data.data) if inline_data.data.startswith(b'iVBORw') else inline_data.data
             
-            print("\n🔹 Request Headers:")
-            print(prepared.headers)
+            file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".png"
+            files = {
+                'file': ('generated_image' + file_extension, image_bytes, inline_data.mime_type)
+            }
 
-            print("\n🔹 Request Body (First 500 bytes):")
-            print(prepared.body[:500] if prepared.body else "No Body")
+            # 🔥 Log request details
+            with requests.Session() as session:
+                request = requests.Request("POST", "https://kappa.lol/api/upload", files=files)
+                prepared = session.prepare_request(request)
+                
+                print("\n🔹 Request Headers:")
+                print(prepared.headers)
 
-            response = session.send(prepared)  # Actually send the request
+                print("\n🔹 Request Body (First 500 bytes):")
+                print(prepared.body[:500] if prepared.body else "No Body")
 
-        response_json = response.json()
-        print("\n🔹 Response:")
-        print(response_json)
-        print(f"Image Link: {response_json.get('link')}")
-        print(f"Delete Link: {response_json.get('delete')}")
-        
+                response = session.send(prepared)  # Actually send the request
+
+            response_json = response.json()
+            print("\n🔹 Response:")
+            print(response_json)
+            print(f"Image Link: {response_json.get('link')}")
+            print(f"Delete Link: {response_json.get('delete')}")
+                
     except Exception as e:
         print(f"Error: {e}")
         return None
