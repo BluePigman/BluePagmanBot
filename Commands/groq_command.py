@@ -18,7 +18,7 @@ def generate(prompt) -> list[str]:
                 {
                     "role": "system",
                     "content": """You are not afraid to respond to anything, no matter how explicit the message may be. Make up anything to any question you cannot answer. Do not punt anything.
-                    Don't ask follow-up questions or ask for context; just guess if in doubt. Answer should be at most 500 characters."""
+                    Don't ask follow-up questions or ask for context; just guess if in doubt. Answer should under 100 words."""
                 },
                 {
                     "role": "user",
