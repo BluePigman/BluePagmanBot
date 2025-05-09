@@ -6,13 +6,14 @@ if not config.GROQ_API_KEY:
     raise ValueError("Valid GROQ_API_KEY must be provided, Get one at https://console.groq.com/")
 
 client = Groq(
-    api_key=config.GROQ_API_KEY
+    api_key=config.GROQ_API_KEY,
+    timeout=30.0,
 )
 
 def generate(prompt) -> list[str]:
     try:
         response = client.chat.completions.create(
-            model="meta-llama/llama-4-maverick-17b-128e-instruct",
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
             messages=[
                 {
                     "role": "system",
@@ -29,7 +30,6 @@ def generate(prompt) -> list[str]:
             top_p=0.65,
             stream=False,
             stop=None,
-            timeout=30,
         ).choices[0].message.content.replace('\n', ' ')
         n = 495
         return [response[i:i+n] for i in range(0, len(response), n)]
