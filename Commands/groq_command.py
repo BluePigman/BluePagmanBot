@@ -29,6 +29,7 @@ def generate(prompt) -> list[str]:
             top_p=0.65,
             stream=False,
             stop=None,
+            timeout=30,
         ).choices[0].message.content.replace('\n', ' ')
         n = 495
         return [response[i:i+n] for i in range(0, len(response), n)]
