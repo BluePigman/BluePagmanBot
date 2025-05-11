@@ -35,7 +35,7 @@ def generate(prompt) -> list[str]:
         return [response[i:i+n] for i in range(0, len(response), n)]
     except Exception as e:
         print(e)
-        return ["Error: ", str(e)[0:495]]
+        return None
 
 def reply_with_groq(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
@@ -43,13 +43,19 @@ def reply_with_groq(self, message):
         self.state[message['source']['nick']] = time.time()
 
     if not message['command']['botCommandParams']:
-        m = f"@{message['tags']['display-name']}, please provide a prompt for Groq. Model: meta-llama/llama-4-maverick-17b-128e-instruct, \
+        m = f"@{message['tags']['display-name']}, please provide a prompt for Groq. Model: meta-llama/llama-4-scout-17b-16e-instruct, \
             temperature: 0.75, top_p: 0.65"
         self.send_privmsg(message['command']['channel'], m)
         return
 
     prompt = message['command']['botCommandParams']
     result = generate(prompt)
+
+    if not result:
+        m = "Error, the server is likely down. Try again later."
+        self.send_privmsg(message['command']['channel'], m)
+        time.sleep(1.2)
+
     for m in result:
         self.send_privmsg(message['command']['channel'], str(m))
         time.sleep(1.2)
