@@ -1,10 +1,13 @@
 import time
+from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlencode, unquote
 import re
 import google.generativeai as genai
 import config
+
+TIMEOUT = 10
 
 genai.configure(api_key=config.GOOGLE_API_KEY)
 
@@ -22,51 +25,66 @@ system_instruction = [
     any follow up prompts. Answer should be at most 990 characters."""
 ]
 
+utc_date_time = datetime.now().strftime("%d %B %Y %I:%M %p UTC")
+
 model = genai.GenerativeModel(
     model_name=model_name,
     generation_config=generation_config,
     system_instruction=system_instruction
 )
 
-def get_duckduckgo_results(query, count=2):
-    url = "https://html.duckduckgo.com/html/?" + urlencode({"q": query})
+def get_duckduckgo_results(query):
+    url = "https://lite.duckduckgo.com/lite/?" + urlencode({"q": query})
     headers = {'User-Agent': 'Mozilla/5.0'}
-    if config.PROXY:
-        req = requests.get(config.PROXY, headers={"url": url, **headers})
-    else:
-        req = requests.get(url, headers=headers)
-    
+    try:
+        if config.PROXY:
+            req = requests.get(config.PROXY, headers={"url": url, **headers}, timeout=TIMEOUT)
+        else:   
+            req = requests.get(url, headers=headers, timeout=TIMEOUT)
+    except requests.RequestException as e:
+        print(f"get_duckduckgo_results: Request failed: {e}")
+        return []
+
     if not req or not req.text:
         print("get_duckduckgo_results: No response or empty body from DuckDuckGo.")
         return []
-    
+
     try:
         soup = BeautifulSoup(req.text, 'html.parser')
     except Exception as e:
         print(f"get_duckduckgo_results: Error parsing HTML: {e}")
         return []
 
-    links = soup.select('.result__a')[:count]
+    a_elements = soup.select('.result-link')
     urls = []
 
-    for link in links:
-        if link.has_attr('href'):
-            decoded_url = unquote(link['href'])
-            match = re.search(r"http.*?(?=&)", decoded_url)
-            if match:
-                urls.append(match.group(0))
+    for a in a_elements:
+        try:
+            decoded_href = unquote(a['href'])
+            match = re.search(r"http.*?(?=&)", decoded_href)
+            url = match.group(0) if match else None
+            if not url or "ad_domain=" in url:
+                continue
+            urls.append(url)
+        except Exception as e:
+            print(f"[Error] {e}")
 
+    print(urls)
     return urls
 
 def get_body_content(url):
     headers = {'User-Agent': 'Mozilla/5.0'}
-    if config.PROXY:
-        req = requests.get(config.PROXY, headers={"url": url, **headers})
-    else:
-        req = requests.get(url, headers=headers)
+    try:
+        if config.PROXY:
+            req = requests.get(config.PROXY, headers={"url": url, **headers}, timeout=TIMEOUT)
+        else:
+            req = requests.get(url, headers=headers, timeout=TIMEOUT)
+    except requests.RequestException as e:
+        print(f"get_body_content: Request failed: {e}")
+        return ""
 
     if not req or not req.text:
-        print("get_body_content: No response or empty body from URL.")
+        print(f"get_body_content: No response or empty body from {url}.")
         return ""
 
     try:
@@ -81,16 +99,18 @@ def get_body_content(url):
 
     return soup.body.get_text(" ", strip=True)
 
-def get_grounding_data(prompt):
+def get_grounding_data(prompt, count=2):
     urls = get_duckduckgo_results(prompt)
-    valid_urls = []
     contents = []
+    valid_urls = []
 
     for url in urls:
         content = get_body_content(url)
         if content:
             valid_urls.append(url)
             contents.append(content)
+        if len(valid_urls) == count:
+            break
 
     combined_content = "\n".join(contents)
     return {'body_content': combined_content, 'duck_urls': valid_urls}
@@ -98,7 +118,7 @@ def get_grounding_data(prompt):
 def generate(prompt, grounding_text=None) -> list[str]:
     try:
         if grounding_text:
-            full_prompt = f"{prompt}\n\nUse this to ground your response (Don't mention that I provided you with a text/document/article/context for your response under any circumstance. Answer as if you know this information):\n{grounding_text}"
+            full_prompt = f"{prompt}\n\nToday is {utc_date_time}.\n\nUse this to ground your response (Don't mention that I provided you with a text/document/article/context for your response under any circumstance. Answer as if you know this information):\n{grounding_text}"
         else:
             full_prompt = prompt
 
@@ -119,7 +139,7 @@ def reply_with_grounded_gemini(self, message):
         self.state[nick] = time.time()
 
     if not params:
-        m = f"{username}, please provide a prompt for Gemini. It will search DuckDuckGo before giving an answer. Model: {model_name}, temperature: {generation_config['temperature']}, top_p: {generation_config['top_p']}"
+        m = f"{username}, please provide a prompt for Gemini. Model: {model_name}, temperature: {generation_config['temperature']}, top_p: {generation_config['top_p']}"
         self.send_privmsg(channel, m)
         return
 
@@ -133,6 +153,10 @@ def reply_with_grounded_gemini(self, message):
 
     result = generate(prompt, grounding_text=body_content)
     prefix = "🔎 Grounded: " if body_content.strip() else "Not Grounded: "
+
+    if "Error" in result[0]:
+        self.send_privmsg(channel, f"Failed to generate a response. Please try again later.")
+        return
 
     for i, m in enumerate(result):
         if i == 0:
