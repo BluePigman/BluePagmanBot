@@ -88,7 +88,7 @@ def proxy_get_request(url: str, headers=HEADERS, timeout=TIMEOUT) -> requests.Re
         target_url = config.PROXY
         headers["url"] = url
 
-    res = res = requests.get(target_url, headers=headers, timeout=(timeout, timeout))
+    res = requests.get(target_url, headers=headers, timeout=(timeout, timeout))
     return res
 
 def proxy_post_request(url: str, data=None, json=None, headers=HEADERS, timeout=TIMEOUT) -> requests.Response:
