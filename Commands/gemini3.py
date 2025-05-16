@@ -7,7 +7,7 @@ import config
 from utils import (
     proxy_get_request,
     clean_str,
-    chunk_str,
+    send_chunks,
     fetch_cmd_data,
     gemini_generate,
     check_cooldown,
@@ -136,11 +136,10 @@ def reply_with_grounded_gemini(self, message):
         self.send_privmsg(channel, f"Failed to generate a response. Please try again later.")
         return
 
-    clean_result = clean_str(result, ['`', '*'])
-    chunks = chunk_str(clean_result)
-
-    for i, m in enumerate(chunks):
-        if i == len(chunks) - 1 and duck_urls:
-            m += f" 📝 Source(s): {' | '.join(duck_urls)}"
-        self.send_privmsg(channel, m)
-        time.sleep(1)
+    try:
+        clean_result = clean_str(result, ['`', '*'])
+        send_chunks(self.send_privmsg, channel, clean_result)
+        self.send_privmsg(channel, f"📝 Source(s): {' | '.join(duck_urls)}")
+    except Exception as e:
+        print(f"[Error] {e}")
+        self.send_privmsg(f"Failed to send a response. Please try again later")
