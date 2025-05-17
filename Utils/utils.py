@@ -122,7 +122,7 @@ def parse_str(data: str, kind: str) -> Any:
 
 # --- LLM Generation Utilities ---
 
-def gemini_generate(request: str | dict, model) -> list[str]:
+def gemini_generate(request: str | dict, model) -> str:
     """
     Generate content using the model with optional grounding.
     Accepts request as either a string or dict with keys:
@@ -132,7 +132,7 @@ def gemini_generate(request: str | dict, model) -> list[str]:
         "grounding_text": str or list[str]
     }
     model: object with generate_content method
-    Returns generated text.
+    Returns generated text or error message string.
     """
     genai.configure(api_key=config.GOOGLE_API_KEY)
     try:
@@ -157,7 +157,7 @@ def gemini_generate(request: str | dict, model) -> list[str]:
 
     except Exception as e:
         print(e)
-        return ["Error: ", str(e)]
+        return f"Error: {str(e)}"
 
 def groq_generate(request: dict, client) -> str:
     """
