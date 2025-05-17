@@ -22,6 +22,7 @@ dependencies = [
     "google-genai>=1.7.0",
     "googlenewsdecoder>=0.1.7",
     "html2text>=2025.4.15",
+    "lxml>=5.4.0",
 ]
 
 [tool.setuptools]
