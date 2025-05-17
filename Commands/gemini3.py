@@ -14,28 +14,18 @@ from Utils.utils import (
     parse_str,
 )
 
-genai.configure(api_key=config.GOOGLE_API_KEY)
-
-model_name = "gemini-2.0-flash-lite"
-
-generation_config = {
-    "max_output_tokens": 400,
-    "temperature": 0.5,
-    "top_p": 0.95,
-}
-
-system_instruction = [
-    """Please always provide a short and concise response. Do not ask the user follow up questions, 
-    because you are intended to provide a single response with no history and are not expected
-    any follow up prompts. Answer should be at most 990 characters."""
-]
-
 utc_date_time = datetime.now().strftime("%A %d %B %Y %I:%M %p UTC")
 
 model = genai.GenerativeModel(
-    model_name=model_name,
-    generation_config=generation_config,
-    system_instruction=system_instruction
+    model_name="gemini-2.0-flash-lite",
+    generation_config={
+        "max_output_tokens": 400,
+        "temperature": 0.5,
+        "top_p": 0.95,
+    },
+    system_instruction=[
+        "Please always provide a short and concise response. Do not ask the user follow up questions, because you are intended to provide a singlen response with no history and are not expected any follow up prompts. Answer should be at most 990 characters."
+    ]
 )
 
 def fetch_and_parse_html(url):
@@ -73,6 +63,16 @@ def get_duckduckgo_results(query):
     print(urls)
     return urls
 
+def get_google_lucky(query):
+    params = {'q': query, 'btnI': "I'm Feeling Lucky"}
+    query_string = urlencode(params)
+    url = f"https://www.google.com/search?{query_string}"
+
+    soup = fetch_and_parse_html(url)
+    
+    link = soup.find('a', href=True)
+    return link['href'] if link else None
+
 def get_body_content(url):
     soup = fetch_and_parse_html(url)
     if not soup:
@@ -86,6 +86,9 @@ def get_body_content(url):
 
 def get_grounding_data(prompt, count=2):
     urls = get_duckduckgo_results(prompt)
+    google_lucky_url = get_google_lucky(prompt)
+    if google_lucky_url:
+        urls.insert(0, google_lucky_url)
     contents = []
     valid_urls = []
 
@@ -107,7 +110,12 @@ def reply_with_grounded_gemini(self, message):
     check_cooldown(state, nick, cooldown)
 
     if not params:
-        m = f"{username}, please provide a prompt for Gemini. Model: {model_name}, temperature: {generation_config['temperature']}, top_p: {generation_config['top_p']}"
+        m = (
+            f"{username}, please provide a prompt for Gemini. "
+            f"Model: {model.model_name}, temperature: {model._generation_config['temperature']}, "
+            f"top_p: {model._generation_config['top_p']}"
+        )
+
         self.send_privmsg(channel, m)
         return
 
@@ -139,7 +147,8 @@ def reply_with_grounded_gemini(self, message):
     try:
         clean_result = clean_str(result, ['`', '*'])
         send_chunks(self.send_privmsg, channel, clean_result)
-        self.send_privmsg(channel, f"📝 Source(s): {' | '.join(duck_urls)}")
+        if duck_urls:
+            self.send_privmsg(channel, f"📝 Source(s): {' | '.join(duck_urls)}")
     except Exception as e:
         print(f"[Error] {e}")
         self.send_privmsg(f"Failed to send a response. Please try again later")
