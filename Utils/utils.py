@@ -6,6 +6,8 @@ from typing import Dict
 import json
 from bs4 import BeautifulSoup
 from typing import Any
+import google.generativeai as genai
+from groq import Groq
 
 # --- Chat Utilities ---
 
@@ -132,6 +134,7 @@ def gemini_generate(request: str | dict, model) -> list[str]:
     model: object with generate_content method
     Returns generated text.
     """
+    genai.configure(api_key=config.GOOGLE_API_KEY)
     try:
         if isinstance(request, str):
             prompt = request
@@ -175,6 +178,7 @@ def groq_generate(request: dict, client) -> str:
     client: API client object
     Returns generated text.
     """
+    client = Groq(api_key=config.GROQ_API_KEY)
     try:
         prompt = request.get("prompt", "")
         grounded = request.get("grounded", False)
