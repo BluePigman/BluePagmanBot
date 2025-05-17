@@ -1,5 +1,5 @@
 import time
-import newsCommands
+import Utils.newsCommands as newsCommands
 def reply_with_news(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
         self.state[message['source']['nick']] = time.time()

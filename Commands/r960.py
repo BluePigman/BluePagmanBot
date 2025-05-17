@@ -1,5 +1,5 @@
 import time
-import chessCommands
+import Utils.chessCommands as chessCommands
 
 
 def reply_with_random960(self, message):

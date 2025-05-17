@@ -1,6 +1,6 @@
 import time
 
-import chessCommands
+import Utils.chessCommands as chessCommands
 
 
 def reply_with_random_opening(self, message):

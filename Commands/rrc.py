@@ -1,29 +1,27 @@
 import random
 import html
-import re
-from bs4 import BeautifulSoup
-import config
 import requests
+from Utils.utils import (
+    proxy_get_request,
+    clean_str,
+    send_chunks,
+    fetch_cmd_data,
+    check_cooldown,
+    parse_str,
+)
 
-TIMEOUT = 10
+MAX_COMMENTS = 300
 
-def clean(text):
-    return re.sub(r'\s+', ' ', text).strip()
-  
 base_urls = {
     "hot_posts": "https://www.reddit.com/r/{subreddit}/hot.json?limit=30",
-    "comments": "https://www.reddit.com/comments/{post_id}.json?depth=10&limit=200"
+    "comments": "https://www.reddit.com/comments/{post_id}.json?depth=10&limit={MAX_COMMENTS}"
 }
 
-def get_posts(subreddit):
+def get_posts(subreddit, max_comments=MAX_COMMENTS):
     url = base_urls["hot_posts"].format(subreddit=subreddit)
-    headers = {'User-agent': 'BluePagmanBot'}
 
     try:
-        if config.PROXY:
-            res = requests.get(config.PROXY, headers={"url": url, **headers}, timeout=TIMEOUT)
-        else:
-            res = requests.get(url, headers=headers, timeout=TIMEOUT)
+        res = proxy_get_request(url)
     except requests.RequestException as e:
         print(f"[get_posts] Request failed: {e}")
         return {"success": False, "message": "Network error while fetching posts."}
@@ -40,7 +38,17 @@ def get_posts(subreddit):
         print(f"[get_posts] {msg}")
         return {"success": False, "message": msg}
 
-    posts_with_comments = [p for p in all_posts if p['data'].get('num_comments', 0) > 0]
+    posts_with_comments = []
+    for p in all_posts:
+        num_comments = p['data'].get('num_comments', 0)
+
+        if num_comments < 1:
+            continue
+        if num_comments > max_comments:
+            continue
+
+        posts_with_comments.append(p)
+
     if not posts_with_comments:
         msg = f"Could not find posts with comments in /r/{subreddit}"
         print(f"[get_posts] {msg}")
@@ -51,15 +59,11 @@ def get_posts(subreddit):
 def get_random_comment(posts, subreddit, min_words=15):
     random_post = random.choice(posts)['data']
     post_id = random_post['id']
-    
-    url = base_urls["comments"].format(post_id=post_id)
-    headers = {'User-agent': 'BluePagmanBot'}
+
+    url = base_urls["comments"].format(post_id=post_id, MAX_COMMENTS=MAX_COMMENTS)
 
     try:
-        if config.PROXY:
-            res = requests.get(config.PROXY, headers={"url": url, **headers}, timeout=TIMEOUT)
-        else:
-            res = requests.get(url, headers=headers, timeout=TIMEOUT)
+        res = proxy_get_request(url)
     except requests.RequestException as e:
         print(f"[get_random_comment] Request failed: {e}")
         return {"success": False, "message": "Network error while fetching comments."}
@@ -77,7 +81,7 @@ def get_random_comment(posts, subreddit, min_words=15):
 
     comments = items[1]['data'].get('children', [])
     all_comments = []
-    
+
     while comments:
         comment = comments.pop()
         comment_info = comment['data']
@@ -88,7 +92,7 @@ def get_random_comment(posts, subreddit, min_words=15):
             comments.extend(replies_data)
 
     print(f"[get_random_comment] Total comments (including replies): {len(all_comments)}")
-    
+
     filtered_comments = [
         c for c in all_comments
         if c.get('body') not in ('[removed]',) and c.get('author') != 'AutoModerator' and 'body' in c
@@ -108,7 +112,7 @@ def get_random_comment(posts, subreddit, min_words=15):
 
         weight = (score + 1) * word_bonus
         weights.append(weight)
-    
+
     random_comment = random.choices(filtered_comments, weights=weights, k=1)[0]
 
     post_link = f"https://www.reddit.com{random_post['permalink']}"
@@ -117,9 +121,7 @@ def get_random_comment(posts, subreddit, min_words=15):
 
     comment_body_html = random_comment['body_html']
     comment_body = html.unescape(comment_body_html)
-
-    soup = BeautifulSoup(comment_body, "html.parser")
-    comment_body_clean = soup.get_text()
+    comment_body_clean = parse_str(comment_body, "html").get_text()
 
     return {
         "success": True,
@@ -129,9 +131,10 @@ def get_random_comment(posts, subreddit, min_words=15):
     }
 
 def reply_with_random_reddit_comment(self, message):
-    username = f"@{message['tags']['display-name']}"
-    channel = message['command']['channel']
-    params = message['command']['botCommandParams']
+    cmd_data = fetch_cmd_data(self, message)
+    username, channel, params, nick, state, cooldown = cmd_data.values()
+
+    check_cooldown(state, nick, cooldown)
 
     if not params:
         self.send_privmsg(channel, f"{username} Please provide a subreddit name to get a random comment from.")
@@ -152,7 +155,7 @@ def reply_with_random_reddit_comment(self, message):
             return
 
         m = f"{random_comment_result['comment_body']} {random_comment_result['comment_link']}"
-        self.send_privmsg(channel, clean(m))
+        send_chunks(self.send_privmsg, channel, clean_str(m))
 
     except Exception as e:
         print(f"[reply_with_random_reddit_comment] Error: {e}")
