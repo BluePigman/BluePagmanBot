@@ -1,7 +1,7 @@
 import random
 import html
 import requests
-from utils import (
+from Utils.utils import (
     proxy_get_request,
     clean_str,
     send_chunks,

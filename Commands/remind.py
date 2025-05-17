@@ -1,6 +1,6 @@
 import time
 import threading
-from reminder_class import Reminder
+from Classes.reminder_class import Reminder
 
 
 def reply_with_reminder(self, message):

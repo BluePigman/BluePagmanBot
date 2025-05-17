@@ -4,7 +4,7 @@ from urllib.parse import urlencode, unquote
 import re
 import google.generativeai as genai
 import config
-from utils import (
+from Utils.utils import (
     proxy_get_request,
     clean_str,
     send_chunks,

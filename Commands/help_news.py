@@ -1,5 +1,5 @@
 import time
-import newsCommands
+import Utils.newsCommands as newsCommands
 
 
 def reply_with_help_news(self, message):

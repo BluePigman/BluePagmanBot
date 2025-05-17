@@ -2,7 +2,7 @@ import time
 import requests
 import config
 from threading import Timer
-from dankPoker import DankPokerGame
+from Classes.dankPoker import DankPokerGame
 
 
 def reply_with_poker(self, message):

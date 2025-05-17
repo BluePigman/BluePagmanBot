@@ -4,7 +4,7 @@ import time
 import re
 import requests
 import types
-import utils
+import Utils.utils as utils
 from bs4 import BeautifulSoup
 import json
 
