@@ -70,6 +70,9 @@ def get_google_lucky(query):
 
     soup = fetch_and_parse_html(url)
     
+    if not soup:
+        return None
+
     link = soup.find('a', href=True)
     return link['href'] if link else None
 
@@ -151,4 +154,4 @@ def reply_with_grounded_gemini(self, message):
             self.send_privmsg(channel, f"📝 Source(s): {' | '.join(duck_urls)}")
     except Exception as e:
         print(f"[Error] {e}")
-        self.send_privmsg(f"Failed to send a response. Please try again later")
+        self.send_privmsg(channel, f"Failed to send a response. Please try again later")
