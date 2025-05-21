@@ -6,19 +6,6 @@ from xml.etree.ElementTree import ParseError
 from xml.parsers.expat import ExpatError
 
 
-def _retry_operation(func, attempts=5, delay=5):
-    """Retry a function multiple times in case of XML parsing errors."""
-    for attempt in range(attempts):
-        try:
-            return func()
-        except (ParseError, ExpatError):
-            if attempt == attempts - 1:  # If this was the last attempt
-                print(f"Failed after {attempts} attempts")
-                raise
-            print(f"Retrying operation after error (attempt {attempt+1}/{attempts})")
-            time.sleep(delay)
-
-
 def reply_with_summarize(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
             self.cooldown):
@@ -77,11 +64,11 @@ def extract_youtube_id(text):
 def get_transcript(video_id: str) -> str | None:
     # Try getting English transcript, fallback on translated transcript
     try:
-        # Use the retry operation for listing transcripts
-        def list_transcripts_operation():
-            return YouTubeTranscriptApi.list_transcripts(video_id)
-        
-        transcript_list = _retry_operation(list_transcripts_operation)
+        try:
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        except (ParseError, ExpatError) as e:
+            print(f"XML parsing error when listing transcripts for video {video_id}: {e}")
+            return "API_ERROR"
 
         try:
             transcript = transcript_list.find_transcript(['en-GB'])
@@ -91,22 +78,24 @@ def get_transcript(video_id: str) -> str | None:
             except NoTranscriptFound:
                 for t in transcript_list:
                     try:
-                        # Use the retry operation for translation
-                        def translate_operation():
-                            return t.translate('en')
-                        
-                        transcript = _retry_operation(translate_operation)
-                        break
+                        try:
+                            transcript = t.translate('en')
+                            break
+                        except (ParseError, ExpatError) as e:
+                            print(f"XML parsing error when translating for video {video_id}: {e}")
+                            return "API_ERROR"
                     except Exception as e:
                         print(f"Translation error: {e}")
                         continue
                 else:
                     return None
 
-        def fetch_operation():
-            return transcript.fetch()
-        
-        fetched = _retry_operation(fetch_operation)
+        # Fetch transcript without retrying
+        try:
+            fetched = transcript.fetch()
+        except (ParseError, ExpatError) as e:
+            print(f"XML parsing error when fetching transcript for video {video_id}: {e}")
+            return "API_ERROR"
         
         # Check if fetched has a 'snippets' attribute, otherwise treat it as the transcript list directly
         if hasattr(fetched, 'snippets'):
