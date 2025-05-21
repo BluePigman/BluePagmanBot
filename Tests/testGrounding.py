@@ -1,11 +1,21 @@
-from Commands.gemini3 import get_grounding_data, generate
+from Commands.gemini3 import get_grounding_data, model
 
 def test_search(prompt):
     grounding_data = get_grounding_data(prompt)
     body_content = grounding_data['body_content']
     duck_urls = grounding_data['duck_urls']
 
-    result = generate(prompt, grounding_text=body_content)
+    # Create the prompt with grounding data
+    if body_content:
+        full_prompt = f"""Use the following information to answer the question accurately.
+        Information: {body_content}
+        Question: {prompt}"""
+    else:
+        full_prompt = prompt
+
+    response = model.generate_content(full_prompt)
+    result = [response.text] 
+    
     prefix = "🔎 Grounded: " if body_content else "Not Grounded: "
 
     for i, m in enumerate(result):
