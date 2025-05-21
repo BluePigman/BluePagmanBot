@@ -6,7 +6,7 @@ from xml.etree.ElementTree import ParseError
 from xml.parsers.expat import ExpatError
 
 
-def _retry_operation(func, attempts=3, delay=5):
+def _retry_operation(func, attempts=10, delay=2):
     """Retry a function multiple times in case of XML parsing errors."""
     for attempt in range(attempts):
         try:
