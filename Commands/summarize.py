@@ -6,7 +6,7 @@ from xml.etree.ElementTree import ParseError
 from xml.parsers.expat import ExpatError
 
 
-def _retry_operation(func, attempts=10, delay=2):
+def _retry_operation(func, attempts=5, delay=5):
     """Retry a function multiple times in case of XML parsing errors."""
     for attempt in range(attempts):
         try:
@@ -37,6 +37,12 @@ def reply_with_summarize(self, message):
                               ['channel'], "Youtube vid not found.")
             return
         transcript = get_transcript(video_id)
+        
+        if transcript == "API_ERROR":
+            self.send_privmsg(
+                message['command']['channel'], "Transcript could not be fetched, due to an issue with the API. Please try again.")
+            return
+            
         if not transcript or len(transcript) < 1:
             self.send_privmsg(
                 message['command']['channel'], "No transcript found for the video.")
@@ -97,7 +103,6 @@ def get_transcript(video_id: str) -> str | None:
                 else:
                     return None
 
-        # Use the retry operation for fetching the transcript
         def fetch_operation():
             return transcript.fetch()
         
@@ -114,6 +119,9 @@ def get_transcript(video_id: str) -> str | None:
     except (NoTranscriptFound, TranscriptsDisabled):
         print("Transcripts are disabled or none were found.")
         return None
+    except (ParseError, ExpatError) as e:
+        print(f"XML parsing error for video {video_id}: {e}")
+        return "API_ERROR"
     except Exception as e:
         print(f"Unexpected error for video {video_id}: {e}")
         return None
