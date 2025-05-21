@@ -27,7 +27,7 @@ def reply_with_summarize(self, message):
         
         if transcript == "API_ERROR":
             self.send_privmsg(
-                message['command']['channel'], "Transcript could not be fetched, due to an issue with the API. Please try again.")
+                message['command']['channel'], "Transcript could not be fetched, likely due to being rate limited. Please try again later.")
             return
             
         if not transcript or len(transcript) < 1:
