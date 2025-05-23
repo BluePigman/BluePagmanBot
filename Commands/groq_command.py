@@ -55,6 +55,7 @@ def reply_with_groq(self, message):
         m = "Error, the server is likely down. Try again later."
         self.send_privmsg(message['command']['channel'], m)
         time.sleep(1.2)
+        return
 
     for m in result:
         self.send_privmsg(message['command']['channel'], str(m))
