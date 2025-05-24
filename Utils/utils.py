@@ -1,34 +1,62 @@
-import requests
-import re
 import config
-import time
-from typing import Dict
-import json
+import os, requests, re, base64, time, json, sqlite3, tempfile
 from bs4 import BeautifulSoup
-from typing import Any
-import google.generativeai as genai
+from typing import Any, Dict, List, Union
+import google.generativeai as genai_text
+from google import genai as genai_image
+from google.genai import types
 from groq import Groq
+from dataclasses import dataclass
 
 # --- Chat Utilities ---
 
-def fetch_cmd_data(self, message: dict) -> dict:
+@dataclass
+class CmdData:
+    username: str
+    channel: str
+    params: Any
+    args: Dict[str, str]
+    nick: str
+    state: Dict
+    cooldown: int
+
+def fetch_cmd_data(self, message: dict, with_args: bool = False) -> CmdData:
     """
-    Extracts key fields from a message dict and instance attributes, returning them in a new dict:
+    Extracts key fields from a message dict and instance attributes,
+    returning them as a CmdData object for structured, type-safe access:
       - username: str — display name prefixed with '@'
       - channel: str — channel name
-      - params: any — botCommandParams from the message
+      - params: any — full botCommandParams or first token (if with_args=True)
+      - args: dict — tokens in arg_name:arg_value format (if with_args=True)
       - nick: str — sender's nickname
       - state: dict — current cooldown state from self
       - cooldown: int — cooldown duration from self
     """
-    return {
-        "username": f"@{message['tags']['display-name']}",
-        "channel": message['command']['channel'],
-        "params": message['command']['botCommandParams'],
-        "nick": message['source']['nick'],
-        "state": self.state,
-        "cooldown": self.cooldown
-    }
+    raw = message['command']['botCommandParams']
+    if isinstance(raw, str):
+        raw = raw.replace('\U000E0000', '')
+
+    params, args = raw, {}
+
+    if with_args and raw:
+        parts = raw.split()
+        if parts:
+            params, *arg_parts = parts
+            args = {
+                k: v for k, v in (a.split(":", 1) for a in arg_parts if ":" in a)
+            }
+        else:
+            params, args = None, {}
+
+    return CmdData(
+        username=f"@{message['tags']['display-name']}",
+        channel=message['command']['channel'],
+        params=params,
+        args=args,
+        nick=message['source']['nick'],
+        state=self.state,
+        cooldown=self.cooldown,
+    )
 
 def check_cooldown(state: Dict[str, float], nick: str, cooldown: float) -> bool:
     """
@@ -60,9 +88,24 @@ CHUNK_SIZE = 495
 
 def chunk_str(text: str, chunk_size: int = CHUNK_SIZE) -> list[str]:
     """
-    Split text into chunks of size chunk_size.
+    Split text into chunks of words where each chunk's total length (including spaces) 
+    does not exceed chunk_size. If adding a word would exceed the limit, start a new chunk.
     """
-    return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+    words = text.split()
+    chunks = []
+    current = []
+
+    for word in words:
+        if sum(len(w) for w in current) + len(current) + len(word) > chunk_size:
+            chunks.append(' '.join(current))
+            current = [word]
+        else:
+            current.append(word)
+
+    if current:
+        chunks.append(' '.join(current))
+
+    return chunks
 
 def send_chunks(send_func, channel, text: str, chunk_size: int = CHUNK_SIZE) -> None:
     """
@@ -75,36 +118,129 @@ def send_chunks(send_func, channel, text: str, chunk_size: int = CHUNK_SIZE) -> 
 
 
 
+# --- File Utilities ---
+
+def upload_to_kappa(filepath: str, ext: str, timeout: int = 60) -> str | None:
+    """
+    Uploads a file to kappa.lol and returns the direct link. None if the file is not found or upload fails.
+    """
+    mime_map = {
+        "mp4": "video/mp4",
+        "mov": "video/mp4",
+        "webm": "video/webm",
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "gif": "image/gif",
+        "png": "image/png",
+    }
+    content_type = mime_map.get(ext.lower(), "application/octet-stream")
+    filename = f"upload.{ext}"
+    
+    print(f"Uploading {filename} as {content_type} to kappa.lol from {filepath}...")
+    try:
+        with open(filepath, "rb") as f_video:
+            files = {
+                'file': (filename, f_video, content_type)
+            }
+            res = proxy_request("POST", 'https://kappa.lol/api/upload', files=files, timeout=timeout)
+        
+        res.raise_for_status()
+        data = res.json()
+        link = data.get("link", "upload failed")
+        if link != "upload failed":
+            os.remove(filepath)
+        print(f"Upload res link: {link}")
+        return link
+
+    except FileNotFoundError:
+        print(f"Upload error: File not found at {filepath}")
+        return None
+
+    except Exception as e:
+        print(f"Upload error: {e}")
+        return None
+
+def download_bytes(file_url: str) -> bytes | None:
+    """Download raw bytes from the given URL, returning None on failure."""
+    try:
+        res = proxy_request("GET", file_url)
+        res.raise_for_status()
+        print(f"Downloaded {len(res.content)} bytes")
+        return res.content
+    except Exception as e:
+        print(f"Download error: {e}")
+        return None
+
+
+
 # --- Proxy HTTP Requests ---
 
 HEADERS = {'User-agent': 'BluePagmanBot'}
 TIMEOUT = 10
 
-def proxy_get_request(url: str, headers=HEADERS, timeout=TIMEOUT) -> requests.Response:
+def proxy_request(method: str, url: str, headers=HEADERS, timeout=TIMEOUT, bypass_proxy=False, **kwargs) -> requests.Response:
     """
-    Perform GET request through proxy if configured.
-    """
-    target_url = url
-
-    if config.PROXY:
-        target_url = config.PROXY
-        headers["url"] = url
-
-    res = requests.get(target_url, headers=headers, timeout=(timeout, timeout))
-    return res
-
-def proxy_post_request(url: str, data=None, json=None, headers=HEADERS, timeout=TIMEOUT) -> requests.Response:
-    """
-    Perform POST request through proxy if configured.
+    Perform HTTP request with given method through proxy if configured.
+    Supports additional requests parameters via kwargs.
     """
     target_url = url
-
-    if config.PROXY:
+    if config.PROXY and not bypass_proxy:
         target_url = config.PROXY
         headers["url"] = url
+    res = requests.request(method, target_url, headers=headers, timeout=(timeout, timeout), **kwargs)
 
-    res = requests.post(target_url, data=data, json=json, headers=headers, timeout=timeout)
     return res
+
+def fetch_firefox_cookies(domains: List[str] = [], as_netscape: bool = False) -> Union[str, Dict[str, str]]:
+    """
+    Fetch Firefox cookies for given domains. If no domains are provided, returns all cookies.
+
+    Args:
+    domains (List[str]): Domains to filter.
+    as_netscape (bool): Return Netscape-format file if True, else dict.
+
+    Returns:
+    Union[str, Dict[str, str]]: File path or cookie dict.
+    
+    Raises:
+    Exception: If FIREFOX_COOKIES_PATH is not set in config.
+    """
+    db_path = getattr(config, 'FIREFOX_COOKIES_PATH', None)
+    if not db_path:
+        raise Exception("Firefox cookies path not set in config")
+
+    with sqlite3.connect(db_path) as conn:
+        cur = conn.cursor()
+
+        if domains:
+            where_clause = " OR ".join(["host LIKE ?" for _ in domains])
+            params = [f"%{d}%" for d in domains]
+        else:
+            where_clause = "1"
+            params = []
+
+        cur.execute(f"""
+            SELECT host, path, isSecure, expiry, name, value
+            FROM moz_cookies
+            WHERE {where_clause}
+        """, params)
+
+        rows = cur.fetchall()
+
+    if as_netscape:
+        tmp = tempfile.NamedTemporaryFile(delete=False, mode="w", suffix=".txt")
+        tmp.write("# Netscape HTTP Cookie File\n")
+        for host, path, is_sec, exp, name, val in rows:
+            tmp.write(
+                f"{host}\t{'TRUE' if host.startswith('.') else 'FALSE'}\t"
+                f"{path}\t{'TRUE' if is_sec else 'FALSE'}\t"
+                f"{exp or 0}\t{name}\t{val}\n"
+            )
+        tmp.close()
+        return tmp.name
+
+    cookie_dict = {name: val for _, _, _, _, name, val in rows}
+    return cookie_dict
 
 def parse_str(data: str, kind: str) -> Any:
     """
@@ -122,7 +258,7 @@ def parse_str(data: str, kind: str) -> Any:
 
 # --- LLM Generation Utilities ---
 
-def gemini_generate(request: str | dict, model) -> list[str]:
+def gemini_generate(request: str | dict, model) -> str | list[str]:
     """
     Generate content using the model with optional grounding.
     Accepts request as either a string or dict with keys:
@@ -134,7 +270,7 @@ def gemini_generate(request: str | dict, model) -> list[str]:
     model: object with generate_content method
     Returns generated text.
     """
-    genai.configure(api_key=config.GOOGLE_API_KEY)
+    genai_text.configure(api_key=config.GOOGLE_API_KEY)
     try:
         if isinstance(request, str):
             prompt = request
@@ -159,7 +295,55 @@ def gemini_generate(request: str | dict, model) -> list[str]:
         print(e)
         return ["Error: ", str(e)]
 
-def groq_generate(request: dict, client) -> str:
+GEMINI_IMAGE_MODEL = "gemini-2.0-flash-exp-image-generation"
+
+def gemini_generate_image(prompt: str, image_model: str = GEMINI_IMAGE_MODEL) -> str | None:
+    """
+    Generate an image from a text prompt using Gemini model.
+    Returns the file path of the saved image or None if generation fails.
+    """
+    client = genai_image.Client(api_key=config.GOOGLE_API_KEY)
+
+    contents = [
+        types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=prompt)],
+        )
+    ]
+    generate_config = types.GenerateContentConfig(
+        response_modalities=["image", "text"],
+        response_mime_type="text/plain",
+    )
+    try:
+        stream = client.models.generate_content_stream(
+            model=image_model,
+            contents=contents,
+            config=generate_config,
+        )
+        for chunk in stream:
+            c = chunk.candidates
+            if not c or not c[0].content or not c[0].content.parts or not c[0].content.parts[0].inline_data:
+                continue
+            inline_data = c[0].content.parts[0].inline_data
+            img_bytes = (
+                base64.b64decode(inline_data.data)
+                if inline_data.data.startswith(b'iVBORw')
+                else inline_data.data
+            )
+            
+            image_filepath = None
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
+                temp_file.write(img_bytes)
+                image_filepath = temp_file.name
+
+            return image_filepath
+
+        return None
+    except Exception as e:
+        print(e)
+        return None
+
+def groq_generate(request: dict, client_opts: dict | None = None) -> str | None:
     """
     Generate content using the client with customizable parameters and optional grounding.
     Accepts request as dict with keys:
@@ -175,10 +359,21 @@ def groq_generate(request: dict, client) -> str:
         "grounded": bool,
         "grounding_text": str or list[str]
     }
-    client: API client object
+    client_opts (dict): Optional Groq client settings:
+    {
+        "base_url": str | URL | None,
+        "timeout": float | Timeout | None,
+        "max_retries": int,
+        "default_headers": Mapping[str, str] | None,
+        "default_query": Mapping[str, object] | None,
+        "http_client": Client | None,
+        "_strict_response_validation": bool
+    }
     Returns generated text.
     """
-    client.api_key = config.GROQ_API_KEY
+    client_opts = client_opts or {}
+    client = Groq(api_key=config.GROQ_API_KEY, **client_opts)
+
     try:
         prompt = request.get("prompt", "")
         grounded = request.get("grounded", False)
