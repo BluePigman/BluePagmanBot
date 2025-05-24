@@ -1,17 +1,15 @@
-import time
 from datetime import datetime
 from urllib.parse import urlencode, unquote
 import re
 import google.generativeai as genai
-import config
 from Utils.utils import (
-    proxy_get_request,
+    proxy_request,
     clean_str,
     send_chunks,
     fetch_cmd_data,
     gemini_generate,
     check_cooldown,
-    parse_str,
+    parse_str
 )
 
 utc_date_time = datetime.now().strftime("%A %d %B %Y %I:%M %p UTC")
@@ -30,11 +28,13 @@ model = genai.GenerativeModel(
 
 def fetch_and_parse_html(url):
     try:
-        res = proxy_get_request(url)
+        res = proxy_request("GET", url)
         if not res or not res.text:
             print(f"fetch_and_parse_html: Empty response from {url}")
             return None
+
         return parse_str(res.text, "html")
+
     except Exception as e:
         print(f"fetch_and_parse_html: Error fetching/parsing {url}: {e}")
         return None
@@ -60,7 +60,6 @@ def get_duckduckgo_results(query):
         except Exception as e:
             print(f"[Error] {e}")
 
-    print(urls)
     return urls
 
 def get_google_lucky(query):
@@ -69,11 +68,12 @@ def get_google_lucky(query):
     url = f"https://www.google.com/search?{query_string}"
 
     soup = fetch_and_parse_html(url)
-    
-    if not soup:
-        return None
 
+    if not soup:
+        return
+    
     link = soup.find('a', href=True)
+
     return link['href'] if link else None
 
 def get_body_content(url):
@@ -91,7 +91,9 @@ def get_grounding_data(prompt, count=2):
     urls = get_duckduckgo_results(prompt)
     google_lucky_url = get_google_lucky(prompt)
     if google_lucky_url:
+        print(f"Google's I'm Feeling Lucky URL: {google_lucky_url}")
         urls.insert(0, google_lucky_url)
+    print(urls)
     contents = []
     valid_urls = []
 
@@ -107,24 +109,22 @@ def get_grounding_data(prompt, count=2):
     return {'body_content': combined_content, 'duck_urls': valid_urls}
 
 def reply_with_grounded_gemini(self, message):
-    cmd_data = fetch_cmd_data(self, message)
-    username, channel, params, nick, state, cooldown = cmd_data.values()
+    cmd = fetch_cmd_data(self, message)
 
-    check_cooldown(state, nick, cooldown)
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
+        return
 
-    if not params:
+    if not cmd.params:
         m = (
-            f"{username}, please provide a prompt for Gemini. "
+            f"{cmd.username}, please provide a prompt for Gemini. "
             f"Model: {model.model_name}, temperature: {model._generation_config['temperature']}, "
             f"top_p: {model._generation_config['top_p']}"
         )
-
-        self.send_privmsg(channel, m)
+        self.send_privmsg(cmd.channel, m)
         return
 
-    prompt = params.strip()
-    print(prompt)
-    self.send_privmsg(channel, "Searching DuckDuckGo, please wait..")
+    prompt = cmd.params.strip()
+    self.send_privmsg(cmd.channel, "Searching DuckDuckGo, please wait..")
 
     grounding_data = get_grounding_data(prompt)
     duck_urls = grounding_data['duck_urls']
@@ -144,14 +144,15 @@ def reply_with_grounded_gemini(self, message):
     }, model)
 
     if "Error" in result[0]:
-        self.send_privmsg(channel, f"Failed to generate a response. Please try again later.")
+        self.send_privmsg(cmd.channel, f"Failed to generate a response. Please try again later.")
         return
 
     try:
         clean_result = clean_str(result, ['`', '*'])
-        send_chunks(self.send_privmsg, channel, clean_result)
+        send_chunks(self.send_privmsg, cmd.channel, clean_result)
         if duck_urls:
-            self.send_privmsg(channel, f"📝 Source(s): {' | '.join(duck_urls)}")
+            self.send_privmsg(cmd.channel, f"📝 Source(s): {' | '.join(duck_urls)}")
     except Exception as e:
         print(f"[Error] {e}")
-        self.send_privmsg(channel, f"Failed to send a response. Please try again later")
+        self.send_privmsg(cmd.channel, f"Failed to send a response. Please try again later")
+
