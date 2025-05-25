@@ -2,7 +2,7 @@ import random
 import html
 import requests
 from Utils.utils import (
-    proxy_get_request,
+    proxy_request,
     clean_str,
     send_chunks,
     fetch_cmd_data,
@@ -13,7 +13,7 @@ from Utils.utils import (
 MAX_COMMENTS = 300
 
 base_urls = {
-    "hot_posts": "https://www.reddit.com/r/{subreddit}/hot.json?limit=30",
+    "hot_posts": "https://www.reddit.com/r/{subreddit}/hot.json?limit=60",
     "comments": "https://www.reddit.com/comments/{post_id}.json?depth=10&limit={MAX_COMMENTS}"
 }
 
@@ -21,7 +21,7 @@ def get_posts(subreddit, max_comments=MAX_COMMENTS):
     url = base_urls["hot_posts"].format(subreddit=subreddit)
 
     try:
-        res = proxy_get_request(url)
+        res = proxy_request("GET", url)
     except requests.RequestException as e:
         print(f"[get_posts] Request failed: {e}")
         return {"success": False, "message": "Network error while fetching posts."}
@@ -63,7 +63,7 @@ def get_random_comment(posts, subreddit, min_words=15):
     url = base_urls["comments"].format(post_id=post_id, MAX_COMMENTS=MAX_COMMENTS)
 
     try:
-        res = proxy_get_request(url)
+        res = proxy_request("GET", url)
     except requests.RequestException as e:
         print(f"[get_random_comment] Request failed: {e}")
         return {"success": False, "message": "Network error while fetching comments."}
@@ -118,10 +118,16 @@ def get_random_comment(posts, subreddit, min_words=15):
     post_link = f"https://www.reddit.com{random_post['permalink']}"
     comment_link = f"https://www.reddit.com/r/{subreddit}/comments/{post_id}/comment/{random_comment['id']}"
     alt_comment_link = f"https://www.reddit.com{random_comment['permalink']}"
+    comment_body_html = html.unescape(random_comment['body_html'])
 
-    comment_body_html = random_comment['body_html']
-    comment_body = html.unescape(comment_body_html)
-    comment_body_clean = parse_str(comment_body, "html").get_text()
+    soup = parse_str(comment_body_html, "html")
+    # keep image/gif links
+    for a in soup.find_all('a'):
+        if not a.get_text(strip=True):
+            href = a.get('href')
+            if href:
+                a.string = href
+    comment_body_clean = soup.get_text(separator=' ').strip()
 
     return {
         "success": True,
@@ -131,32 +137,33 @@ def get_random_comment(posts, subreddit, min_words=15):
     }
 
 def reply_with_random_reddit_comment(self, message):
-    cmd_data = fetch_cmd_data(self, message)
-    username, channel, params, nick, state, cooldown = cmd_data.values()
+    cmd = fetch_cmd_data(self, message)
 
-    check_cooldown(state, nick, cooldown)
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
+        return
 
-    if not params:
-        self.send_privmsg(channel, f"{username} Please provide a subreddit name to get a random comment from.")
+    if not cmd.params:
+        self.send_privmsg(cmd.channel, f"{cmd.username} Please provide a subreddit name to get a random comment from.")
         return
 
     try:
-        subreddit = params.strip()
+        subreddit = cmd.params.strip()
         posts_result = get_posts(subreddit)
 
         if not posts_result.get("success"):
-            self.send_privmsg(channel, f"{username} {posts_result['message']}")
+            self.send_privmsg(cmd.channel, f"{cmd.username} {posts_result['message']}")
             return
 
         random_comment_result = get_random_comment(posts_result["posts_data"], subreddit)
 
         if not random_comment_result.get("success"):
-            self.send_privmsg(channel, f"{username} {random_comment_result['message']}")
+            self.send_privmsg(cmd.channel, f"{cmd.username} {random_comment_result['message']}")
             return
 
         m = f"{random_comment_result['comment_body']} {random_comment_result['comment_link']}"
-        send_chunks(self.send_privmsg, channel, clean_str(m))
+        send_chunks(self.send_privmsg, cmd.channel, clean_str(m))
 
     except Exception as e:
-        print(f"[reply_with_random_reddit_comment] Error: {e}")
-        self.send_privmsg(channel, f"{username} Failed to get a random comment.")
+        print(f"[Error] {e}")
+        self.send_privmsg(cmd.channel, f"{cmd.username} Failed to fetch Reddit comment. Please try again later.")
+
