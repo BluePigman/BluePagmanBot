@@ -22,7 +22,7 @@ model = genai.GenerativeModel(
         "top_p": 0.95,
     },
     system_instruction=[
-        "Please provide a short, concise response with enough detail. Do not ask the user follow up questions, because you are intended to provide a singlen response with no history and are not expected any follow up prompts. Answer should be at most 990 characters."
+        "Please provide a short, concise response with enough detail. Do not ask the user follow up questions, because you are intended to provide a single response with no history and are not expected any follow up prompts. Answer should be at most 990 characters."
     ]
 )
 
