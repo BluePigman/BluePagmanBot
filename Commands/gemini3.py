@@ -18,11 +18,11 @@ model = genai.GenerativeModel(
     model_name="gemini-2.0-flash-lite",
     generation_config={
         "max_output_tokens": 400,
-        "temperature": 0.5,
+        "temperature": 0.8,
         "top_p": 0.95,
     },
     system_instruction=[
-        "Please always provide a short and concise response. Do not ask the user follow up questions, because you are intended to provide a singlen response with no history and are not expected any follow up prompts. Answer should be at most 990 characters."
+        "Please provide a short, concise response with enough detail. Do not ask the user follow up questions, because you are intended to provide a singlen response with no history and are not expected any follow up prompts. Answer should be at most 990 characters."
     ]
 )
 
@@ -93,6 +93,7 @@ def get_grounding_data(prompt, count=2):
     if google_lucky_url:
         print(f"Google's I'm Feeling Lucky URL: {google_lucky_url}")
         urls.insert(0, google_lucky_url)
+    urls = list(dict.fromkeys(urls))  # remove duplicates, keep orde
     print(urls)
     contents = []
     valid_urls = []
@@ -130,8 +131,7 @@ def reply_with_grounded_gemini(self, message):
     duck_urls = grounding_data['duck_urls']
     grounding_text = (
         f"Today is {utc_date_time}.\n\n"
-        "Use this text to ground your response (Don't mention that I provided you with a text/"
-        "document/article/context for your response under any circumstance. Answer as if you know this information):\n"
+        "Read this text in full and use it to inform your response, mention the date in your response if it's relevant (Don't mention that I provided you with a text/document/article/context for your response under any circumstance. Answer as if you know this information):\n"
         f"{grounding_data['body_content']}"
     )
 
