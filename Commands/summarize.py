@@ -16,6 +16,9 @@ def reply_with_summarize(self, message):
         self.send_privmsg(message['command']['channel'], m)
         return
 
+    self.send_privmsg(message['command']['channel'], "The summarize command has been disabled because Youtube blocked the IP.")
+    return
+
     prompt = (message['command']['botCommandParams'])
     if "youtube.com" in prompt or "youtu.be" in prompt:
         video_id = extract_youtube_id(prompt)
