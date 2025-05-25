@@ -118,10 +118,16 @@ def get_random_comment(posts, subreddit, min_words=15):
     post_link = f"https://www.reddit.com{random_post['permalink']}"
     comment_link = f"https://www.reddit.com/r/{subreddit}/comments/{post_id}/comment/{random_comment['id']}"
     alt_comment_link = f"https://www.reddit.com{random_comment['permalink']}"
+    comment_body_html = html.unescape(random_comment['body_html'])
 
-    comment_body_html = random_comment['body_html']
-    comment_body = html.unescape(comment_body_html)
-    comment_body_clean = parse_str(comment_body, "html").get_text()
+    soup = parse_str(comment_body_html, "html")
+    # keep image/gif links
+    for a in soup.find_all('a'):
+        if not a.get_text(strip=True):
+            href = a.get('href')
+            if href:
+                a.string = href
+    comment_body_clean = soup.get_text(separator=' ').strip()
 
     return {
         "success": True,
