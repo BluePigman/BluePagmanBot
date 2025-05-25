@@ -191,7 +191,7 @@ def proxy_request(method: str, url: str, headers=HEADERS, timeout=TIMEOUT, bypas
 
     return res
 
-def fetch_firefox_cookies(domains: List[str] = [], as_netscape: bool = False) -> Union[str, Dict[str, str]]:
+def fetch_firefox_cookies(domains: List[str] | None = None, as_netscape: bool = False) -> Union[str, Dict[str, str]]:
     """
     Fetch Firefox cookies for given domains. If no domains are provided, returns all cookies.
 
@@ -228,16 +228,16 @@ def fetch_firefox_cookies(domains: List[str] = [], as_netscape: bool = False) ->
         rows = cur.fetchall()
 
     if as_netscape:
-        tmp = tempfile.NamedTemporaryFile(delete=False, mode="w", suffix=".txt")
-        tmp.write("# Netscape HTTP Cookie File\n")
-        for host, path, is_sec, exp, name, val in rows:
-            tmp.write(
-                f"{host}\t{'TRUE' if host.startswith('.') else 'FALSE'}\t"
-                f"{path}\t{'TRUE' if is_sec else 'FALSE'}\t"
-                f"{exp or 0}\t{name}\t{val}\n"
-            )
-        tmp.close()
-        return tmp.name
+        with tempfile.NamedTemporaryFile(delete=False, mode="w", suffix=".txt") as tmp:
+            tmp.write("# Netscape HTTP Cookie File\n")
+            for host, path, is_sec, exp, name, val in rows:
+                tmp.write(
+                    f"{host}\t{'TRUE' if host.startswith('.') else 'FALSE'}\t"
+                    f"{path}\t{'TRUE' if is_sec else 'FALSE'}\t"
+                    f"{exp or 0}\t{name}\t{val}\n"
+                )
+            temp_path = tmp.name
+        return temp_path
 
     cookie_dict = {name: val for _, _, _, _, name, val in rows}
     return cookie_dict
