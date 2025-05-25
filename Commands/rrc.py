@@ -98,6 +98,10 @@ def get_random_comment(posts, subreddit, min_words=15):
         if c.get('body') not in ('[removed]',) and c.get('author') != 'AutoModerator' and 'body' in c
     ]
     
+    if not filtered_comments:
+        print(f"[get_random_comment] No valid comments found for post {post_id}")
+        return {"success": False, "message": "No valid comments found in post"}
+    
     # Give full weight to comments above min_words + higher score
     weights = []
     for c in filtered_comments:
