@@ -240,6 +240,11 @@ def reply_with_grounded_gemini(self, message):
         utc_date_time = datetime.now().strftime("%A %d %B %Y %I:%M %p UTC")
         
         grounding_data = get_grounding_data(prompt)
+
+        if not grounding_data:
+            self.send_privmsg(cmd.channel, "No results found for the query.")
+            return
+
         valid_urls = grounding_data['valid_urls']
         grounding_text = (
             f"Today is {utc_date_time}.\n\n"
