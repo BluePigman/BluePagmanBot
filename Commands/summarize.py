@@ -71,37 +71,33 @@ def get_transcript(video_id: str) -> str | None:
         return transcript
 
     except Exception as e:
-        print(f"[Error] {e}")
+        print(f"Error: {e}")
         return
 
 def reply_with_summarize(self, message):
     try:
-        # uncomment to disable command
-        # self.send_privmsg(cmd.channel, f"The summarize command has been disabled because Youtube blocked the IP.")
-        # return
-
         cmd = fetch_cmd_data(self, message)
 
         if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
             return
 
         if not cmd.params:
-            self.send_privmsg(cmd.channel, f"{cmd.username} please provide a YouTube link to summarize.")
+            self.send_privmsg(cmd.channel, f"{cmd.username}, please provide a YouTube link to summarize.")
             return
 
         url = cmd.params.strip()
         if "youtube.com" not in url and "youtu.be" not in url:
-            self.send_privmsg(cmd.channel, f"{cmd.username} that doesn’t look like a YouTube link.")
+            self.send_privmsg(cmd.channel, f"{cmd.username}, that doesn't look like a YouTube link.")
             return
 
         video_id = extract_youtube_id(url)
         if not video_id:
-            self.send_privmsg(cmd.channel, f"{cmd.username} unable to extract a video ID from that link.")
+            self.send_privmsg(cmd.channel, f"{cmd.username}, unable to extract a video ID from that link.")
             return
 
         transcript = get_transcript(video_id)
         if not transcript:
-            self.send_privmsg(cmd.channel, f"{cmd.username} no transcript available for that video.")
+            self.send_privmsg(cmd.channel, f"{cmd.username}, no transcript available for that video.")
             return
 
         prompt = {
@@ -116,14 +112,12 @@ def reply_with_summarize(self, message):
 
         summary = gemini_generate(prompt, model)
         if isinstance(summary, str) and summary.lower().startswith("error"):
-            self.send_privmsg(cmd.channel, f"{cmd.username} failed to generate a summary. Please try again later.")
+            self.send_privmsg(cmd.channel, f"{cmd.username}, failed to generate a summary. Please try again later.")
             return
 
         send_chunks(self.send_privmsg, cmd.channel, clean_str(summary, ["`", "*"]))
 
     except Exception as e:
         print(f"[Error] {e}")
-        return
-
-    finally:
+        self.send_privmsg(cmd.channel, "Failed to generate a summary. Please try again later.")
         return

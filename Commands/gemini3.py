@@ -262,7 +262,7 @@ def reply_with_grounded_gemini(self, message):
         }, model)
 
         if "Error" in result[0]:
-            self.send_privmsg(cmd.channel, f"Failed to generate a response. Please try again later.")
+            self.send_privmsg(cmd.channel, "Failed to generate a response. Please try again later.")
             return
 
         clean_result = clean_str(result, ['`', '*'])
@@ -272,7 +272,5 @@ def reply_with_grounded_gemini(self, message):
 
     except Exception as e:
         print(f"[Error] {e}")
-        self.send_privmsg(cmd.channel, f"Failed to send a response. Please try again later")
-    
-    finally:
+        self.send_privmsg(cmd.channel, "Failed to send a response. Please try again later.")
         return
