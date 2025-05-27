@@ -2,26 +2,26 @@
 A Twitch chatbot running in Python. 
 
 ##  Major Features:
-- Generate text from a text prompt using Google Gemini.
-- Get a random chess opening name, can add specific keywords, and/or indicate the side.
-- Play a chess game through sending messages, with a dynamically updated PGN of the ongoing game.
+- Interact with Google Gemini to ask it questions, generate images, describe image and video links, and summarize Youtube videos.
+- Generate Braille/ASCII art from emotes/image links.
 - Get a random news headline from Google News.
-- Gambling with points.
-- Generates Braille/ASCII art from emotes/image links.
-- Play Texas Hold'em poker with multiple people.
-- Summarize Youtube videos (sends transcript to Gemini).
-- Describe image and video links (uploads to Gemini and asks for description).
+- Play various games: Gambling with points, Guess the Emote
+- Show lyrics of a song from Genius.
+- Fetch a random post or comment from a subreddit on Reddit.
+- Play a chess game through sending messages, with a dynamically updated PGN of the ongoing game.
+- Get a random chess opening name, can add specific keywords, and/or indicate the side.
+
 
 ## Prerequisites
-[Python 3.9+](https://www.python.org/downloads/)
-[MongoDB](https://www.mongodb.com/try/download/community) Installed and running
+- [Python 3.9+](https://www.python.org/downloads/)
+- MongoDB Server ([Atlas](https://www.mongodb.com/products/platform/atlas-database) is the easiest to set up)
+- Twitch Account
 
 ## How to use: 
 
-1. Download the latest release and extract or clone this repository.
+1. Fork or clone this repository.
 2. Create a [python virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#create-and-use-virtual-environments) and run `pip install -e .` in the project's directory. (The `-e` flag installs the package in editable mode, which is useful for development.)
-3. Make a Twitch account if you do not already have one.
-4. Get the OAuth token of the Twitch account to be used as the bot [here](https://twitchapps.com/tmi/).
+3. Get an OAuth token of the Twitch account for the bot. I used [this](https://twitchapps.com/tmi/) to generate one, but the site has now shut down, so please find another way to get one. You can get the access token and Client ID [here](http://twitchtokengenerator.com/)
 5. Rename `config_example.py` to `config.py`, and fill in the details.
 6. Set up a Mongo database, add a database named "test" and a collection named "Users". Then add the connection string into `config.py` in db_uri.
 7. Run `bot.py`. The bot will now join the channels you put in `config.py`.
