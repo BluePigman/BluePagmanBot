@@ -155,7 +155,6 @@ def get_grounding_data(prompt, count=2):
     blocked_domains = {'facebook.com', 'youtube.com', 'reddit.com', 'instagram.com'}
     modifiers = ' ' + ' '.join(f'-site:{domain}' for domain in blocked_domains)
 
-    normal_urls = []
     normal_urls = get_duckduckgo_results(prompt + modifiers)
     if normal_urls:
         print("Normal URLs:", normal_urls)
@@ -193,7 +192,7 @@ def get_grounding_data(prompt, count=2):
                 continue
             domain = urlparse(url).netloc
             print(f"    Domain: {domain}")
-            if domain in blocked_domains:
+            if any(blocked_domain in url for blocked_domain in blocked_domains):
                 print("    Skipped: Domain blocked")
                 continue
             content = get_body_content(url)
