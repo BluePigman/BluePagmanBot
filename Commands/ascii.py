@@ -226,7 +226,7 @@ def reply_with_ascii(self, message):
                             text_img, color_threshold=args['tr'], fill_transparency=args['b'], 
                             dot_for_blank=args['e'], width=text_width, height=text_height)
                     else:
-                        text_ascii = braillecreate.ordered_dithering(
+                        text_ascii = braillecreate.treshold_dithering(
                             text_img, color_threshold=args['tr'], dot_for_blank=args['e'], 
                             fill_transparency=args['b'], width=text_width, height=text_height)
                     
