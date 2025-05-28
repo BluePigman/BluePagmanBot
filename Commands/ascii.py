@@ -48,13 +48,11 @@ def parse_custom_args(args):
     parser.add_argument('-d', action='store_true',
                         help="Use Floyd-Steinberg dithering.")
     parser.add_argument('-b', action='store_false',
-                        help="Remove transparent background.")
+                        help="Include transparent background.")
     parser.add_argument('-e', action='store_false',
                         help="Keep empty characters.")
     parser.add_argument('-i', action='store_true',
                         help="Invert the end result.")
-    parser.add_argument('-g', action='store_true',
-                        help="Use multiple frames of the first gif provided.")
     parser.add_argument('-t', action='store_true',
                         help="Text to print on the ASCII.")
 
@@ -181,11 +179,10 @@ def reply_with_ascii(self, message):
                         frame, color_threshold=args['tr'], fill_transparency=args['b'], 
                         dot_for_blank=args['e'], width=args['w'], height=args['h'])
                 else:
-                    image_str = braillecreate.treshold_dithering(
-                        frame, color_threshold=args['tr'], dot_for_blank=args['e'], 
-                        fill_transparency=args['b'], width=args['w'], height=args['h'])
-
-                image_str = brailletransform.invert(image_str, args['e'])
+                    # Use ordered dithering instead of threshold for better results
+                    image_str = braillecreate.ordered_dithering(
+                    frame, color_threshold=args['tr'], dot_for_blank=args['e'], 
+                    fill_transparency=args['b'], width=args['w'], height=args['h'])
 
                 # Apply transformations
                 if args['i']:
@@ -218,7 +215,7 @@ def reply_with_ascii(self, message):
                         font = ImageFont.load_default()
                     
                     # Draw the text (centered)
-                    text_color = (0, 0, 0, 255)  # Black text
+                    text_color = (0, 0, 0, 255)  if args['i'] else (255, 255, 255, 255)
                     text_position = (text_width // 2, text_height // 2)
                     draw.text(text_position, args['t'], fill=text_color, font=font, anchor="mm")
                     
@@ -229,7 +226,7 @@ def reply_with_ascii(self, message):
                             text_img, color_threshold=args['tr'], fill_transparency=args['b'], 
                             dot_for_blank=args['e'], width=text_width, height=text_height)
                     else:
-                        text_ascii = braillecreate.treshold_dithering(
+                        text_ascii = braillecreate.ordered_dithering(
                             text_img, color_threshold=args['tr'], dot_for_blank=args['e'], 
                             fill_transparency=args['b'], width=text_width, height=text_height)
                     

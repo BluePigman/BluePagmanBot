@@ -1,39 +1,41 @@
 from .brailledata import braille_descr_dic
-from PIL import Image
-
-
-treshold = 0
-transparency = True
+from PIL import Image, ImageEnhance, ImageFilter
+import numpy as np
 
 
 def treshold_dithering(picture, color_threshold=128, line_delimiter=' ', dot_for_blank=True, fill_transparency=True, width=0, height=0):
-    global treshold, transparency
-    treshold = color_threshold
-    transparency = fill_transparency
     picture = _resize_pic(picture, width, height)
     result_arr = []
 
     for y in range(0, picture.height, 4):
         line = ""
         for x in range(0, picture.width, 2):
-            line += braille_descr_dic[_get_braille_code(picture, x, y)]
+            line += braille_descr_dic[_get_braille_code(picture, x, y, color_threshold, fill_transparency)]
         result_arr.append(line)
 
     if dot_for_blank:
-        return line_delimiter.join(result_arr).replace('⠀', '⠄')
+        # For black background, use single dot instead of centered dot
+        return line_delimiter.join(result_arr).replace('⠀', '⠁')
     else:
         return line_delimiter.join(result_arr)
 
 
 def ordered_dithering(picture, color_threshold=128, line_delimiter=' ', dot_for_blank=True, fill_transparency=True, width=0, height=0):
     picture = _resize_pic(picture, width, height)
+    
+    # Apply preprocessing for better results
+    picture = apply_gamma_correction(picture, 0.7)
+    picture = enhance_contrast(picture, 1.5)
+    picture = simple_edge_enhance(picture)
 
     change_factor = color_threshold/128
     matrix = [[64*change_factor, 128*change_factor], [192*change_factor, 0]]
     for y in range(0, picture.height, 1):
         for x in range(0, picture.width, 1):
             pixel = picture.getpixel((x, y))
-            if sum((pixel[0], pixel[1], pixel[2])) / 3 > matrix[(y % len(matrix))][(x % len(matrix))]:
+            # Use perceptually accurate grayscale conversion
+            gray_value = _rgb_to_grayscale(pixel[0], pixel[1], pixel[2])
+            if gray_value > matrix[(y % len(matrix))][(x % len(matrix))]:
                 picture.putpixel((x, y), (255, 255, 255, pixel[3]))
             else:
                 picture.putpixel((x, y), (0, 0, 0, pixel[3]))
@@ -41,19 +43,22 @@ def ordered_dithering(picture, color_threshold=128, line_delimiter=' ', dot_for_
     return treshold_dithering(picture, 128, line_delimiter, dot_for_blank, fill_transparency, 0, 0)
 
 
-def floyd_steinberg_dithering(picture, color_threshold=1, line_delimiter=' ', dot_for_blank=True, fill_transparency=True, width=0, height=0):
+def floyd_steinberg_dithering(picture, color_threshold=128, line_delimiter=' ', dot_for_blank=True, fill_transparency=True, width=0, height=0):
     picture = _resize_pic(picture, width, height)
+    
+    # Apply preprocessing for better results
+    picture = apply_gamma_correction(picture, 0.7)
+    picture = enhance_contrast(picture, 1.5)
+    picture = simple_edge_enhance(picture)
 
     for y in range(0, picture.height, 1):
         for x in range(0, picture.width, 1):
             quant_error = list(picture.getpixel((x, y)))
             oldpixel = picture.getpixel((x, y))
-            percent = color_threshold/255
-            red_poly = ((1-percent) ** 2)
-            green_poly = 2*(1-percent)*percent
-            blue_poly = (percent ** 2)
-
-            if red_poly*oldpixel[0] + green_poly*oldpixel[1] + blue_poly*oldpixel[2] > 128:
+            # Use perceptually accurate grayscale
+            gray_value = _rgb_to_grayscale(oldpixel[0], oldpixel[1], oldpixel[2])
+            
+            if gray_value > 128:
                 for i in range(0, len(quant_error)-1, 1):
                     quant_error[i] -= 255
                 picture.putpixel((x, y), (255, 255, 255, oldpixel[3]))
@@ -70,7 +75,7 @@ def floyd_steinberg_dithering(picture, color_threshold=1, line_delimiter=' ', do
                     picture.putpixel(
                         (x+a, y+b), (new_colors[0], new_colors[1], new_colors[2], picture.getpixel((x+a, y+b))[3]))
 
-    return treshold_dithering(picture, 128, line_delimiter, dot_for_blank, fill_transparency, 0, 0)
+    return treshold_dithering(picture, color_threshold, line_delimiter, dot_for_blank, fill_transparency, 0, 0)
 
 
 def _resize_pic(picture, width, height):
@@ -80,7 +85,7 @@ def _resize_pic(picture, width, height):
     return picture
 
 
-def _get_braille_code(picture, x, y):
+def _get_braille_code(picture, x, y, threshold, transparency):
     braille_code = ""
     braille_parts_arr = [  # (x, y, dot number in braille character)
         (0, 0, "1"),
@@ -94,16 +99,47 @@ def _get_braille_code(picture, x, y):
     ]
     for xn, yn, p in braille_parts_arr:
         if y + yn < picture.height and x + xn < picture.width:
-            if _evaluate_pixel(*picture.getpixel((x + xn, y + yn))):
+            pixel = picture.getpixel((x + xn, y + yn))
+            if _evaluate_pixel(pixel[0], pixel[1], pixel[2], pixel[3], threshold, transparency):
                 braille_code += p
 
     return ''.join(sorted(braille_code))
 
 
-def _evaluate_pixel(red, green, blue, alpha):
+def _evaluate_pixel(red, green, blue, alpha, threshold, transparency):
     if transparency and alpha == 0:
         return False
-    if red > treshold or green > treshold or blue > treshold:
-        return False
-    else:
-        return True
+    
+    # For black background, we want to show bright pixels as dots
+    brightness = _rgb_to_grayscale(red, green, blue)
+    
+    # Invert the logic for black backgrounds
+    return brightness > threshold
+
+
+def _rgb_to_grayscale(r, g, b):
+    """Convert RGB to grayscale using perceptually accurate weights"""
+    return int(0.2126 * r + 0.7152 * g + 0.0722 * b)
+
+
+def apply_gamma_correction(picture, gamma=0.7):
+    """Apply gamma correction to brighten mid-tones for better visibility on black backgrounds"""
+    # Convert to numpy array for efficient processing
+    img_array = np.array(picture)
+    
+    # Apply gamma correction
+    corrected = np.power(img_array / 255.0, gamma) * 255
+    
+    # Convert back to PIL Image
+    return Image.fromarray(corrected.astype(np.uint8))
+
+
+def enhance_contrast(picture, factor=1.5):
+    """Enhance contrast for better definition at low resolutions"""
+    enhancer = ImageEnhance.Contrast(picture)
+    return enhancer.enhance(factor)
+
+
+def simple_edge_enhance(picture):
+    """Apply gentle edge enhancement suitable for small images"""
+    return picture.filter(ImageFilter.EDGE_ENHANCE)

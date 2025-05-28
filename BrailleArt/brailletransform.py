@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
-
 import re
 from .brailledata import *
-
 
 braille_dic_invert = create_invert_dic()
 braille_dic_90 = create_turn90_dic()
 braille_dic_mirror = create_mirror_dic()
 
-
 def invert(input_str, dot_for_blank=False):
+    """Invert the braille pattern (swap filled and empty dots)."""
+
     if dot_for_blank:
         braille_dic_invert['⣿'] = '⠄'
         braille_dic_invert['⠄'] = '⣿'
@@ -27,8 +25,9 @@ def invert(input_str, dot_for_blank=False):
     return result_str
 
 
+def mirror(input_str, line_delimiter=' ', dot_for_blank=False):
+    """Mirror the braille art horizontally."""
 
-def mirror(input_str, line_delimiter='\n', dot_for_blank=False):
     line_arr = list(filter(None, re.split(" |\n", input_str)))
     results_arr = [''] * len(line_arr)
     for i in range(0, len(line_arr), 1):
@@ -44,8 +43,9 @@ def mirror(input_str, line_delimiter='\n', dot_for_blank=False):
         return line_delimiter.join(results_arr)
 
 
-
 def turn_90(input_str, line_delimiter=' ', dot_for_blank=False):
+    """Rotate the braille art 90 degrees clockwise."""
+
     line_arr = list(filter(None, re.split(" |\n", input_str)))
     longest_line = len(max(line_arr, key=len))
     new_line_arr = [' '] * (int(longest_line/2) + longest_line % 2)
@@ -73,4 +73,4 @@ def turn_180(input_str, line_delimiter=' ', dot_for_blank=False):
 
 
 def turn_270(input_str, line_delimiter=' ', dot_for_blank=False):
-    return turn_90(turn_180(input_str,line_delimiter, dot_for_blank), line_delimiter, dot_for_blank)
+    return turn_90(turn_180(input_str, line_delimiter, dot_for_blank), line_delimiter, dot_for_blank)
