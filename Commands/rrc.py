@@ -170,4 +170,4 @@ def reply_with_random_reddit_comment(self, message):
     except Exception as e:
         print(f"[Error] {e}")
         self.send_privmsg(cmd.channel, f"{cmd.username} Failed to fetch Reddit comment. Please try again later.")
-
+        return

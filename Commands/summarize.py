@@ -1,119 +1,123 @@
 import re
-import time
-from Commands import gemini
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
-from xml.etree.ElementTree import ParseError
-from xml.parsers.expat import ExpatError
+import json
+from typing import Optional
+from urllib.parse import urljoin
+import google.generativeai as genai
+from Utils.utils import (
+    fetch_cmd_data,
+    check_cooldown,
+    send_chunks,
+    clean_str,
+    gemini_generate,
+    proxy_request
+)
 
+SUMMARY_CHAR_LIMIT = 500
 
-def reply_with_summarize(self, message):
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
-            self.cooldown):
-        self.state[message['source']['nick']] = time.time()
+model = genai.GenerativeModel(
+    model_name="gemini-2.0-flash-lite",
+    generation_config={
+        "max_output_tokens": 400,
+        "temperature": 0.5,
+        "top_p": 0.95,
+    }
+)
 
-    if not message['command']['botCommandParams']:
-        m = f"@{message['tags']['display-name']}, please provide a youtube URL link to summarize."
-        self.send_privmsg(message['command']['channel'], m)
-        return
-
-    self.send_privmsg(message['command']['channel'], "The summarize command has been disabled because Youtube blocked the IP.")
-    return
-
-    prompt = (message['command']['botCommandParams'])
-    if "youtube.com" in prompt or "youtu.be" in prompt:
-        video_id = extract_youtube_id(prompt)
-        if not video_id:
-            self.send_privmsg(message['command']
-                              ['channel'], "Youtube vid not found.")
-            return
-        transcript = get_transcript(video_id)
-        
-        if transcript == "API_ERROR":
-            self.send_privmsg(
-                message['command']['channel'], "Transcript could not be fetched, likely due to being rate limited. Please try again later.")
-            return
-            
-        if not transcript or len(transcript) < 1:
-            self.send_privmsg(
-                message['command']['channel'], "No transcript found for the video.")
-            return
-        prompt = f"Here is the transcript for a youtube video, please summarize it in under 500 characters, \
-        ignoring any sponsors of the video or mention of interacting with their channel (Subscribing, liking, etc): {transcript}"
-    else:
-        self.send_privmsg(message['command']['channel'],
-                          "Please provide a Youtube link to summarize.")
-        return
-    result = gemini.generate(prompt)
-    for m in result:
-        self.send_privmsg(message['command']['channel'], m)
-        time.sleep(1)
-
-
-def extract_youtube_id(text):
-    youtube_regex = r"(https?://)?(www\.|m\.)?(youtube\.com|youtu\.be)/.+$"
-
+def extract_youtube_id(text: str) -> Optional[str]:
+    youtube_regex = r"(?:youtu\.be/|youtube\.com/(?:watch\?v=|shorts/))([A-Za-z0-9_-]{11})"
     match = re.search(youtube_regex, text)
-    video_id = None
-    if match:
-        if "youtube.com/watch" in text:
-            video_id = text.split("v=")[-1].split("&")[0]
-        elif "youtube.com/shorts" in text:
-            video_id = text.split("/shorts/")[-1].split("?")[0]
-        elif "youtu.be" in text:
-            video_id = text.split("/")[-1].split("?")[0]
-    return video_id
-
+    return match.group(1) if match else None
 
 def get_transcript(video_id: str) -> str | None:
-    # Try getting English transcript, fallback on translated transcript
+    base = "https://inv.nadeko.net"
     try:
-        try:
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        except (ParseError, ExpatError) as e:
-            print(f"XML parsing error when listing transcripts for video {video_id}: {e}")
-            return "API_ERROR"
+        res = proxy_request("GET", f"{base}/api/v1/captions/{video_id}")
+        if res.status_code != 200:
+            return
 
-        try:
-            transcript = transcript_list.find_transcript(['en-GB'])
-        except NoTranscriptFound:
-            try:
-                transcript = transcript_list.find_transcript(['en'])
-            except NoTranscriptFound:
-                for t in transcript_list:
-                    try:
-                        try:
-                            transcript = t.translate('en')
-                            break
-                        except (ParseError, ExpatError) as e:
-                            print(f"XML parsing error when translating for video {video_id}: {e}")
-                            return "API_ERROR"
-                    except Exception as e:
-                        print(f"Translation error: {e}")
-                        continue
-                else:
-                    return None
+        data = json.loads(res.text)
+        captions = data.get("captions", [])
+        if not captions:
+            return
 
-        # Fetch transcript without retrying
-        try:
-            fetched = transcript.fetch()
-        except (ParseError, ExpatError) as e:
-            print(f"XML parsing error when fetching transcript for video {video_id}: {e}")
-            return "API_ERROR"
-        
-        # Check if fetched has a 'snippets' attribute, otherwise treat it as the transcript list directly
-        if hasattr(fetched, 'snippets'):
-            merged_text = " ".join(snippet.text.replace(r'\'', "'") for snippet in fetched.snippets)
-        else:
-            merged_text = " ".join(item['text'].replace(r'\'', "'") for item in fetched)
-        
-        return merged_text
+        preferred = [
+            "English (United States)",
+            "English (United Kingdom)",
+            "English (auto-generated)",
+        ]
 
-    except (NoTranscriptFound, TranscriptsDisabled):
-        print("Transcripts are disabled or none were found.")
-        return None
-    except (ParseError, ExpatError) as e:
-        print(f"XML parsing error for video {video_id}: {e}")
-        return "API_ERROR"
+        selected = None
+        for label in preferred:
+            for caption in captions:
+                if caption.get("label") == label:
+                    selected = caption
+                    break
+            if selected:
+                break
+
+        if not selected and captions:
+            selected = captions[0]
+
+        if not selected or not selected.get("url"):
+            return
+
+        full_url = urljoin(base, selected["url"])
+        transcript_res = proxy_request("GET", full_url)
+        if transcript_res.status_code != 200:
+            return
+
+        transcript = transcript_res.text
+        print(f"Excerpt:\n{transcript[:300]}")
+        return transcript
+
     except Exception as e:
-        print(f"Unexpected error for video {video_id}: {e}")
-        return None
+        print(f"Error: {e}")
+        return
+
+def reply_with_summarize(self, message):
+    try:
+        cmd = fetch_cmd_data(self, message)
+
+        if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
+            return
+
+        if not cmd.params:
+            self.send_privmsg(cmd.channel, f"{cmd.username}, please provide a YouTube link to summarize.")
+            return
+
+        url = cmd.params.strip()
+        if "youtube.com" not in url and "youtu.be" not in url:
+            self.send_privmsg(cmd.channel, f"{cmd.username}, that doesn't look like a YouTube link.")
+            return
+
+        video_id = extract_youtube_id(url)
+        if not video_id:
+            self.send_privmsg(cmd.channel, f"{cmd.username}, unable to extract a video ID from that link.")
+            return
+
+        transcript = get_transcript(video_id)
+        if not transcript:
+            self.send_privmsg(cmd.channel, f"{cmd.username}, no transcript available for that video.")
+            return
+
+        prompt = {
+            "prompt": (
+                f"Summarize the following YouTube transcript in under {SUMMARY_CHAR_LIMIT} "
+                "characters. Ignore sponsor segments and calls to subscribe/like/etc. "
+                "Give your summarization in English only."
+            ),
+            "grounded": True,
+            "grounding_text": clean_str(transcript),
+        }
+
+        summary = gemini_generate(prompt, model)
+        if isinstance(summary, str) and summary.lower().startswith("error"):
+            self.send_privmsg(cmd.channel, f"{cmd.username}, failed to generate a summary. Please try again later.")
+            return
+
+        send_chunks(self.send_privmsg, cmd.channel, clean_str(summary, ["`", "*"]))
+
+    except Exception as e:
+        print(f"[Error] {e}")
+        self.send_privmsg(cmd.channel, "Failed to generate a summary. Please try again later.")
+        return

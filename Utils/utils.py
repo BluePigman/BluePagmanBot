@@ -1,6 +1,7 @@
 import config
 import os, requests, re, base64, time, json, sqlite3, tempfile
 from bs4 import BeautifulSoup
+from urllib.parse import urlencode
 from typing import Any, Dict, List, Union
 import google.generativeai as genai_text
 from google import genai as genai_image
@@ -74,7 +75,7 @@ def check_cooldown(state: Dict[str, float], nick: str, cooldown: float) -> bool:
     
     return False
 
-def clean_str(text: str, remove: list[str] = []) -> str:
+def clean_str(text: str, remove: list[str] = None) -> str:
     """
     Normalize whitespace and optionally remove specified characters.
     """
@@ -186,7 +187,10 @@ def proxy_request(method: str, url: str, headers=HEADERS, timeout=TIMEOUT, bypas
     target_url = url
     if config.PROXY and not bypass_proxy:
         target_url = config.PROXY
-        headers["url"] = url
+        qs = urlencode(kwargs.get("params", {}), doseq=True)
+        headers["url"] = f"{url}?{qs}" if qs else url
+        kwargs.pop("params", None)
+
     res = requests.request(method, target_url, headers=headers, timeout=(timeout, timeout), **kwargs)
 
     return res
