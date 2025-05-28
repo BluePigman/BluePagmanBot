@@ -158,7 +158,7 @@ def reward(self, message):
 
 def provide_hint(self, channel, emote_url):
     # Provide a hint from ascii
-    hint = ascii.first_frame(channel, emote_url)
+    hint = ascii.first_frame(emote_url)
     self.send_privmsg(channel, hint)
 
 def is_game_over(current_round, num_rounds):

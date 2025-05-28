@@ -261,7 +261,7 @@ def reply_with_ascii(self, message):
             self.send_privmsg(message['command']['channel'],
                              "The link was not a valid image. :Z")
 
-def first_frame(channel, emote_url):
+def first_frame(emote_url):
     # get first frame of ascii
     try:
         resp = requests.get(emote_url)
