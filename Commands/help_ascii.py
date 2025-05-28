@@ -11,11 +11,10 @@ def reply_with_help_ascii(self, message):
     -r {90,180,270} rotate ascii clockwise
     -tr {0-255} level to apply threshold dithering
     -d Use Floyd-Steinberg dithering.
-    -b Remove transparent background.
+    -b Include transparent background."
     -e Keep empty characters.
     -i Invert the end result.
-    -g Use multiple frames of the first gif provided.
-    -t {text} Text to print below the ASCII. (TODO)""".replace("\n", " ")
+    -t {text} Text to print below the ASCII.""".replace("\n", " ")
 
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
             self.cooldown):
