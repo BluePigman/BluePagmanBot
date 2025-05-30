@@ -235,7 +235,6 @@ def reply_with_grounded_gemini(self, message):
         return
 
     prompt = cmd.params.strip()
-    self.send_privmsg(cmd.channel, "Searching DuckDuckGo, please wait..")
     try:
         utc_date_time = datetime.now().strftime("%A %d %B %Y %I:%M %p UTC")
         
