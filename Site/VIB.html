@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>VIB</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100%;
+      background: black;
+      display: contents;
+    }
+    .flex-center {
+      display: flex;
+      background: black;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div class="flex-center">
+    <script>
+      const params = new URL(location).searchParams;
+      const videoUrl = params.get('url');
+
+      if (videoUrl) {
+        const iframeContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              html, body {
+                margin: 0;
+                padding: 0;
+                background: black;
+                height: 100%;
+                width: 100%;
+                overflow: hidden;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+              }
+              video {
+                max-width: 100%;
+                max-height: 100%;
+                width: auto;
+                height: auto;
+                display: block;
+                object-fit: contain;
+              }
+            </style>
+          </head>
+          <body>
+            <video controls autoplay>
+              <source src="${videoUrl}" type="video/mp4" />
+            </video>
+          </body>
+          </html>
+        `;
+
+        const blob = new Blob([iframeContent], { type: 'text/html' });
+        const blobUrl = URL.createObjectURL(blob);
+
+        const iframe = document.createElement('iframe');
+        iframe.src = blobUrl;
+        iframe.sandbox = 'allow-scripts';
+        iframe.scrolling = 'no';
+        iframe.style = 'border:0; width:90vw; height:90vh; overflow:hidden;';
+        document.querySelector('.flex-center').appendChild(iframe);
+      } else {
+        console.error("Invalid or missing 'url' parameter");
+      }
+    </script>
+  </div>
+</body>
+</html>
