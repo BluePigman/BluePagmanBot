@@ -21,21 +21,24 @@ class CmdData:
     state: Dict
     cooldown: int
 
-def fetch_cmd_data(self, message: dict, with_args: bool = False) -> CmdData:
+def fetch_cmd_data(self, message: dict, split_params: bool = False, with_args: bool = False) -> CmdData:
     """
     Extracts key fields from a message dict and instance attributes,
     returning them as a CmdData object for structured, type-safe access:
-      - username: str — display name prefixed with '@'
+      - nick: str — sender's username
+      - username: str — sender's username prefixed with '@'
       - channel: str — channel name
-      - params: any — full botCommandParams or first token (if with_args=True)
+      - params: list|str — full botCommandParams (split into words if split_params=True),
+                           or first token if with_args=True
       - args: dict — tokens in arg_name:arg_value format (if with_args=True)
-      - nick: str — sender's nickname
       - state: dict — current cooldown state from self
       - cooldown: int — cooldown duration from self
     """
     raw = message['command']['botCommandParams']
     if isinstance(raw, str):
         raw = raw.replace('\U000E0000', '')
+        if split_params:
+            raw = raw.split()
 
     params, args = raw, {}
 
@@ -50,11 +53,11 @@ def fetch_cmd_data(self, message: dict, with_args: bool = False) -> CmdData:
             params, args = None, {}
 
     return CmdData(
+        nick=message['source']['nick'],
         username=f"@{message['tags']['display-name']}",
         channel=message['command']['channel'],
         params=params,
         args=args,
-        nick=message['source']['nick'],
         state=self.state,
         cooldown=self.cooldown,
     )
@@ -257,6 +260,47 @@ def parse_str(data: str, kind: str) -> Any:
         return BeautifulSoup(data, "lxml")
 
     raise ValueError("kind must be 'json' or 'html'")
+
+def is_url(url):
+    """
+    Validates a URL with or without http(s) scheme by checking its structure and ensuring
+    the top-level domain (TLD) is in the official IANA TLD list, cached locally in 'Data/TLDs.txt'.
+
+    Pattern groups:
+    1. One or more subdomains (e.g., 'www.', 'api.')
+    2. Top-level domain (TLD) (e.g., 'com', 'org')
+    """
+    tld_file = "../Data/TLDs.txt"
+
+    if os.path.exists(tld_file):
+        with open(tld_file, "r") as f:
+            lines = f.read().splitlines()
+    else:
+        res = proxy_request("GET", "https://data.iana.org/TLD/tlds-alpha-by-domain.txt")
+        if res.status_code != 200:
+            raise RuntimeError(f"Failed to fetch TLD list, status code: {res.status_code}")
+        lines = res.text.splitlines()
+        os.makedirs(os.path.dirname(tld_file), exist_ok=True)
+        with open(tld_file, "w") as f:
+            f.write(res.text)
+
+    tlds = {line.lower() for line in lines if line and not line.startswith('#')}
+    if not tlds:
+        raise RuntimeError("Empty TLD list fetched from IANA")
+
+    pattern = (
+        r'^(?:https?://)?'
+        r'([a-z0-9-]+\.)+'
+        r'([a-z]{2,})'
+        r'(?::\d+)?'
+        r'(?:/[^\s]*)?$'
+    )
+    match = re.match(pattern, url, re.IGNORECASE)
+    if not match:
+        return False
+
+    tld = match.group(2).lower()
+    return tld in tlds
 
 
 
