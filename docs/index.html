@@ -26,6 +26,14 @@
       const videoUrl = params.get('url');
 
       if (videoUrl) {
+        // Sanitize the URL to prevent XSS
+        const sanitizedUrl = videoUrl.replace(/[<>"']/g, '');
+        if (sanitizedUrl !== videoUrl) {
+          console.error("URL contains potentially unsafe characters");
+          document.querySelector('.flex-center').innerHTML = '<div style="color: white; text-align: center;">Invalid URL format</div>';
+          return;
+        }
+
         const iframeContent = `
           <!DOCTYPE html>
           <html>
@@ -53,8 +61,11 @@
             </style>
           </head>
           <body>
-            <video controls autoplay>
-              <source src="${videoUrl}" type="video/mp4" />
+            <video controls autoplay onerror="this.style.display='none'; this.parentNode.innerHTML='<div style=\\"color: white; text-align: center;\\">Failed to load video</div>'">
+              <source src="${sanitizedUrl}" type="video/mp4" />
+              <source src="${sanitizedUrl}" type="video/webm" />
+              <source src="${sanitizedUrl}" type="video/ogg" />
+              Your browser does not support the video tag.
             </video>
           </body>
           </html>
@@ -65,7 +76,7 @@
 
         const iframe = document.createElement('iframe');
         iframe.src = blobUrl;
-        iframe.sandbox = 'allow-scripts';
+        iframe.sandbox = 'allow-scripts allow-same-origin';
         iframe.scrolling = 'no';
         iframe.style = 'border:0; width:90vw; height:90vh; overflow:hidden;';
         document.querySelector('.flex-center').appendChild(iframe);
