@@ -20,13 +20,13 @@
   </style>
 </head>
 <body>
-  <div class="flex-center">
-    <script>
+  <div class="flex-center"></div>
+  <script>
+    (() => {
       const params = new URL(location).searchParams;
       const videoUrl = params.get('url');
 
       if (videoUrl) {
-        // Sanitize the URL to prevent XSS
         const sanitizedUrl = videoUrl.replace(/[<>"']/g, '');
         if (sanitizedUrl !== videoUrl) {
           console.error("URL contains potentially unsafe characters");
@@ -83,7 +83,7 @@
       } else {
         console.error("Invalid or missing 'url' parameter");
       }
-    </script>
-  </div>
+    })();
+  </script>
 </body>
 </html>
