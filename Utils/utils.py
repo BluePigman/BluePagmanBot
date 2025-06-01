@@ -288,6 +288,10 @@ def is_url(url):
     if not tlds:
         raise RuntimeError("Empty TLD list fetched from IANA")
 
+    unsafe_chars = set(' "\'<>{}|\\^[]`')
+    if any(c in url for c in unsafe_chars):
+        raise ValueError("URL contains unsafe characters")
+
     pattern = (
         r'^(?:https?://)?'
         r'([a-z0-9-]+\.)+'
