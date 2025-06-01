@@ -1,6 +1,11 @@
-from Utils.utils import fetch_cmd_data, check_cooldown, is_url
-import urllib.parse
 import config
+import urllib.parse
+from Utils.utils import (
+    fetch_cmd_data,
+    check_cooldown,
+    clean_str,
+    is_url,
+)
 
 def reply_with_view_in_browser(self, message):
     try:
@@ -16,8 +21,9 @@ def reply_with_view_in_browser(self, message):
         if not cmd.params:
             self.send_privmsg(cmd.channel, f"{cmd.username} Please provide a URL to view in browser.")
             return
-
-        url = cmd.params
+        
+        unsafe_chars = [' ', '"', '\'', '<', '>', '{', '}', '|', '\\', '^', '[', ']', '`']
+        url = clean_str(cmd.params, unsafe_chars)
         valid_url = is_url(url)
         
         if not valid_url:
