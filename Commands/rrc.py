@@ -141,7 +141,7 @@ def get_random_comment(posts, subreddit, min_words=15):
     }
 
 def reply_with_random_reddit_comment(self, message):
-    cmd = fetch_cmd_data(self, message)
+    cmd = fetch_cmd_data(self, message, split_params=True)
 
     if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
         return
@@ -151,7 +151,7 @@ def reply_with_random_reddit_comment(self, message):
         return
 
     try:
-        subreddit = cmd.params.strip()
+        subreddit = cmd.params[0].strip()
         posts_result = get_posts(subreddit)
 
         if not posts_result.get("success"):
