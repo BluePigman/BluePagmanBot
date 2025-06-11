@@ -19,6 +19,7 @@ def reply_with_trophies(self, message):
             else:
                 trophy_string = f"🏆 " * trophies_count
                 m = f"@{message['tags']['display-name']}, you have {trophies_count} trophies in your collection. {trophy_string}"
+                self.send_privmsg(message['command']['channel'], m)
                 return
 
         else: # search a user's trophies count.
