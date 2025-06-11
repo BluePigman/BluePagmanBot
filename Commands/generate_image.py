@@ -1,76 +1,66 @@
-import base64
-import time
-from google import genai
-from google.genai import types
-import requests
-from config import GOOGLE_API_KEY
-
+from Utils.utils import (
+     fetch_cmd_data,
+     proxy_request,
+     gemini_generate_image,
+     GEMINI_IMAGE_MODEL,
+     upload_to_kappa,
+     check_cooldown,
+     download_bytes,
+     is_url,
+     log_err
+)
 
 def reply_with_generate(self, message):
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
-            self.cooldown):
+    cmd = fetch_cmd_data(self, message, split_params=True)
 
-        if not message['command']['botCommandParams']:
-            m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini Image generation Model: gemini-2.0-flash-exp-image-generation."
-            self.send_privmsg(message['command']['channel'], m)
-            return
-        
-        self.state[message['source']['nick']] = time.time()
-        prompt = message['command']['botCommandParams']
-        result = generate_image(prompt)
-        
-        self.send_privmsg(message['command']['channel'], f"@{message['tags']['display-name']}, {result}")
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
+        return
 
-
-def generate_image(prompt) -> str:
-    client = genai.Client(api_key=GOOGLE_API_KEY)
-    model = "gemini-2.0-flash-exp-image-generation"
-    contents = [
-        types.Content(
-            role="user",
-            parts=[
-                types.Part.from_text(text=prompt),
-            ],
+    params = cmd.params
+    if not params:
+        self.send_privmsg(
+            cmd.channel,
+            f"{cmd.username}, please provide a prompt to generate an image, or use <image_link> <prompt> to edit an existing one, Gemini model: {GEMINI_IMAGE_MODEL}"
         )
-    ]
-    generate_content_config = types.GenerateContentConfig(
-        response_modalities=[
-            "image",
-            "text",
-        ],
-        response_mime_type="text/plain",
-    )
+        return
 
     try:
-        for chunk in client.models.generate_content_stream(
-        model=model,
-        contents=contents,
-        config=generate_content_config,
-        ):
-            if (
-                chunk.candidates is None
-                or chunk.candidates[0].content is None
-                or chunk.candidates[0].content.parts is None
-                or chunk.candidates[0].content.parts[0].inline_data is None
-            ):
-                continue
-            
-            inline_data = chunk.candidates[0].content.parts[0].inline_data
-            image_bytes = base64.b64decode(inline_data.data) if inline_data.data.startswith(b'iVBORw') else inline_data.data
-            files = {
-                'file': ('generated_image' + ".png", image_bytes, "image/png")
-            }
+        input_image_b64 = None
+        img_url = None
+        is_edit = False
 
-            try:
-                response = requests.post('https://kappa.lol/api/upload',files=files).json()
-                if response["link"]:
-                    return response["link"]
-            except Exception as e:
-                print(e)
-                return f"Error, {str(e)}"
+        if is_url(params[0]):
+            res = proxy_request("GET", params[0])
+            mime_type = res.headers.get("Content-Type", "")
+            if mime_type and mime_type.startswith('image/'):
+                is_edit = True
+                img_url = params.pop(0)
+
+        prompt = ' '.join(params)
+        if not prompt:
+            self.send_privmsg(cmd.channel, f"{cmd.username}, Empty prompt <image_link> <prompt>.")
+            return
+    
+        if is_edit:
+            input_image_b64 = download_bytes(img_url)
+            if not input_image_b64:
+                self.send_privmsg(cmd.channel, f"{cmd.username}, Invalid image URL provided.")
+                return
+
+        image_path = gemini_generate_image(prompt, input_image_b64)
+        if not image_path:
+            self.send_privmsg(cmd.channel, f"{cmd.username}, Image generation failed.")
+            return
         
-        return "Image could not be generated."
-                
+        result_url = upload_to_kappa(image_path, "png", delete_file=True)
+        
+        if not result_url:
+            self.send_privmsg(cmd.channel, f"{cmd.username}, Kappa upload failed.")
+            return
+        
+        prefix = "Edited Image: " if is_edit else ""
+        self.send_privmsg(cmd.channel, f"{cmd.username}, {prefix}{result_url}")
+        
     except Exception as e:
-        print(e)
-        return "Error, the prompt was likely blocked."
+        self.send_privmsg(cmd.channel, f"{cmd.username}, Unexpected Error occurred; Image generation failed")
+        log_err(e)
