@@ -1,49 +1,21 @@
-import time
-
 import Utils.chessCommands as chessCommands
+from Utils.utils import check_cooldown, fetch_cmd_data
 
 
 def reply_with_random_opening(self, message):
+    cmd = fetch_cmd_data(self, message)
 
-    text = f"@{message['tags']['display-name']}, "
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
+        return
 
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
-            self.cooldown):
-        self.state[message['source']['nick']] = time.time()
-        args = message['command']['botCommandParams']
-        # if args present
-        if (args):
+    if cmd.params:
+        if '-w' in cmd.params or '-b' in cmd.params:
+            side = 'w' if '-w' in cmd.params else 'b'
+            name = cmd.params.replace(f'-{side}', '')
+            opening = chessCommands.getRandomOpeningSpecific(name, side)
+        else:
+            opening = chessCommands.getRandomOpeningSpecific(cmd.params)
+    else:
+        opening = chessCommands.getRandomOpening()
 
-            if '-w' in args:
-                # get opening for white
-                side = 'w'
-                name = args.replace('-w', '')
-                if '\U000e0000' in name:
-                    name = name.replace('\U000e0000', '')
-
-                opening = chessCommands.getRandomOpeningSpecific(
-                    name, side)
-                self.send_privmsg(message['command']['channel'], text + opening)
-
-            elif '-b' in args:
-                # get opening for black
-                side = 'b'
-                name = args.replace('-w', '')
-                if '\U000e0000' in name:
-                    name = name.replace('\U000e0000', '')
-
-                opening = chessCommands.getRandomOpeningSpecific(
-                    name, side)
-                self.send_privmsg(message['command']['channel'], text + opening)
-
-            else:  # get opening for specified search term
-                name = args
-                if '\U000e0000' in name:
-                    name = name.replace('\U000e0000', '')
-
-                opening = chessCommands.getRandomOpeningSpecific(name)
-                self.send_privmsg(message['command']['channel'], text + opening)
-
-        else:  # No arguments
-            opening = chessCommands.getRandomOpening()
-            self.send_privmsg(message['command']['channel'], text + opening)
+    self.send_privmsg(cmd.channel, f"{cmd.username}, {opening}")
