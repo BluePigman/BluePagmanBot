@@ -1,3 +1,4 @@
+from pathlib import Path
 from bs4 import BeautifulSoup
 from urllib.parse import urlencode, urlparse
 from typing import Any, Dict, List, Union
@@ -448,7 +449,8 @@ def is_url(url):
     1. One or more subdomains (e.g., 'www.', 'api.')
     2. Top-level domain (TLD) (e.g., 'com', 'org')
     """
-    tld_file = "../Data/TLDs.txt"
+    tld_file = Path(__file__).resolve().parent / ".." / "Data" / "TLDs.txt"
+    tld_file = tld_file.resolve()
 
     if os.path.exists(tld_file):
         with open(tld_file, "r") as f:
