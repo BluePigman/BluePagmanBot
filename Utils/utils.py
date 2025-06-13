@@ -108,9 +108,7 @@ def clean_str(text: str, remove: list[str] = None) -> str:
     Normalize whitespace and optionally remove specified characters.
     """
     if remove:
-        chars = ''.join(remove)
-        table = str.maketrans('', '', chars)
-        text = text.translate(table)
+        text = text.translate(str.maketrans('', '', ''.join(remove)))
     return re.sub(r'\s+', ' ', text).strip()
 
 
