@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode, urlparse, quote_plus
 from typing import Any, Dict, List, Union
 import google.generativeai as genai_text
 from google import genai as genai_image
@@ -112,6 +112,10 @@ def clean_str(text: str, remove: list[str] = None) -> str:
         table = str.maketrans('', '', chars)
         text = text.translate(table)
     return re.sub(r'\s+', ' ', text).strip()
+
+
+def encode_str(input_text):
+    return quote_plus(input_text)
 
 CHUNK_SIZE = 495
 
