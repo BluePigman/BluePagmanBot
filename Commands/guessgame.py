@@ -62,7 +62,7 @@ def reply_with_guess(self, message):
         # user guessed emote right, move to next round
         self.send_privmsg(
             cmd.channel, f"{cmd.username} guessed it right! (+ 25 Pigga Coins) It's {currentEmote}")
-        reward(self, message)
+        reward(self, cmd.nick)
         time.sleep(1.1)
         if is_game_over(self.currentRound, self.numRounds):
             # end the game

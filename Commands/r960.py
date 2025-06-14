@@ -8,4 +8,4 @@ def reply_with_random960(self, message):
         return
     
     opening = chessCommands.getRandom960()
-    self.send_privmsg(message['command']['channel'], opening)
+    self.send_privmsg(cmd.channel, opening)

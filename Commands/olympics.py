@@ -17,8 +17,12 @@ def reply_with_olympics(self, message):
         if countryCode.lower() != "top":
             link += f"?country={countryCode}"
 
-    response = requests.get(link)
-    response = response.json()
+    try:
+        response = requests.get(link, timeout=5)
+        response = response.json()
+    except (requests.RequestException, ValueError) as exc:
+        self.send_privmsg(cmd.channel, f"Could not fetch medal data: {exc}")
+        return
     
     if not response["results"]:
         self.send_privmsg(cmd.channel, "The country has no medals or the code does not exist.")

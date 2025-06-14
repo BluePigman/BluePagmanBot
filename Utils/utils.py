@@ -143,9 +143,10 @@ def send_chunks(send_func: callable, channel, text: str, chunk_size: int = CHUNK
     Send text in chunks of size chunk_size to channel, delay is in seconds.
     """
     chunks = chunk_str(text, chunk_size)
-    for chunk in chunks:
+    for idx, chunk in enumerate(chunks):
         send_func(channel, chunk)
-        time.sleep(delay)
+        if idx < len(chunks) - 1:
+            time.sleep(delay)
 
 
 

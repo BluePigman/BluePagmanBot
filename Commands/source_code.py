@@ -8,4 +8,4 @@ def reply_with_source_code(self, message):
         return
 
     text = 'Source code: https://github.com/BluePigman/BluePagmanBot'
-    self.send_privmsg(message['command']['channel'], text)
+    self.send_privmsg(cmd.channel, text)

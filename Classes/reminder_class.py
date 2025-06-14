@@ -29,9 +29,9 @@ class Reminder:
 
         # Format the message for chat display
         if self.creator == self.recipient:
-            return f"@{self.recipient}, reminder from yourself, ({self.time_ago} ago): {self.message or '(No message)'}"
+            return f"{self.recipient}, reminder from yourself, ({self.time_ago} ago): {self.message or '(No message)'}"
         else:
-            return f"@{self.recipient}, timed reminder from @{self.creator}, ({self.time_ago} ago): {self.message or '(No message)'}"
+            return f"{self.recipient}, timed reminder from {self.creator}, ({self.time_ago} ago): {self.message or '(No message)'}"
 
     @staticmethod
     def format_time_delta(delta: timedelta) -> str:
