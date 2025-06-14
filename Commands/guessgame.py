@@ -2,74 +2,75 @@ import random
 import time
 from threading import Timer
 from Commands import gemini, describe, ascii
+from Utils.utils import check_cooldown, fetch_cmd_data
 
 def reply_with_guess(self, message):
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > 0.4):
-        self.state[message['source']['nick']] = time.time()
-        channel_id = message["tags"]["room-id"]
+    cmd = fetch_cmd_data(self, message)
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown): 
+        return
 
-        if not self.guessGameActive:
-            # Start the game
-            self.guessGameActive = True
-            self.numRounds = 5
-            is_global = False
+    channel_id = message["tags"]["room-id"]
 
-            # Check if the user wants global emotes or number to specify rounds (1 - 4)
-            if message['command']['botCommandParams']:
-                params = message['command']['botCommandParams']
-                if "global" in params:
-                    is_global = True
-                
-                if params.isdigit() and int(params) < 5 and int(params) > 0:
-                    self.numRounds = int(params)
+    if not self.guessGameActive:
+        # Start the game
+        self.guessGameActive = True
+        self.numRounds = 5
+        is_global = False
 
-            # Fetch emotes (either from channel or globally)
-            emotes_list = get_random_emotes(
-                self, channel_id, self.numRounds, is_global)
+        # Check if the user wants global emotes or number to specify rounds (1 - 4)
+        if cmd.params:
+            if "global" in cmd.params:
+                is_global = True
+            
+            if cmd.params.isdigit() and int(cmd.params) < 5 and int(cmd.params) > 0:
+                self.numRounds = int(cmd.params)
 
-            if not emotes_list:
-                self.send_privmsg(message['command']
-                                  ['channel'], "No emotes found!")
-                self.guessGameActive = False
-                return
+        # Fetch emotes (either from channel or globally)
+        emotes_list = get_random_emotes(
+            self, channel_id, self.numRounds, is_global)
 
-            if len(emotes_list) < self.numRounds:
-                self.numRounds = len(emotes_list)
-            mode = "Global Emotes" if is_global else "Channel Emotes"
-
-            self.send_privmsg(
-                message['command']['channel'], f"Game started! Mode is {mode}")
-            self.gameEmotes = emotes_list
-            # start a timer for 40s, if no one guesses emote in time, then reveal the emote.
-            currentEmote = self.gameEmotes[self.currentRound]
-            print(self.gameEmotes)
-            start_new_round(self, message['command']['channel'])
+        if not emotes_list:
+            self.send_privmsg(message['command']
+                                ['channel'], "No emotes found!")
+            self.guessGameActive = False
             return
 
-        # users will guess emotes using <guess EMOTE_NAME
-        if not message['command']['botCommandParams']:
-            return
-        guess = message['command']['botCommandParams']
+        if len(emotes_list) < self.numRounds:
+            self.numRounds = len(emotes_list)
+        mode = "Global Emotes" if is_global else "Channel Emotes"
 
+        self.send_privmsg(
+            cmd.channel, f"Game started! Mode is {mode}")
+        self.gameEmotes = emotes_list
+        # start a timer for 40s, if no one guesses emote in time, then reveal the emote.
         currentEmote = self.gameEmotes[self.currentRound]
-        if guess == currentEmote:
-            # stop the timer
-            self.guessGameRoundTimer.cancel()
-            if self.hintTimer:
-                self.hintTimer.cancel()
+        print(self.gameEmotes)
+        start_new_round(self, cmd.channel)
+        return
 
-            # user guessed emote right, move to next round
-            self.send_privmsg(
-                message['command']['channel'], f"{message['tags']['display-name']} guessed it right! (+ 25 Pigga Coins) It's {currentEmote}")
-            reward(self, message)
-            time.sleep(1.1)
-            if is_game_over(self.currentRound, self.numRounds):
-                # end the game
-                self.send_privmsg(message['command']['channel'], "Game has ended.")
-                reset_game(self)
-                return
-            self.currentRound += 1
-            start_new_round(self, message['command']['channel'])
+    # users will guess emotes using <guess EMOTE_NAME
+    if not cmd.params:
+        return
+
+    currentEmote = self.gameEmotes[self.currentRound]
+    if cmd.params == currentEmote:
+        # stop the timer
+        self.guessGameRoundTimer.cancel()
+        if self.hintTimer:
+            self.hintTimer.cancel()
+
+        # user guessed emote right, move to next round
+        self.send_privmsg(
+            cmd.channel, f"{cmd.username} guessed it right! (+ 25 Pigga Coins) It's {currentEmote}")
+        reward(self, message)
+        time.sleep(1.1)
+        if is_game_over(self.currentRound, self.numRounds):
+            # end the game
+            self.send_privmsg(cmd.channel, "Game has ended.")
+            reset_game(self)
+            return
+        self.currentRound += 1
+        start_new_round(self, cmd.channel)
 
 
 def start_new_round(self, channel):
@@ -149,12 +150,12 @@ def start_new_round(self, channel):
         20, provide_hint, (self, channel, emote_url))
     self.hintTimer.start()
 
-def reward(self, message):
+def reward(self, user):
     # reward 25 coins for correct answer
-    user_data = self.users.find_one({'user': message['source']['nick']})
+    user_data = self.users.find_one({'user': user})
     if not user_data: # add new user
-        self.users.insert_one({'user': message['source']['nick'] , 'points': 0 })
-    self.users.update_one({'user': message['source']['nick']}, {'$inc': {'points': 25}})
+        self.users.insert_one({'user': user, 'points': 0 })
+    self.users.update_one({'user':user}, {'$inc': {'points': 25}})
 
 def provide_hint(self, channel, emote_url):
     # Provide a hint from ascii

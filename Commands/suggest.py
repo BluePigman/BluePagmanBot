@@ -1,37 +1,38 @@
-import time, requests, config
+import requests, config
+from Utils.utils import check_cooldown, fetch_cmd_data
+
 
 def reply_with_suggest(self, message):
-        if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
-                self.cooldown):
-            self.state[message['source']['nick']] = time.time()
-            
-            headers = {
-            'Authorization': f"Bearer {config.githubToken}",
-            'Accept': 'application/vnd.github.v3+json'
-             }
-            
-            body = {
-                  'title': message['command']['botCommandParams'] if message['command']['botCommandParams']  else "No Title",
-                  'body': f"Suggestion from {message['tags']['display-name']} in #{message['command']['channel']}"
-            }
+    cmd = fetch_cmd_data(self, message)
+    
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
+        return
+    
+    headers = {
+    'Authorization': f"Bearer {config.githubToken}",
+    'Accept': 'application/vnd.github.v3+json'
+        }
+    
+    body = {
+            'title': cmd.params if cmd.params  else "No Title",
+            'body': f"Suggestion from {cmd.nick} in #{cmd.channel}"
+    }
 
-            response = requests.post('https://api.github.com/repos/BluePigman/BluePagmanBot/issues', headers=headers, json=body)
-            
-            if response.status_code == 201:
-                  # created
-                response = response.json()
-                self.send_privmsg(message['command']['channel'], f"Suggestion created successfully under issue #{response['number']}: \
-                {response['html_url']}")
-                return
+    response = requests.post('https://api.github.com/repos/BluePigman/BluePagmanBot/issues', headers=headers, json=body)
+    
+    if response.status_code == 201:
+            # created
+        response = response.json()
+        self.send_privmsg(cmd.channel, f"Suggestion created successfully under issue #{response['number']}: \
+        {response['html_url']}")
 
-            if response.status_code == 400:
-                # bad request
-                self.send_privmsg(message['command']['channel'], f"Error {response.status_code}:Bad request.")
-                return
+    elif response.status_code == 400:
+        # bad request
+        self.send_privmsg(cmd.channel, f"Error {response.status_code}:Bad request.")
 
-            if response.status_code == 403:
-                # forbidden
-                self.send_privmsg(message['command']['channel'], f"Error {response.status_code}:Forbidden.")
-                return
-            else:
-                self.send_privmsg(message['command']['channel'], f"Error {response.status_code}.")
+    elif response.status_code == 403:
+        # forbidden
+        self.send_privmsg(cmd.channel, f"Error {response.status_code}:Forbidden.")
+    
+    else:
+        self.send_privmsg(cmd.channel, f"Error {response.status_code}.")

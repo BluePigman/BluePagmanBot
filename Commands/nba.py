@@ -1,15 +1,16 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import time
 import requests
+from Utils.utils import check_cooldown, fetch_cmd_data
+
 
 def reply_with_nba_scores(self, message):
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
-            self.cooldown):
-        self.state[message['source']['nick']] = time.time()
+    cmd = fetch_cmd_data(self, message)
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown): 
+        return
 
-        nba_scores = get_nba_scores()
-        self.send_privmsg(message['command']['channel'], nba_scores)
+    nba_scores = get_nba_scores()
+    self.send_privmsg(cmd.channel, nba_scores)
 
 
 def get_nba_scores():

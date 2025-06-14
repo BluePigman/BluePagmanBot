@@ -1,11 +1,13 @@
-import time
+from Utils.utils import check_cooldown, fetch_cmd_data
 
 
 def reply_with_help_ro(self, message):
-    text = (f"@{message['tags']['display-name']}, Gets a random opening. You can add -b or -w \
+    cmd = fetch_cmd_data(self, message)
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown): 
+        return
+    
+    text = (f"{cmd.username}, Gets a random opening. You can add -b or -w \
         for a specific side, and/or add a name for search. e.g. {self.prefix}ro King's Indian \
             Defense -w")
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
-            self.cooldown):
-        self.state[message['source']['nick']] = time.time()
-        self.send_privmsg(message['command']['channel'], text)
+
+    self.send_privmsg(cmd.channel, text)

@@ -1,67 +1,62 @@
-import time
 import threading
 from Classes.reminder_class import Reminder
+from Utils.utils import check_cooldown, fetch_cmd_data
 
 
 def reply_with_reminder(self, message):
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
-            self.cooldown):
-        self.state[message['source']['nick']] = time.time()
+    cmd = fetch_cmd_data(self, message)
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown): 
+        return
 
-        user = message['tags']['display-name']
-        channel = message['command']['channel']
+    # Get the user's reminder count from MongoDB
+    user_data = self.users.find_one({'user': cmd.nick})
+    if user_data:
+        reminder_count = user_data.get('reminderCount', 0)
+    else:
+        # If user is not found, initialize their reminderCount
+        reminder_count = 0
+        self.users.insert_one(
+            {'user': cmd.nick, 'reminderCount': 0})
 
-        # Get the user's reminder count from MongoDB
-        user_data = self.users.find_one({'user': message['source']['nick']})
-        if user_data:
-            reminder_count = user_data.get('reminderCount', 0)
-        else:
-            # If user is not found, initialize their reminderCount
-            reminder_count = 0
-            self.users.insert_one(
-                {'user': message['source']['nick'], 'reminderCount': 0})
+    # Check if the user has hit the reminder limit
+    if reminder_count >= 5:
+        self.send_privmsg(
+            cmd.channel, f"{cmd.username}, you already have 5 pending reminders. Enough spamming.")
+        return
 
-        # Check if the user has hit the reminder limit
-        if reminder_count >= 5:
-            self.send_privmsg(
-                channel, f"@{user}, you already have 5 pending reminders. Enough spamming.")
-            return
+    # Parse command parameters
+    recipient, time_str, reminder_message = parse_remind_command(cmd.params)
 
-        # Parse command parameters
-        recipient, time_str, reminder_message = parse_remind_command(
-            message['command']['botCommandParams'])
+    # Validate time_str
+    if time_str is None:
+        self.send_privmsg(
+            cmd.channel, f"{cmd.username}, please specify a valid time for the reminder, like 'in 30s' or 'in 2h'.")
+        return
 
-        # Validate time_str
-        if time_str is None:
-            self.send_privmsg(
-                channel, f"@{user}, please specify a valid time for the reminder, like 'in 30s' or 'in 2h'.")
-            return
+    seconds = parse_time_to_seconds(time_str)
+    # Check for minimum 1 minute (60 seconds)
+    if seconds is None or seconds < 60:
+        self.send_privmsg(
+            cmd.channel, f"{cmd.username}, you must set a reminder for at least 1 minute. The maximum time you can remind someone is 1 month.")
+        return
 
-        seconds = parse_time_to_seconds(time_str)
-        # Check for minimum 1 minute (60 seconds)
-        if seconds is None or seconds < 60:
-            self.send_privmsg(
-                channel, f"@{user}, you must set a reminder for at least 1 minute. The maximum time you can remind someone is 1 month.")
-            return
+    # Create a Reminder instance
+    reminder_message = reminder_message or "No message"
+    if recipient == "me":
+        recipient = cmd.username
+    reminder = Reminder(
+        creator=cmd.username, recipient=recipient, time_ago=time_str, message=reminder_message)
+    display_message = reminder.display_reminder()
 
-        # Create a Reminder instance
-        reminder_message = reminder_message or "No message"
-        if recipient == "me":
-            recipient = user
-        reminder = Reminder(
-            creator=user, recipient=recipient, time_ago=time_str, message=reminder_message)
-        display_message = reminder.display_reminder()
+    # Schedule the reminder
+    schedule_reminder(self, seconds, display_message, cmd.channel, cmd.username)
 
-        # Schedule the reminder
-        schedule_reminder(self, seconds, display_message, channel, user)
+    # Increment the user's reminder count in the database
+    self.users.update_one({'user': cmd.nick}, {
+        '$inc': {'reminderCount': 1}})
 
-        # Increment the user's reminder count in the database
-        self.users.update_one({'user': message['source']['nick']}, {
-            '$inc': {'reminderCount': 1}})
-
-        # Confirm the reminder setup in chat
-        self.send_privmsg(channel,
-                          f"@{user}, I will remind {recipient} in {time_str}.")
+    # Confirm the reminder setup in chat
+    self.send_privmsg(cmd.channel, f"{cmd.username}, I will remind {recipient} in {time_str}.")
 
 
 def schedule_reminder(bot_instance, delay, message, channel, user):

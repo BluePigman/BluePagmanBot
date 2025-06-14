@@ -1,7 +1,12 @@
 import time
+from Utils.utils import check_cooldown, fetch_cmd_data
 
 
 def reply_with_help_ascii(self, message):
+    cmd = fetch_cmd_data(self, message)
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown): 
+        return
+    
     help_msg = f"usage: {self.prefix}ascii " + \
         "[Emote] [-w] [-h] [-r {90,180,270}] [-tr] [-d] [-b] [-e] [-i] [-g] [-t]"
     help_msg2 = """Generate ascii art from emote link.
@@ -15,11 +20,8 @@ def reply_with_help_ascii(self, message):
     -e Keep empty characters.
     -i Invert the end result.
     -g Use multiple frames of the first gif provided.
-    -t {text} Text to print below the ASCII. (TODO)""".replace("\n", " ")
+    -t {text} Text to print below the ASCII.""".replace("\n", " ")
 
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
-            self.cooldown):
-        self.state[message['source']['nick']] = time.time()
-        self.send_privmsg(message['command']['channel'], help_msg)
-        time.sleep(0.69)
-        self.send_privmsg(message['command']['channel'], help_msg2)
+    self.send_privmsg(cmd.channel, help_msg)
+    time.sleep(1.1)
+    self.send_privmsg(cmd.channel, help_msg2)

@@ -1,9 +1,11 @@
-import time
+from Utils.utils import check_cooldown, fetch_cmd_data
 
 
 def reply_with_source_code(self, message):
-        if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
-                self.cooldown):
-            self.state[message['source']['nick']] = time.time()
-            text = 'Source code: https://github.com/BluePigman/BluePagmanBot'
-            self.send_privmsg(message['command']['channel'], text)
+    cmd = fetch_cmd_data(self, message)
+
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
+        return
+
+    text = 'Source code: https://github.com/BluePigman/BluePagmanBot'
+    self.send_privmsg(message['command']['channel'], text)

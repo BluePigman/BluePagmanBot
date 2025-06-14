@@ -1,6 +1,7 @@
-import time
+from Utils.utils import check_cooldown, fetch_cmd_data
 import requests
 from datetime import datetime
+
 
 APP_ID = "79frdp12pn"
 RESULTS_MAX = 50
@@ -62,15 +63,17 @@ def rottentomatoes(query, year=None):
 
 
 def reply_with_rottentomatoes(self, message):
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
-        self.state[message['source']['nick']] = time.time()
+    cmd = fetch_cmd_data(self, message)
 
-    if not message['command']['botCommandParams']:
-        m = f"@{message['tags']['display-name']}, please provide a movie/show name, optionally add year with year:XXXX"
-        self.send_privmsg(message['command']['channel'], m)
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
+        return
+    
+    if not cmd.params:
+        m = f"{cmd.username}, please provide a movie/show name, optionally add year with year:XXXX"
+        self.send_privmsg(cmd.channel, m)
         return
 
-    query = message['command']['botCommandParams']
+    query = cmd.params
     
     # Extract year if provided in the format 'year:XXXX'
     year = None
@@ -82,9 +85,9 @@ def reply_with_rottentomatoes(self, message):
                     year = int(part.split(':')[1])
                     query = query.replace(part, '').strip()  # Remove the year part from the query
                 except ValueError:
-                    m = f"@{message['tags']['display-name']}, invalid year format. Please use 'year:XXXX'."
-                    self.send_privmsg(message['command']['channel'], m)
+                    m = f"{cmd.username}, invalid year format. Please use 'year:XXXX'."
+                    self.send_privmsg(cmd.channel, m)
                     return
 
     result = rottentomatoes(query, year)
-    self.send_privmsg(message['command']['channel'], result)
+    self.send_privmsg(cmd.channel, result)
