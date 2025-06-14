@@ -138,14 +138,14 @@ def chunk_str(text: str, chunk_size: int = CHUNK_SIZE) -> list[str]:
 
     return chunks
 
-def send_chunks(send_func: callable, channel, text: str, chunk_size: int = CHUNK_SIZE) -> None:
+def send_chunks(send_func: callable, channel, text: str, chunk_size: int = CHUNK_SIZE, delay: float = 1.2) -> None:
     """
-    Send text in chunks of size chunk_size to channel.
+    Send text in chunks of size chunk_size to channel, delay is in seconds.
     """
     chunks = chunk_str(text, chunk_size)
     for chunk in chunks:
         send_func(channel, chunk)
-        time.sleep(1)
+        time.sleep(delay)
 
 
 
