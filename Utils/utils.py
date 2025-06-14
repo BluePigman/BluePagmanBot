@@ -569,7 +569,7 @@ def gemini_generate_image(prompt: str, input_image_b64: bytes | None = None, ima
                 continue
             inline_data = c[0].content.parts[0].inline_data
             if inline_data and inline_data.data:
-                data_buffer = inline_data.data
+                data_buffer = base64.b64decode(inline_data.data) if inline_data.data.startswith(b'iVBORw') else inline_data.data
                 file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".png"
                 dir_path = os.path.join(tempfile.gettempdir(), "gemini_generated_images")
                 os.makedirs(dir_path, exist_ok=True)
