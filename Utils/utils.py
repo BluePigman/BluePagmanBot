@@ -55,28 +55,29 @@ def fetch_cmd_data(self, message: dict, split_params: bool = False, with_args: b
       - username: str — sender's username prefixed with '@'
       - channel: str — channel name
       - params: list|str — full botCommandParams (split into words if split_params=True),
-                           or first token if with_args=True
+                           or all tokens excluding args if with_args=True
       - args: dict — tokens in arg_name:arg_value format (if with_args=True)
       - state: dict — current cooldown state from self
       - cooldown: int — cooldown duration from self
     """
     raw = message['command']['botCommandParams']
+    parts = []
+
     if isinstance(raw, str):
         raw = raw.replace('\U000E0000', '')
-        if split_params:
-            raw = raw.split()
-
-    params, args = raw, {}
-
-    if with_args and raw:
         parts = raw.split()
-        if parts:
-            params, *arg_parts = parts
-            args = {
-                k: v for k, v in (a.split(":", 1) for a in arg_parts if ":" in a)
-            }
-        else:
-            params, args = None, {}
+
+    args = {}
+    if with_args and parts:
+        params = []
+        for p in parts:
+            if ":" in p and not p.startswith(("http:", "https:")):
+                k, v = p.split(":", 1)
+                args[k] = v
+            else:
+                params.append(p)
+    else:
+        params = parts if split_params else raw
 
     return CmdData(
         nick=message['source']['nick'],
@@ -532,21 +533,22 @@ def gemini_generate(request: str | dict, model) -> str | list[str]:
 
 GEMINI_IMAGE_MODEL = "gemini-2.0-flash-exp-image-generation"
 
-def gemini_generate_image(prompt: str, input_image_b64: bytes | None = None, image_model: str = GEMINI_IMAGE_MODEL) -> str | None:
+def gemini_generate_image(prompt: str, input_images_b64: list[bytes] | None = None, temperature: float = 1, image_model: str = GEMINI_IMAGE_MODEL) -> str | None:
     """
-    Generate an image from a text prompt and optional input image using Gemini model.
+    Generate an image from a text prompt and optional input images using Gemini model.
     Returns the file path of the saved image or None if generation fails.
     """
     client = genai_image.Client(api_key=config.GOOGLE_API_KEY)
 
     contents_parts = []
-    if input_image_b64:
-        contents_parts.append(
-            types.Part.from_bytes(
-                mime_type="image/png",
-                data=base64.b64decode(input_image_b64),
+    if input_images_b64:
+        for image_b64 in input_images_b64:
+            contents_parts.append(
+                types.Part.from_bytes(
+                    mime_type="image/png",
+                    data=base64.b64decode(image_b64),
+                )
             )
-        )
     contents_parts.append(types.Part.from_text(text=prompt))
 
     contents = [
@@ -559,6 +561,7 @@ def gemini_generate_image(prompt: str, input_image_b64: bytes | None = None, ima
     generate_config = types.GenerateContentConfig(
         response_modalities=["image", "text"],
         response_mime_type="text/plain",
+        temperature=temperature,
     )
 
     try:
