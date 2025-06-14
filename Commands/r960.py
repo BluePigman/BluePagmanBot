@@ -1,10 +1,11 @@
-import time
+from Utils.utils import check_cooldown, fetch_cmd_data
 import Utils.chessCommands as chessCommands
 
 
 def reply_with_random960(self, message):
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
-            self.cooldown):
-        self.state[message['source']['nick']] = time.time()
-        opening = chessCommands.getRandom960()
-        self.send_privmsg(message['command']['channel'], opening)
+    cmd = fetch_cmd_data(self, message)
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown): 
+        return
+    
+    opening = chessCommands.getRandom960()
+    self.send_privmsg(cmd.channel, opening)

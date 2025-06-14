@@ -1,11 +1,12 @@
 import datetime
-import time
+from Utils.utils import check_cooldown, fetch_cmd_data
 
-def reply_with_date(bot, message):
-    if (message['source']['nick'] not in bot.state or time.time() - bot.state[message['source']['nick']] >
-            bot.cooldown):
-        bot.state[message['source']['nick']] = time.time()
-        formatted_date = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
-        text = f"{message['source']['nick']}, the date is {formatted_date} EST."
-        bot.send_privmsg(message['command']['channel'], text)
 
+def reply_with_date(self, message):
+    cmd = fetch_cmd_data(self, message)
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown): 
+        return
+    
+    formatted_date = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+    text = f"{cmd.username}, the date is {formatted_date} EST."
+    self.send_privmsg(cmd.channel, text)

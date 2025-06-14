@@ -1,6 +1,6 @@
 from pathlib import Path
 from bs4 import BeautifulSoup
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode, urlparse, quote_plus
 from typing import Any, Dict, List, Union
 import google.generativeai as genai_text
 from google import genai as genai_image
@@ -109,10 +109,12 @@ def clean_str(text: str, remove: list[str] = None) -> str:
     Normalize whitespace and optionally remove specified characters.
     """
     if remove:
-        chars = ''.join(remove)
-        table = str.maketrans('', '', chars)
-        text = text.translate(table)
+        text = text.translate(str.maketrans('', '', ''.join(remove)))
     return re.sub(r'\s+', ' ', text).strip()
+
+
+def encode_str(input_text):
+    return quote_plus(input_text)
 
 CHUNK_SIZE = 495
 
@@ -137,14 +139,15 @@ def chunk_str(text: str, chunk_size: int = CHUNK_SIZE) -> list[str]:
 
     return chunks
 
-def send_chunks(send_func: callable, channel, text: str, chunk_size: int = CHUNK_SIZE) -> None:
+def send_chunks(send_func: callable, channel, text: str, chunk_size: int = CHUNK_SIZE, delay: float = 1.2) -> None:
     """
-    Send text in chunks of size chunk_size to channel.
+    Send text in chunks of size chunk_size to channel, delay is in seconds.
     """
     chunks = chunk_str(text, chunk_size)
-    for chunk in chunks:
+    for idx, chunk in enumerate(chunks):
         send_func(channel, chunk)
-        time.sleep(1)
+        if idx < len(chunks) - 1:
+            time.sleep(delay)
 
 
 

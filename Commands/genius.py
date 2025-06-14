@@ -5,7 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 import config
-
+from Utils.utils import fetch_cmd_data, send_chunks
 
 def get_request(url: str, web: bool = False):
     if config.PROXY:
@@ -42,39 +42,37 @@ def reply_with_genius(self, message, timeout=30):
     last_call = self.state.get("genius-lyrics")
     if last_call and last_call > time.time() - timeout:
         return
+    
+    cmd = fetch_cmd_data(self, message)
 
-    if not message['command']['botCommandParams']:
+    if not cmd.params:
         m = f"@{message['tags']['display-name']}, please provide a query for Genius search. Include song name and artist for best result."
-        self.send_privmsg(message['command']['channel'], m)
+        self.send_privmsg(cmd.channel, m)
         return
-
-    query = (message['command']['botCommandParams'])
+    
     try:
-        request = search(query)
+        request = search(cmd.params)
         hits = request["hits"]
         if not hits:
             m = "No results found. Try a different search."
-            self.send_privmsg(message['command']['channel'], m)
+            self.send_privmsg(cmd.channel, m)
             return
 
         first_hit = hits[0]["result"]
         song_url = first_hit["url"]
         lyrics = get_lyrics(song_url)
         if not lyrics:
-            self.send_privmsg(message['command']['channel'], "Lyrics not found!")
+            self.send_privmsg(cmd.channel, "Lyrics not found!")
             return
-
-        title = first_hit["full_title"]
-        lyrics = title + " " + lyrics
-        lyric_msgs = [lyrics[i:i + 480] for i in range(0, len(lyrics), 480)]
 
         self.state["genius-lyrics"] = time.time()
 
-        for msg in lyric_msgs:
-            self.send_privmsg(message['command']['channel'], msg)
-            time.sleep(0.6)
+        title = first_hit["full_title"]
+        lyrics = title + " " + lyrics
+
+        send_chunks(self.send_privmsg, cmd.channel, lyrics, delay=0.6)
 
     except Exception as e:
         error_msg = f"Error: {str(e)[:490]}"
-        self.send_privmsg(message['command']['channel'], error_msg)
+        self.send_privmsg(cmd.channel, error_msg)
         return

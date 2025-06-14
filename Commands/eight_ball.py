@@ -1,5 +1,5 @@
 import random
-import time
+from Utils.utils import check_cooldown, fetch_cmd_data
 
 responses = [
     "😃 It is certain.",
@@ -10,7 +10,7 @@ responses = [
     "😃 As I see it, yes.",
     "😃 Most likely.",
     "😃 Outlook good.",
-    "😃 Yes.",
+    "😃 Yes ",
     "😃 Signs point to yes.",
     "😐 Reply hazy, try again.",
     "😐 Ask again later.",
@@ -18,21 +18,17 @@ responses = [
     "😐 Cannot predict now.",
     "😐 Concentrate and ask again.",
     "😦 Don't count on it.",
-    "😦 My reply is no.",
-    "😦 My sources say no.",
+    "😦 My reply is No",
+    "😦 My sources say No",
     "😦 Outlook not so good.",
     "😦 Very doubtful."
 ]
 
 
 def reply_with_eight_ball(self, message):
-    if message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown:
-        self.state[message['source']['nick']] = time.time()
+    cmd = fetch_cmd_data(self, message)
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown): 
+        return
 
-        if message['command']['botCommandParams']:  # Check if a question was asked
-            response = random.choice(responses)
-            self.send_privmsg(
-                message['command']['channel'], f"@{message['tags']['display-name']}, {response}")
-        else:
-            self.send_privmsg(
-                message['command']['channel'], f"@{message['tags']['display-name']}, please ask a question.")
+    response = random.choice(responses)
+    self.send_privmsg(cmd.channel, f"{cmd.username}, {response}")

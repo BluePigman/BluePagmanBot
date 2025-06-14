@@ -1,6 +1,7 @@
 import config
 import time
 import requests
+from Utils.utils import check_cooldown, fetch_cmd_data
 
 headers = {
     'Authorization': f"Bearer {config.user_access_token}",
@@ -9,18 +10,18 @@ headers = {
 
 
 def reload_global_emotes(self, message):
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
-        self.state[message['source']['nick']] = time.time()
-        reload_7tv_global(self, message)
-        time.sleep(1.1)
-        reload_ffz_global(self, message)
-        time.sleep(1.1)
-        reload_bttv_global(self, message)
-        time.sleep(1.1)
-        reload_twitch_global(self, message)
-        time.sleep(1.1)
-        self.send_privmsg(message['command']['channel'],
-                          "Global Emotes reloaded successfully.")
+    cmd = fetch_cmd_data(self, message)
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown): 
+        return
+
+    reload_7tv_global(self, message)
+    time.sleep(1.1)
+    reload_ffz_global(self, message)
+    reload_bttv_global(self, message)
+    reload_twitch_global(self, message)
+    time.sleep(1.1)
+    self.send_privmsg(message['command']['channel'],
+                        "Global Emotes reloaded successfully.")
 
 
 def reload_twitch_global(self, message):

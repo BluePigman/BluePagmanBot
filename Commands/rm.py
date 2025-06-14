@@ -1,29 +1,31 @@
 from datetime import datetime
-import random
-import time
-import requests
+import random, requests, time
 from bs4 import BeautifulSoup
-def reply_with_rm(self, message):
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
-        self.state[message['source']['nick']] = time.time()
-        
-        if not message['command']['botCommandParams']:
-            subreddit = "all"
-        else:
-            subreddit = message['command']['botCommandParams'].split()[0]
-        
-        post_dict = scrape_subreddit(subreddit)
-        if not post_dict:
-            self.send_privmsg(message['command']['channel'], "No posts found.")
-            return
-        subName = post_dict['subreddit']
-        title = post_dict['title']
-        url =  post_dict['link']
-        score = post_dict['score']
-        time_posted = post_dict['time_posted']
-        msg = f"{subName}: {title} {url} (Score: {score}, posted {time_posted})"
+from Utils.utils import check_cooldown, fetch_cmd_data
 
-        self.send_privmsg(message['command']['channel'], msg)
+def reply_with_rm(self, message):
+    cmd = fetch_cmd_data(self, message)
+
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
+        return
+    
+    if not cmd.params:
+        subreddit = "all"
+    else:
+        subreddit = cmd.params.split()[0]
+    
+    post_dict = scrape_subreddit(subreddit)
+    if not post_dict:
+        self.send_privmsg(cmd.channel, "No posts found.")
+        return
+    subName = post_dict['subreddit']
+    title = post_dict['title']
+    url =  post_dict['link']
+    score = post_dict['score']
+    time_posted = post_dict['time_posted']
+    msg = f"{subName}: {title} {url} (Score: {score}, posted {time_posted})"
+
+    self.send_privmsg(cmd.channel, msg)
 
 
 def scrape_subreddit(subreddit):

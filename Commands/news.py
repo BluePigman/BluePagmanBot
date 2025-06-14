@@ -1,20 +1,18 @@
-import time
 import Utils.newsCommands as newsCommands
+from Utils.utils import check_cooldown, fetch_cmd_data, encode_str
+
+
 def reply_with_news(self, message):
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
-        self.state[message['source']['nick']] = time.time()
-        try:
-            if (message['command']['botCommandParams']):
-                keywords = message['command']['botCommandParams']
-                if '\U000e0000' in keywords:
-                    keywords = keywords.replace('\U000e0000', '')
-                keywords = keywords.replace(" ", "+")
-                keywords = keywords.replace("#", "'#'")
-                keywords = keywords.replace("&", "'&'")
-                m = newsCommands.get_random_news_item(keywords)
-            else:
-                m = newsCommands.get_random_news_item()
-            self.send_privmsg(message['command']['channel'], m) 
-        except Exception as e:
-            print(e)
-            self.send_privmsg(message['command']['channel'], f"Error: {str(e)[:300]}")
+    cmd = fetch_cmd_data(self, message)
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown): 
+        return
+    
+    try:
+        if cmd.params:
+            m = newsCommands.get_random_news_item(encode_str(cmd.params))
+        else:
+            m = newsCommands.get_random_news_item()
+        self.send_privmsg(cmd.channel, m) 
+    except Exception as e:
+        print(e)
+        self.send_privmsg(cmd.channel, f"Error: {str(e)[:300]}")

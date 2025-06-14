@@ -1,70 +1,50 @@
-import time, config, requests
+import config, requests
+from Utils.utils import check_cooldown, fetch_cmd_data, clean_str
 
 def reply_with_timeout(self, message):
-    if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
-            self.cooldown):
-        self.state[message['source']['nick']] = time.time()
+    cmd = fetch_cmd_data(self, message)
 
-        if not message['command']['botCommandParams']:
-            m = f"@{message['tags']['display-name']}, please specify a user (not moderator or broadcaster) to timeout."
-            self.send_privmsg(message['command']['channel'], m)
-            return
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
+        return
 
-        userToTimeout = message['command']['botCommandParams']
+    if not cmd.params:
+        self.send_privmsg(cmd.channel, f"{cmd.username}, please specify a user (not moderator or broadcaster) to timeout.")
+        return
 
-        if '\U000e0000' in userToTimeout:
-            userToTimeout = userToTimeout.replace('\U000e0000', '')
+    if cmd.params.lower() == "amount":
+        user_data = self.users.find_one({'user': cmd.nick})
+        count = user_data.get('timeout', 0) if user_data else 0
+        self.send_privmsg(cmd.channel, f"{cmd.username}, you have {count} timeouts available.")
+        return
 
-        user_data = self.users.find_one({'user': message['source']['nick']})
-        if not user_data or 'timeout' not in user_data:
-            m = f"@{message['tags']['display-name']}, you don't have any timeouts to use. Buy them in the shop."
-            self.send_privmsg(message['command']['channel'], m)
-            return
+    user_to_timeout = clean_str(cmd.params, ["@", ","])
 
-        timeout_count = user_data['timeout']
-        if timeout_count <= 0:
-            m = f"@{message['tags']['display-name']}, you don't have any timeouts left to use. Buy them in the shop."
-            self.send_privmsg(message['command']['channel'], m)
-            return
+    # Validate timeout ownership
+    user_data = self.users.find_one({'user': cmd.nick})
+    timeout_count = user_data.get('timeout', 0) if user_data else 0
 
-        if ',' in userToTimeout:
-            userToTimeout = userToTimeout.replace(',', '')
-        if '@' in userToTimeout:
-            userToTimeout = userToTimeout.replace('@', '')
+    if timeout_count == 0:
+        m = f"{cmd.username}, you don't have any timeouts to use. Buy them in the shop with {self.prefix}shop buy timeout."
+        self.send_privmsg(cmd.channel, m)
+        return
 
-        
-        if message['command']['botCommandParams'][0] == 'amount':
-            m = f"@{message['tags']['display-name']}, you have {timeout_count} timeouts available."
-            self.send_privmsg(message['command']['channel'], m)
-            return
+    # Get user IDs
+    channel_id = message["tags"]["room-id"]
+    timeout_id = get_user_id(user_to_timeout)
+    moderator_id = get_user_id('bluepagmanbot')
 
-        # Get user ID of the channel and user to timeout
-        channel_id  = message["tags"]["room-id"]
-        timeout_id = get_user_id(userToTimeout)
-        moderator_id = get_user_id('bluepagmanbot')
+    # Attempt timeout
+    result = timeout(channel_id, moderator_id, timeout_id)
 
-        m = f"@{message['tags']['display-name']} used a timeout on {userToTimeout}!"
-        self.send_privmsg(message['command']['channel'], m)
-
-        # Attempt timeout
-        result = timeout(channel_id, moderator_id, timeout_id)
-
-        if result == "Success":
-            self.users.update_one({'user': message['source']['nick']}, {'$inc': {'timeout': -1}})
-            return
-        if result == "Bad":
-            self.users.update_one({'user': message['source']['nick']}, {'$inc': {'timeout': -1}})
-            m = f"@{message['tags']['display-name']}, you tried to timeout a mod/broadcaster, which is impossible. -500 LUL"
-            self.send_privmsg(message['command']['channel'], m)
-            return
-        if result == "InsufficientPrivileges":
-            m = "The bot is not a moderator in this channel!"
-            self.send(message['command']['channel'], m)
-            return
-        else:
-            m = f"@{message['tags']['display-name']}, something went wrong. Your timeout was not used."
-            self.send_privmsg(message['command']['channel'], m)
-            return 
+    if result == "Success":
+        self.users.update_one({'user': cmd.nick}, {'$inc': {'timeout': -1}})
+    else:
+        responses = {
+            "Bad": f"Timeout failed, either the user is a mod/broadcaster or the user does not exist.",
+            "InsufficientPrivileges": "The bot is not a moderator in this channel!",
+        }
+        fallback = f"{cmd.username}, something went wrong. Your timeout was not used."
+        self.send_privmsg(cmd.channel, responses.get(result, fallback))
 
 
 def get_user_id(username):
@@ -72,13 +52,14 @@ def get_user_id(username):
             'Authorization': f"Bearer {config.user_access_token}",
             'Client-ID': f'{config.client_id}',
         }
+    
     params = {
         'login': username,
     }
+
     response = requests.get('https://api.twitch.tv/helix/users', headers=headers, params=params)
 
     if response.status_code == 200:
-        # Handle successful response
         data = response.json()
         if data['data']:
             user_info = data['data'][0]
@@ -87,23 +68,21 @@ def get_user_id(username):
         else:
             return None
     else:
-        # Handle error response
         return None
 
 def timeout(channel, moderator, user):
-    # Construct headers
+    """Attempt a POST request to timeout a user"""
+
     headers = {
             'Authorization': f"Bearer {config.user_access_token}",
             'Client-ID': f'{config.client_id}',
     }
 
-    # Construct request parameters
     params = {
         'broadcaster_id': channel,
         'moderator_id': moderator,
     }
 
-    # Construct request body
     body = {
         'data': {
             'user_id': user,
@@ -111,11 +90,9 @@ def timeout(channel, moderator, user):
             'reason': "Someone bought the timeout in the shop and used it on you!"
         }
     }
-
-    # Make POST request to carry out the timeout
+    
     response = requests.post('https://api.twitch.tv/helix/moderation/bans', headers=headers, params=params, json=body)
 
-     # Check response status code
     if response.status_code == 200:
         print(f"{user} timed out successfully in #{channel}!")
         return "Success"
