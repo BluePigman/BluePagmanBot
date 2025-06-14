@@ -11,12 +11,15 @@ from Utils.utils import (
 )
 
 def reply_with_generate(self, message):
-    cmd = fetch_cmd_data(self, message, split_params=True)
-
+    
+    cmd = fetch_cmd_data(self, message, split_params=True, with_args=True)
+    
     if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
         return
 
     params = cmd.params
+    args = cmd.args
+    print(args)
     if not params:
         self.send_privmsg(
             cmd.channel,
@@ -43,7 +46,17 @@ def reply_with_generate(self, message):
             self.send_privmsg(cmd.channel, f"{cmd.username}, Empty prompt after image link(s).")
             return
 
-        image_path = gemini_generate_image(prompt, input_images_b64 if input_images_b64 else None)
+        try:
+            temperature = 1
+            temperature = float(args.get("temperature"))
+        except Exception:
+            pass
+
+        image_path = gemini_generate_image(
+            prompt,
+            input_images_b64 if input_images_b64 else None,
+            temperature=temperature
+        )
         if not image_path:
             self.send_privmsg(cmd.channel, f"{cmd.username}, Image generation failed.")
             return
