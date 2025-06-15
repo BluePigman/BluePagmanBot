@@ -54,9 +54,8 @@ def fetch_cmd_data(self, message: dict, split_params: bool = False, arg_types: d
       - nick: str — sender's username
       - username: str — sender's username prefixed with '@'
       - channel: str — channel name
-      - params: list|str — full botCommandParams (split into words if split_params=True),
-                           or all tokens excluding args if with_args=True
-      - args: dict — tokens in arg_name:arg_value format (if with_args=True)
+      - params: list|str — full botCommandParams with all arguments removed (split into words if split_params=True)
+      - args: dict — parsed arguments in -key value or -flag format according to arg_types
       - state: dict — current cooldown state from self
       - cooldown: int — cooldown duration from self
     """
@@ -74,7 +73,7 @@ def fetch_cmd_data(self, message: dict, split_params: bool = False, arg_types: d
                 bool: re.compile(fr'-{key}\b'),
                 str: re.compile(fr'-{key}\s+((?:(?! -\w).)+)', re.DOTALL),
                 int: re.compile(fr'-{key}\s+(-?\d+)\b'),
-                float: re.compile(fr'-{key}\s+(-?\d+\.\d+)\b')
+                float: re.compile(fr'-{key}\s+(-?\d+(?:\.\d+)?)\b')
             }[typ]
 
             match = pattern.search(remaining)
