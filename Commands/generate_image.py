@@ -50,6 +50,7 @@ def reply_with_generate(self, message):
         try:
             temperature = 1
             temperature = float(args.get("temperature"))
+            temperature = max(0, min(temperature, 2))
         except Exception:
             pass
 
