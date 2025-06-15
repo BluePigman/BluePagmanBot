@@ -69,11 +69,12 @@ def fetch_cmd_data(self, message: dict, split_params: bool = False, arg_types: d
     if arg_types:
         remaining = raw
         for key, typ in arg_types.items():
+            escaped_key = re.escape(key)
             pattern = {
-                bool: re.compile(fr'-{key}\b'),
-                str: re.compile(fr'-{key}\s+((?:(?! -\w).)+)', re.DOTALL),
-                int: re.compile(fr'-{key}\s+(-?\d+)\b'),
-                float: re.compile(fr'-{key}\s+(-?\d+(?:\.\d+)?)\b')
+                bool:  re.compile(rf'-{escaped_key}\b'),
+                str:   re.compile(rf'-{escaped_key}\s+((?:(?! -\w).)+)', re.DOTALL),
+                int:   re.compile(rf'-{escaped_key}\s+(-?\d+)\b'),
+                float: re.compile(rf'-{escaped_key}\s+(-?\d+(?:\.\d+)?)\b')
             }[typ]
 
             match = pattern.search(remaining)
@@ -82,12 +83,11 @@ def fetch_cmd_data(self, message: dict, split_params: bool = False, arg_types: d
 
             try:
                 val = True if typ is bool else typ(match.group(1).strip())
-            except:
+            except (ValueError, TypeError):
                 continue
 
             args[key] = val
-            start, end = match.span()
-            remaining = remaining[:start] + ' ' * (end - start) + remaining[end:]
+            remaining = pattern.sub(' ', remaining, count=1)
 
         raw = ' '.join(remaining.split())
 
