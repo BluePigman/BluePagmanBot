@@ -11,8 +11,7 @@ from Utils.utils import (
 )
 
 def reply_with_generate(self, message):
-    
-    cmd = fetch_cmd_data(self, message, split_params=True, with_args=True)
+    cmd = fetch_cmd_data(self, message, split_params=True, arg_types={'temperature': float})
     
     if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
         return
@@ -49,7 +48,7 @@ def reply_with_generate(self, message):
 
         try:
             temperature = 1
-            temperature = float(args.get("temperature"))
+            temperature = args.get("temperature")
             temperature = max(0, min(temperature, 2))
         except Exception:
             pass
