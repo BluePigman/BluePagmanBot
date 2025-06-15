@@ -35,6 +35,7 @@ def reply_with_generate(self, message):
             if not is_url(param):
                 prompt_start_index = i
                 break
+            prompt_start_index += 1
             res = proxy_request("GET", param)
             if res.headers.get("Content-Type", "").startswith('image/'):
                 img_bytes = download_bytes(param)
