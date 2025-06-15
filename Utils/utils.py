@@ -47,7 +47,7 @@ class CmdData:
     state: Dict
     cooldown: int
 
-def fetch_cmd_data(self, message: dict, split_params: bool = False, with_args: bool = False) -> CmdData:
+def fetch_cmd_data(self, message: dict, split_params: bool = False, arg_types: dict = None) -> CmdData:
     """
     Extracts key fields from a message dict and instance attributes,
     returning them as a CmdData object for structured, type-safe access:
@@ -61,23 +61,38 @@ def fetch_cmd_data(self, message: dict, split_params: bool = False, with_args: b
       - cooldown: int — cooldown duration from self
     """
     raw = message['command']['botCommandParams']
-    parts = []
-
     if isinstance(raw, str):
         raw = raw.replace('\U000E0000', '')
-        parts = raw.split()
+    else:
+        raw = ''
 
     args = {}
-    if with_args and parts:
-        params = []
-        for p in parts:
-            if ":" in p and not p.startswith(("http:", "https:")):
-                k, v = p.split(":", 1)
-                args[k] = v
-            else:
-                params.append(p)
-    else:
-        params = parts if split_params else raw
+    if arg_types:
+        remaining = raw
+        for key, typ in arg_types.items():
+            pattern = {
+                bool: re.compile(fr'-{key}\b'),
+                str: re.compile(fr'-{key}\s+((?:(?! -\w).)+)', re.DOTALL),
+                int: re.compile(fr'-{key}\s+(-?\d+)\b'),
+                float: re.compile(fr'-{key}\s+(-?\d+\.\d+)\b')
+            }[typ]
+
+            match = pattern.search(remaining)
+            if not match:
+                continue
+
+            try:
+                val = True if typ is bool else typ(match.group(1).strip())
+            except:
+                continue
+
+            args[key] = val
+            start, end = match.span()
+            remaining = remaining[:start] + ' ' * (end - start) + remaining[end:]
+
+        raw = ' '.join(remaining.split())
+
+    params = raw.split() if split_params else raw
 
     return CmdData(
         nick=message['source']['nick'],
