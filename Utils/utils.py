@@ -42,7 +42,7 @@ class CmdData:
     username: str
     channel: str
     params: Any
-    args: Dict[str, str]
+    args: Dict[str, Any]
     nick: str
     state: Dict
     cooldown: int
@@ -547,7 +547,7 @@ def gemini_generate(request: str | dict, model) -> str | list[str]:
 
 GEMINI_IMAGE_MODEL = "gemini-2.0-flash-exp-image-generation"
 
-def gemini_generate_image(prompt: str, input_images_b64: list[bytes] | None = None, temperature: float = 1, image_model: str = GEMINI_IMAGE_MODEL) -> str | None:
+def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None, temperature: float = 1, image_model: str = GEMINI_IMAGE_MODEL) -> str | None:
     """
     Generate an image from a text prompt and optional input images using Gemini model.
     Returns the file path of the saved image or None if generation fails.
