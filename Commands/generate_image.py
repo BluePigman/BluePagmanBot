@@ -11,47 +11,53 @@ from Utils.utils import (
 )
 
 def reply_with_generate(self, message):
-    cmd = fetch_cmd_data(self, message, split_params=True, arg_types={'temperature': float})
-    
+    cmd = fetch_cmd_data(self, message, split_params=True, arg_types={('temperature', 't'): float})
+
     if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
         return
 
     params = cmd.params
     args = cmd.args
     print(args)
+
     if not params:
         self.send_privmsg(
             cmd.channel,
-            f"{cmd.username}, Please provide a prompt to generate an image, or use <image_link(s)> <prompt> to edit using existing image(s), Gemini model: {GEMINI_IMAGE_MODEL}"
+            f"{cmd.username}, Please provide a prompt to generate an image, or use image links in the prompt to edit them, Gemini model: {GEMINI_IMAGE_MODEL}"
         )
         return
 
     try:
         input_images_b64 = []
-        prompt_start_index = 0
+        url_map = {}
+        prompt_parts = []
 
-        for i, param in enumerate(params):
+        for param in params:
             if not is_url(param):
-                prompt_start_index = i
-                break
-            prompt_start_index += 1
-            res = proxy_request("GET", param)
-            if res.headers.get("Content-Type", "").startswith('image/'):
-                img_bytes = download_bytes(param)
-                if img_bytes:
-                    input_images_b64.append(img_bytes)
+                prompt_parts.append(param)
+                continue
 
-        prompt = ' '.join(params[prompt_start_index:])
-        if not prompt:
-            self.send_privmsg(cmd.channel, f"{cmd.username}, Empty prompt after image link(s).")
-            return
+            res = proxy_request("GET", param)
+            if not res.headers.get("Content-Type", "").startswith('image/'):
+                prompt_parts.append(param)
+                continue
+
+            img_bytes = download_bytes(param)
+            if not img_bytes:
+                prompt_parts.append(param)
+                continue
+
+            input_images_b64.append(img_bytes)
+            url_map[param] = f"(image {len(input_images_b64)})"
+            prompt_parts.append(url_map[param])
+
+        prompt = ' '.join(prompt_parts).strip()
 
         try:
-            temperature = 1
-            temperature = args.get("temperature")
+            temperature = args.get("temperature", 1)
             temperature = max(0, min(temperature, 2))
         except Exception:
-            pass
+            temperature = 1
 
         image_path = gemini_generate_image(
             prompt,
