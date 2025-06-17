@@ -70,9 +70,9 @@ def fetch_cmd_data(self, message: dict, split_params: bool = False, arg_types: d
         remaining = raw
         type_patterns = {
             bool: lambda k: re.compile(rf'(?:^|\s)-{re.escape(k)}\b'),
-            str: lambda k: re.compile(rf'-{re.escape(k)}\s+((?:(?! -\w).)+)', re.DOTALL),
-            int: lambda k: re.compile(rf'-{re.escape(k)}\s+(-?\d+)\b'),
-            float: lambda k: re.compile(rf'-{re.escape(k)}\s+(-?\d+(?:\.\d+)?)\b')
+            str: lambda k: re.compile(rf'(?:^|\s)-{re.escape(k)}\s+((?:(?! -\w).)+)', re.DOTALL),
+            int: lambda k: re.compile(rf'(?:^|\s)-{re.escape(k)}\s+(-?\d+)\b'),
+            float: lambda k: re.compile(rf'(?:^|\s)-{re.escape(k)}\s+(-?\d+(?:\.\d+)?)\b')
         }
 
         for key, typ in arg_types.items():
