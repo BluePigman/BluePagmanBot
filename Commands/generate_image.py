@@ -1,9 +1,11 @@
 from Utils.utils import (
     fetch_cmd_data,
+    SingleWord,
+    DEFAULT_UPLOADER,
     proxy_request,
     gemini_generate_image,
     GEMINI_IMAGE_MODEL,
-    upload_to_kappa,
+    upload_file,
     check_cooldown,
     download_bytes,
     is_url,
@@ -11,7 +13,11 @@ from Utils.utils import (
 )
 
 def reply_with_generate(self, message):
-    cmd = fetch_cmd_data(self, message, split_params=True, arg_types={('temperature', 't'): float})
+    arg_types = {
+        ('temperature', 't'): float,
+        ('uploader', 'u'): SingleWord
+    }
+    cmd = fetch_cmd_data(self, message, split_params=True, arg_types=arg_types)
 
     if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
         return
@@ -58,7 +64,7 @@ def reply_with_generate(self, message):
             temperature = max(0, min(temperature, 2))
         except Exception:
             temperature = 1
-
+            
         image_path = gemini_generate_image(
             prompt,
             input_images_b64 if input_images_b64 else None,
@@ -68,9 +74,10 @@ def reply_with_generate(self, message):
             self.send_privmsg(cmd.channel, f"{cmd.username}, Image generation failed.")
             return
 
-        result_url = upload_to_kappa(image_path, "png", delete_file=True)
+        upload_service = args.get("uploader", DEFAULT_UPLOADER)
+        result_url = upload_file(upload_service, image_path, "png", delete_file=True)
         if not result_url:
-            self.send_privmsg(cmd.channel, f"{cmd.username}, Kappa upload failed.")
+            self.send_privmsg(cmd.channel, f"{cmd.username}, {upload_service} upload failed.")
             return
 
         prefix = "Edited image: " if input_images_b64 else ""
