@@ -47,6 +47,8 @@ class CmdData:
     state: Dict
     cooldown: int
 
+class SingleWord(str): pass
+
 def fetch_cmd_data(self, message: dict, split_params: bool = False, arg_types: dict = None) -> CmdData:
     """
     Extracts key fields from a message dict and instance attributes,
@@ -71,6 +73,7 @@ def fetch_cmd_data(self, message: dict, split_params: bool = False, arg_types: d
         type_patterns = {
             bool: lambda k: re.compile(rf'(?:^|\s)-{re.escape(k)}\b'),
             str: lambda k: re.compile(rf'(?:^|\s)-{re.escape(k)}\s+((?:(?! -\w).)+)', re.DOTALL),
+            SingleWord: lambda k: re.compile(rf'(?:^|\s)-{re.escape(k)}\s+([^\s-]+)'),
             int: lambda k: re.compile(rf'(?:^|\s)-{re.escape(k)}\s+(-?\d+)\b'),
             float: lambda k: re.compile(rf'(?:^|\s)-{re.escape(k)}\s+(-?\d+(?:\.\d+)?)\b')
         }
@@ -287,42 +290,59 @@ class GenericStorage:
     def is_empty(self):
         return not bool(self._read())
 
-def upload_to_kappa(filepath: str, ext: str, delete_file: bool = False, timeout: int = 60) -> str | None:
+DEFAULT_UPLOADER = "nuuls.com"
+
+UPLOAD_SERVICES = {
+    "kappa.lol": {
+        "url": "https://kappa.lol/api/upload",
+        "headers": {},
+        "get_link": lambda r: r.json().get("link", None),
+    },
+    "nuuls.com": {
+        "url": "https://i.nuuls.com/v1/uploads",
+        "headers": {},
+        "get_link": lambda r: r.text.strip()
+    },
+}
+
+def upload_file(service: str, filepath: str, ext: str, delete_file: bool = False, timeout: int = 60) -> str | None:
     """
-    Uploads a file to kappa.lol and returns the direct link. None if the file is not found or upload fails.
+    Uploads a file to the specified upload service (e.g., 'kappa', 'nuuls').
+
+    Returns:
+        str: Direct link to the uploaded file.
+        None: If upload fails or file is not found.
     """
+    service = service or DEFAULT_UPLOADER
+    uploader = UPLOAD_SERVICES.get(service)
+
     mime_map = {
-        "mp4": "video/mp4",
-        "mov": "video/mp4",
-        "webm": "video/webm",
-        "jpg": "image/jpeg",
-        "jpeg": "image/jpeg",
-        "gif": "image/gif",
-        "png": "image/png",
+        "mp4": "video/mp4", "mov": "video/mp4", "webm": "video/webm",
+        "jpg": "image/jpeg", "jpeg": "image/jpeg", "gif": "image/gif", "png": "image/png",
     }
+    
     content_type = mime_map.get(ext.lower(), "application/octet-stream")
     filename = f"upload.{ext}"
-    
-    print(f"Uploading {filename} as {content_type} to kappa.lol from {filepath}...")
+
+    print(f"Uploading {filename} as {content_type} to {service} from {filepath}...")
     try:
-        with open(filepath, "rb") as f_video:
-            files = {
-                'file': (filename, f_video, content_type)
-            }
-            res = proxy_request("POST", 'https://kappa.lol/api/upload', files=files, timeout=timeout)
-        
+        with open(filepath, "rb") as f:
+            files = {'file': (filename, f, content_type)}
+            res = proxy_request("POST", uploader["url"], files=files, headers=uploader["headers"], timeout=timeout)
+
         res.raise_for_status()
-        data = res.json()
-        link = data.get("link", "upload failed")
-        if link != "upload failed" and delete_file:
+
+        link = uploader["get_link"](res)
+        if link and delete_file:
             os.remove(filepath)
+
         print(f"Upload res link: {link}")
         return link
 
     except FileNotFoundError:
         print(f"Upload error: File not found at {filepath}")
         return None
-
+    
     except Exception as e:
         print(f"Upload error: {e}")
         log_err(e)
