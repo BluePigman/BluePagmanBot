@@ -305,22 +305,26 @@ UPLOAD_SERVICES = {
     },
 }
 
-def upload_file(service: str, filepath: str, ext: str, delete_file: bool = False, timeout: int = 60) -> str | None:
+def upload_file(service: str, filepath: str, ext: str, delete_file: bool = False, timeout: int = 60) -> dict:
     """
     Uploads a file to the specified upload service (e.g., 'kappa', 'nuuls').
 
     Returns:
-        str: Direct link to the uploaded file.
-        None: If upload fails or file is not found.
+        dict: {success: bool, message: str}
     """
     service = service or DEFAULT_UPLOADER
     uploader = UPLOAD_SERVICES.get(service)
+
+    if not uploader:
+        msg = f"Upload error: Unknown uploader '{service}'"
+        print(msg)
+        return {"success": False, "message": msg}
 
     mime_map = {
         "mp4": "video/mp4", "mov": "video/mp4", "webm": "video/webm",
         "jpg": "image/jpeg", "jpeg": "image/jpeg", "gif": "image/gif", "png": "image/png",
     }
-    
+
     content_type = mime_map.get(ext.lower(), "application/octet-stream")
     filename = f"upload.{ext}"
 
@@ -337,16 +341,16 @@ def upload_file(service: str, filepath: str, ext: str, delete_file: bool = False
             os.remove(filepath)
 
         print(f"Upload res link: {link}")
-        return link
+        return {"success": True, "message": link}
 
     except FileNotFoundError:
-        print(f"Upload error: File not found at {filepath}")
-        return None
-    
+        msg = f"Upload error: File not found"
+        print(f"{msg} at {filepath}")
+        return {"success": False, "message": msg}
+
     except Exception as e:
-        print(f"Upload error: {e}")
         log_err(e)
-        return None
+        return {"success": False, "message": "File upload failed"}
 
 def download_bytes(file_url: str) -> str | None:
     """Download data from the given URL and return it base64-encoded as a string, or None on failure."""
