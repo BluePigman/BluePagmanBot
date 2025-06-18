@@ -75,13 +75,14 @@ def reply_with_generate(self, message):
             return
 
         upload_service = args.get("uploader", DEFAULT_UPLOADER)
-        result_url = upload_file(upload_service, image_path, "png", delete_file=True)
-        if not result_url:
-            self.send_privmsg(cmd.channel, f"{cmd.username}, {upload_service} upload failed.")
+        result = upload_file(upload_service, image_path, "png", delete_file=True)
+        
+        if not result["success"]:
+            self.send_privmsg(cmd.channel, f"{cmd.username}, {result['message']}")
             return
 
         prefix = "Edited image: " if input_images_b64 else ""
-        self.send_privmsg(cmd.channel, f"{cmd.username}, {prefix}{result_url}")
+        self.send_privmsg(cmd.channel, f"{cmd.username}, {prefix}{result['message']}")
 
     except Exception as e:
         self.send_privmsg(cmd.channel, f"{cmd.username}, Unexpected Error occurred; Image generation failed")
