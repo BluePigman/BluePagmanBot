@@ -271,10 +271,57 @@ class GenericStorage:
     def is_empty(self):
         return not bool(self._read())
 
-def upload_to_kappa(filepath: str, ext: str, delete_file: bool = False, timeout: int = 60) -> str | None:
+DEFAULT_UPLOADER = "s-ul.eu"
+
+UPLOAD_SERVICES = {
+    "kappa.lol": {
+        "url": "https://kappa.lol/api/upload",
+        "headers": {},
+        "field": "file",
+        "get_link": lambda r: r.json().get("link", None),
+    },
+    "nuuls.com": {
+        "url": "https://i.nuuls.com/v1/uploads",
+        "headers": {},
+        "field": "file",
+        "get_link": lambda r: r.text.strip()
+    },
+    "imgur.com": {
+        "url": "https://api.imgur.com/3/image",
+        "headers": {"Authorization": "Client-ID c898c0bb848ca39"},
+        "field": "image",
+        "get_link": lambda r: r.json()["data"].get("link", None),
+    },
+    "s-ul.eu": {
+        "url": f"https://s-ul.eu/api/v1/upload?wizard=true&key={config.sul_key}",
+        "headers": {},
+        "field": "file",
+        "get_link": lambda r: r.json().get("url", None),
+    }
+}
+
+def upload_file(service: str, filepath: str, ext: str, delete_file: bool = False, timeout: int = 60) -> dict:
     """
-    Uploads a file to kappa.lol and returns the direct link. None if the file is not found or upload fails.
+    Uploads a file to the specified upload service (e.g., 'kappa', 'nuuls', 'imgur').
+    If the specified service fails, tries all other available services.
+
+    Returns:
+        dict: {success: bool, message: str}
     """
+    service = service or DEFAULT_UPLOADER
+
+    if service not in UPLOAD_SERVICES:
+        msg = f"Upload error: Unknown uploader '{service}'"
+        print(msg)
+        return {"success": False, "message": msg}
+
+    services_to_try = []
+    services_to_try.append(service)
+
+    for srv in UPLOAD_SERVICES:
+        if srv not in services_to_try:
+            services_to_try.append(srv)
+
     mime_map = {
         "mp4": "video/mp4",
         "mov": "video/mp4",
@@ -287,30 +334,46 @@ def upload_to_kappa(filepath: str, ext: str, delete_file: bool = False, timeout:
     content_type = mime_map.get(ext.lower(), "application/octet-stream")
     filename = f"upload.{ext}"
     
-    print(f"Uploading {filename} as {content_type} to kappa.lol from {filepath}...")
-    try:
-        with open(filepath, "rb") as f_video:
-            files = {
-                'file': (filename, f_video, content_type)
-            }
-            res = proxy_request("POST", 'https://kappa.lol/api/upload', files=files, timeout=timeout)
+    for current_service in services_to_try:
+        uploader = UPLOAD_SERVICES[current_service]
+        print(f"Uploading {filename} as {content_type} to {current_service} from {filepath}...")
         
-        res.raise_for_status()
-        data = res.json()
-        link = data.get("link", "upload failed")
-        if link != "upload failed" and delete_file:
-            os.remove(filepath)
-        print(f"Upload res link: {link}")
-        return link
+        try:
+            with open(filepath, "rb") as f:
+                files = {uploader["field"]: (filename, f, content_type)}
+                res = proxy_request("POST", uploader["url"], files=files, headers=uploader["headers"], timeout=timeout)
 
-    except FileNotFoundError:
-        print(f"Upload error: File not found at {filepath}")
-        return None
+            res.raise_for_status()
+            
+            if 'text/html' in res.headers.get('Content-Type', ''):
+                print(f"Unexpected HTML response from {current_service}")
+                continue
 
-    except Exception as e:
-        print(f"Upload error: {e}")
-        log_err(e)
-        return None
+            link = uploader["get_link"](res)
+            if link:
+                if current_service == "imgur.com" and "i.imgur.com" in link:
+                    imgur_id = link.split('/')[-1]
+                    link = f"https://imgur.artemislena.eu/{imgur_id}"
+
+                if delete_file:
+                    os.remove(filepath)
+                print(f"Upload successful to {current_service}: {link}")
+                return {"success": True, "message": link}
+            else:
+                print(f"Failed to extract link from {current_service} response")
+                continue
+
+        except FileNotFoundError:
+            msg = f"Upload error: File not found."
+            print(msg)
+            return {"success": False, "message": msg}
+
+        except Exception as e:
+            print(f"Upload to {current_service} failed: {str(e)}")
+            log_err(e)
+            continue
+
+    return {"success": False, "message": f"All upload services failed."}
 
 def download_bytes(file_url: str) -> str | None:
     """Download data from the given URL and return it base64-encoded as a string, or None on failure."""
@@ -325,8 +388,6 @@ def download_bytes(file_url: str) -> str | None:
     except Exception as e:
         log_err(e)
         return None
-
-
 
 # --- Proxy HTTP Requests ---
 
