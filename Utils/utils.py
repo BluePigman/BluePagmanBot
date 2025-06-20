@@ -42,41 +42,60 @@ class CmdData:
     username: str
     channel: str
     params: Any
-    args: Dict[str, str]
+    args: Dict[str, Any]
     nick: str
     state: Dict
     cooldown: int
 
-def fetch_cmd_data(self, message: dict, split_params: bool = False, with_args: bool = False) -> CmdData:
+class SingleWord(str): pass
+
+def fetch_cmd_data(self, message: dict, split_params: bool = False, arg_types: dict = None) -> CmdData:
     """
     Extracts key fields from a message dict and instance attributes,
     returning them as a CmdData object for structured, type-safe access:
       - nick: str — sender's username
       - username: str — sender's username prefixed with '@'
       - channel: str — channel name
-      - params: list|str — full botCommandParams (split into words if split_params=True),
-                           or first token if with_args=True
-      - args: dict — tokens in arg_name:arg_value format (if with_args=True)
+      - params: list|str — full botCommandParams with all arguments removed (split into words if split_params=True)
+      - args: dict — parsed arguments in -key value or -flag format according to arg_types
       - state: dict — current cooldown state from self
       - cooldown: int — cooldown duration from self
     """
     raw = message['command']['botCommandParams']
     if isinstance(raw, str):
         raw = raw.replace('\U000E0000', '')
-        if split_params:
-            raw = raw.split()
+    else:
+        raw = ''
 
-    params, args = raw, {}
+    args = {}
+    if arg_types:
+        remaining = raw
+        type_patterns = {
+            bool: lambda k: re.compile(rf'(?:^|\s)-{re.escape(k)}\b'),
+            str: lambda k: re.compile(rf'(?:^|\s)-{re.escape(k)}\s+((?:(?! -\w).)+)', re.DOTALL),
+            SingleWord: lambda k: re.compile(rf'(?:^|\s)-{re.escape(k)}\s+([^\s-]+)'),
+            int: lambda k: re.compile(rf'(?:^|\s)-{re.escape(k)}\s+(-?\d+)\b'),
+            float: lambda k: re.compile(rf'(?:^|\s)-{re.escape(k)}\s+(-?\d+(?:\.\d+)?)\b')
+        }
 
-    if with_args and raw:
-        parts = raw.split()
-        if parts:
-            params, *arg_parts = parts
-            args = {
-                k: v for k, v in (a.split(":", 1) for a in arg_parts if ":" in a)
-            }
-        else:
-            params, args = None, {}
+        for key, typ in arg_types.items():
+            aliases = [key] if isinstance(key, str) else key
+            for alias in aliases:
+                pattern = type_patterns[typ](alias)
+                match = pattern.search(remaining)
+                if not match:
+                    continue
+                try:
+                    val = True if typ is bool else typ(match.group(1).strip())
+                    args[aliases[0]] = val
+                    remaining = pattern.sub(' ', remaining, count=1)
+                    break
+                except (ValueError, TypeError):
+                    continue
+
+        raw = ' '.join(remaining.split())
+
+    params = raw.split() if split_params else raw
 
     return CmdData(
         nick=message['source']['nick'],
@@ -323,14 +342,10 @@ def upload_file(service: str, filepath: str, ext: str, delete_file: bool = False
             services_to_try.append(srv)
 
     mime_map = {
-        "mp4": "video/mp4",
-        "mov": "video/mp4",
-        "webm": "video/webm",
-        "jpg": "image/jpeg",
-        "jpeg": "image/jpeg",
-        "gif": "image/gif",
-        "png": "image/png",
+        "mp4": "video/mp4", "mov": "video/mp4", "webm": "video/webm",
+        "jpg": "image/jpeg", "jpeg": "image/jpeg", "gif": "image/gif", "png": "image/png",
     }
+
     content_type = mime_map.get(ext.lower(), "application/octet-stream")
     filename = f"upload.{ext}"
     
@@ -593,21 +608,22 @@ def gemini_generate(request: str | dict, model) -> str | list[str]:
 
 GEMINI_IMAGE_MODEL = "gemini-2.0-flash-exp-image-generation"
 
-def gemini_generate_image(prompt: str, input_image_b64: bytes | None = None, image_model: str = GEMINI_IMAGE_MODEL) -> str | None:
+def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None, temperature: float = 1, image_model: str = GEMINI_IMAGE_MODEL) -> str | None:
     """
-    Generate an image from a text prompt and optional input image using Gemini model.
+    Generate an image from a text prompt and optional input images using Gemini model.
     Returns the file path of the saved image or None if generation fails.
     """
     client = genai_image.Client(api_key=config.GOOGLE_API_KEY)
 
     contents_parts = []
-    if input_image_b64:
-        contents_parts.append(
-            types.Part.from_bytes(
-                mime_type="image/png",
-                data=base64.b64decode(input_image_b64),
+    if input_images_b64:
+        for image_b64 in input_images_b64:
+            contents_parts.append(
+                types.Part.from_bytes(
+                    mime_type="image/png",
+                    data=base64.b64decode(image_b64),
+                )
             )
-        )
     contents_parts.append(types.Part.from_text(text=prompt))
 
     contents = [
@@ -620,6 +636,7 @@ def gemini_generate_image(prompt: str, input_image_b64: bytes | None = None, ima
     generate_config = types.GenerateContentConfig(
         response_modalities=["image", "text"],
         response_mime_type="text/plain",
+        temperature=temperature,
     )
 
     try:
