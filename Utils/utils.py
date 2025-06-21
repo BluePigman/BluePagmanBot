@@ -549,7 +549,8 @@ def is_url(url):
 
     unsafe_chars = set(' "\'<>{}|\\^[]`')
     if any(c in url for c in unsafe_chars):
-        raise ValueError("URL contains unsafe characters")
+        print(f"URL contains unsafe characters: {url}")
+        return False
 
     pattern = (
         r'^(?:https?://)?'
