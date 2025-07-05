@@ -25,6 +25,7 @@ class Bot:
         self.time = time.time()
         self.last_msg = ''
         self.last_msg_time = time.time()
+        self.last_ping = time.time()
         self.chess_manager = ChessManager(self)
         # poker params
         self.pokerGameActive = False
@@ -127,6 +128,7 @@ class Bot:
             self.send_command(f'JOIN #{channel}')
             # self.send_privmsg(channel, config.initial_msg)
         self.start_time = time.time()
+        self.last_ping = time.time()
         self.loop_for_messages()
 
     def parse_message(self, message):
@@ -329,13 +331,11 @@ class Bot:
             return
         if message['command']['command'] == 'PING':
             self.send_command('PONG :tmi.twitch.tv')
+            self.last_ping = time.time()
 
         if message['command']['command'] == 'RECONNECT':
             print("The Twitch server needs to terminate the connection for maintenance. Reconnecting...")
-            self.irc.shutdown(socket.SHUT_RDWR)
-            self.irc.close()
-            time.sleep(1)
-            self.connect()
+            self.reconnect()
             print("Reconnected.")
 
         # # Follow 1s cooldown
@@ -383,20 +383,33 @@ class Bot:
                 else:
                     return
 
+    def reconnect(self):
+        self.irc.shutdown(socket.SHUT_RDWR)
+        self.irc.close()
+        time.sleep(1)
+        self.connect()
+
     def loop_for_messages(self):
         buffer = ""  # Store partial messages
+        # Set socket timeout to check every minute
+        self.irc.settimeout(60)
         while True:
-            received_msgs = self.irc.recv(8192).decode(errors='ignore')
-            buffer += received_msgs  # Append new data to buffer
+            try:
+                received_msgs = self.irc.recv(8192).decode(errors='ignore')
+                buffer += received_msgs  
 
-            # Split messages using \r\n
-            messages = buffer.split("\r\n")
+                messages = buffer.split("\r\n")
+                buffer = messages.pop() if received_msgs[-2:] != "\r\n" else ""
 
-            # Check if the last message is incomplete (does not end in \r\n)
-            buffer = messages.pop() if received_msgs[-2:] != "\r\n" else ""
-
-            for received_msg in messages:
-                self.handle_message(received_msg)
+                for received_msg in messages:
+                    self.handle_message(received_msg)
+                    
+            except socket.timeout:
+                time_since_ping = time.time() - self.last_ping
+                
+                if time_since_ping > 1800:
+                    print(f"No ping received for {time_since_ping:.1f} seconds. Reconnecting...")
+                    self.reconnect()
     
     """Private commands"""
 
