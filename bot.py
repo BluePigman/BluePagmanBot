@@ -385,7 +385,10 @@ class Bot:
 
     def reconnect(self):
         self.irc.shutdown(socket.SHUT_RDWR)
-        self.irc.close()
+        try:
+            self.irc.close()
+        except OSError:
+            pass
         time.sleep(1)
         self.connect()
 
