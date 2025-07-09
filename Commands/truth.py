@@ -9,6 +9,7 @@ from curl_cffi import requests
 from dateutil import parser as date_parse
 
 import config
+from Utils.utils import fetch_cmd_data, send_chunks, check_cooldown
 
 
 class RateLimitExceeded(Exception):
@@ -116,9 +117,9 @@ def format_time_ago(created_at_str: str) -> str:
 
 
 def truthsocial(self, message):
-    if message['source']['nick'] in self.state and time.time() - self.state[message['source']['nick']] < self.cooldown:
+    cmd = fetch_cmd_data(self, message)
+    if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
         return
-    self.state[message['source']['nick']] = time.time()
 
     try:
         resp = api.pull_latest_status(user_id=TRUMP_USER_ID)
@@ -141,15 +142,12 @@ def truthsocial(self, message):
     soup = BeautifulSoup(content_html, "html.parser")
     clean_text = soup.get_text().strip()
     time_part = format_time_ago(created_at_str)
-    # Handle video-only posts
     if not clean_text and attachments:
         video = next((m.get("url") for m in attachments if m.get("type") == "video"), None)
         if video:
-            msg = f"Video post: {video} {time_part}".strip()
-            self.send_privmsg(message['command']['channel'], msg[:500])
+            msg = f"TRUTH {video} {time_part}".strip()
+            send_chunks(self.send_privmsg, cmd.channel, msg, delay=0.6)
             return
 
     msg = f"TRUTH {clean_text} {time_part}".strip()
-    if len(msg) > 500:
-        msg = msg[:495] + "..."
-    self.send_privmsg(message['command']['channel'], msg)
+    send_chunks(self.send_privmsg, cmd.channel, msg, delay=0.6)
