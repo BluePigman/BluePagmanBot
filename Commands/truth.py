@@ -14,8 +14,10 @@ import config
 class RateLimitExceeded(Exception):
     pass
 
+
 class UnknownError(Exception):
     pass
+
 
 class TruthSocialApi:
     API_BASE_URL = "https://truthsocial.com/api"
@@ -114,8 +116,7 @@ def format_time_ago(created_at_str: str) -> str:
 
 
 def truthsocial(self, message):
-    if not (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
-            self.cooldown):
+    if message['source']['nick'] in self.state and time.time() - self.state[message['source']['nick']] < self.cooldown:
         return
     self.state[message['source']['nick']] = time.time()
 
@@ -127,7 +128,6 @@ def truthsocial(self, message):
     except UnknownError as e:
         self.send_privmsg(message['command']['channel'], str(e))
         return
-
 
     if not resp or len(resp) == 0:
         self.send_privmsg(message['command']['channel'], "No recent posts found.")
