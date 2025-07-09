@@ -1,5 +1,4 @@
 import json
-import time
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -9,7 +8,7 @@ from curl_cffi import requests
 from dateutil import parser as date_parse
 
 import config
-from Utils.utils import fetch_cmd_data, send_chunks, check_cooldown
+from Utils.utils import fetch_cmd_data, check_cooldown, CHUNK_SIZE
 
 
 class RateLimitExceeded(Exception):
@@ -116,6 +115,24 @@ def format_time_ago(created_at_str: str) -> str:
         return ""
 
 
+def truncate_with_suffix(text: str, suffix: str, max_length: int = CHUNK_SIZE) -> str:
+    ellipsis = "..."
+    space = " " if suffix else ""
+    total_suffix = ellipsis + space + suffix  # e.g. "... (posted 10m ago)"
+
+    if len(text) + len(space + suffix) <= max_length:
+        return text + space + suffix
+
+    # Reserve space for the suffix and ellipsis
+    max_text_len = max_length - len(total_suffix)
+
+    if max_text_len <= 0:
+        # Not enough room for even a single char + suffix
+        return suffix[:max_length]
+
+    return text[:max_text_len].rstrip() + total_suffix
+
+
 def truthsocial(self, message):
     cmd = fetch_cmd_data(self, message)
     if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
@@ -142,12 +159,16 @@ def truthsocial(self, message):
     soup = BeautifulSoup(content_html, "html.parser")
     clean_text = soup.get_text().strip()
     time_part = format_time_ago(created_at_str)
+    max_content_len = CHUNK_SIZE - len("TRUTH ") - 1
+
     if not clean_text and attachments:
         video = next((m.get("url") for m in attachments if m.get("type") == "video"), None)
         if video:
-            msg = f"TRUTH {video} {time_part}".strip()
-            send_chunks(self.send_privmsg, cmd.channel, msg, delay=0.6)
+            truncated_video = truncate_with_suffix(video, time_part, max_length=max_content_len)
+            msg = "TRUTH " + truncated_video
+            self.send_privmsg(cmd.channel, msg)
             return
 
-    msg = f"TRUTH {clean_text} {time_part}".strip()
-    send_chunks(self.send_privmsg, cmd.channel, msg, delay=0.6)
+    truncated_text = truncate_with_suffix(clean_text, time_part, max_length=max_content_len)
+    msg = "TRUTH " + truncated_text
+    self.send_privmsg(cmd.channel, msg)
