@@ -99,7 +99,10 @@ def format_time_ago(created_at_str: str) -> str:
         minutes = (delta.seconds % 3600) // 60
 
         if days > 0:
-            return f"(posted {days}d {hours}h {minutes}m ago)"
+            if minutes > 0:
+                return f"(posted {days}d {hours}h {minutes}m ago)"
+            else:
+                return f"(posted {days}d {hours}h ago)"
         elif hours > 0:
             return f"(posted {hours}h {minutes}m ago)"
         elif minutes > 0:
@@ -112,7 +115,8 @@ def format_time_ago(created_at_str: str) -> str:
         return "(posted at unknown time)"
     except Exception as e:
         print(f"Unexpected error in date formatting: {e}")
-        return ""
+        print(f"Date string was: {created_at_str}")
+        return "(posted at unknown time)"
 
 
 def truncate_with_suffix(text: str, suffix: str, max_length: int = CHUNK_SIZE) -> str:
