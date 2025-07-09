@@ -1,7 +1,6 @@
 import json
 import time
 from datetime import datetime, timezone
-from time import sleep
 from typing import Any, Optional
 
 import curl_cffi
@@ -89,9 +88,13 @@ def truthsocial(self, message):
         created_at = date_parse.parse(created_at_str)
         now = datetime.now(timezone.utc)
         delta = now - created_at
+        days = delta.days
         hours = delta.seconds // 3600
         minutes = (delta.seconds % 3600) // 60
-        time_part = f"(posted {hours}h {minutes}m ago)"
+        if days > 0:
+            time_part = f"(posted {days}d {hours}h {minutes}m ago)"
+        else:
+            time_part = f"(posted {hours}h {minutes}m ago)"
     except Exception:
         time_part = ""
     # Handle video-only posts
