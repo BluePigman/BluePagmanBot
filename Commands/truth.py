@@ -32,38 +32,9 @@ class TruthSocialApi:
         self.ratelimit_reset = None
         self.token = token
 
-    def _make_session(self):
-        s = requests.Session()
-        return s
-
-    def _check_ratelimit(self, resp):
-        if resp.headers.get("x-ratelimit-limit") is not None:
-            self.ratelimit_max = int(resp.headers.get("x-ratelimit-limit"))
-        if resp.headers.get("x-ratelimit-remaining") is not None:
-            self.ratelimit_remaining = int(resp.headers.get("x-ratelimit-remaining"))
-        if resp.headers.get("x-ratelimit-reset") is not None:
-            self.ratelimit_reset = date_parse.parse(
-                resp.headers.get("x-ratelimit-reset")
-            )
-
-        if (
-                self.ratelimit_remaining is not None and self.ratelimit_remaining <= 50
-        ):  # We do 50 to be safe; their tracking is a bit stochastic... it can jump down quickly
-            now = datetime.utcnow().replace(tzinfo=timezone.utc)
-            time_to_sleep = (
-                    self.ratelimit_reset.replace(tzinfo=timezone.utc) - now
-            ).total_seconds()
-            # logger.warning(
-            #    f"Approaching rate limit; sleeping for {time_to_sleep} seconds..."
-            # )
-            if time_to_sleep > 0:
-                sleep(time_to_sleep)
-            else:
-                sleep(10)
-
     def _get(self, url: str, params: dict = None) -> Any:
         try:
-            resp = self._make_session().get(
+            resp = requests.Session().get(
                 self.API_BASE_URL + url,
                 params=params,
                 impersonate="chrome123",
@@ -74,28 +45,21 @@ class TruthSocialApi:
             )
         except curl_cffi.curl.CurlError as e:
             print(f"Curl error: {e}")
-            pass
-        # Will also sleep
-        # self._check_ratelimit(resp)
+            return None
 
         try:
             r = resp.json()
         except json.JSONDecodeError:
             print(f"Failed to decode JSON: {resp.text}")
             r = None
-
         return r
 
-    def lookup(self, user_handle: str = None) -> Optional[dict]:
+    def lookup(self, user_handle: str) -> Optional[dict]:
         """Lookup a user's information."""
-        assert user_handle is not None
         return self._get("/v1/accounts/lookup", params=dict(acct=user_handle))
 
     def pull_latest_status(self, user_id: str):
-        result = self._get(f"/v1/accounts/{user_id}/statuses?exclude_replies=true&only_replies=false&with_muted=true")
-        if result is None:
-            return None
-        return result
+        return self._get(f"/v1/accounts/{user_id}/statuses?exclude_replies=true&only_replies=false&with_muted=true")
 
 
 api = TruthSocialApi(token=config.TRUTHSOCIAL_KEY)
