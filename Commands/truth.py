@@ -37,6 +37,9 @@ class TruthSocialApi:
             "User-Agent": self.USER_AGENT,
         })
 
+        if resp is None:
+            raise UnknownError("Failed to make request to Truth Social API. Please try again later.")
+
         if resp.status_code == 429:
             raise RateLimitExceeded("Truth Social API Rate limit exceeded. Please try again later.")
 
