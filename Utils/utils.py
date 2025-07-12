@@ -1,17 +1,23 @@
+from datetime import datetime, timezone
 from pathlib import Path
+
+import curl_cffi
 from bs4 import BeautifulSoup
 from urllib.parse import urlencode, urlparse, quote_plus
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Optional
 import google.generativeai as genai_text
 from google import genai as genai_image
 from google.genai import types
 from groq import Groq
 from dataclasses import dataclass
 import config, os, requests, re, base64, time, json, sqlite3, tempfile, traceback, inspect, mimetypes, uuid
+from dateutil import parser as date_parse
+from curl_cffi import requests as cffi_requests
+
 
 # --- Error Logging ---
 
-def log_err(e: Exception) -> None: 
+def log_err(e: Exception) -> None:
     """Prints detailed information about an exception to the console, including type, message, args, and traceback."""
     try:
         caller = inspect.stack()[1].function
@@ -25,6 +31,7 @@ def log_err(e: Exception) -> None:
         print("Error while printing exception details:")
         print(f"{type(ex).__name__}: {ex}")
 
+
 def msg_err(send_func: callable, channel: str, e: Exception) -> None:
     """Sends a simplified error message to a channel."""
     try:
@@ -32,7 +39,6 @@ def msg_err(send_func: callable, channel: str, e: Exception) -> None:
         send_func(channel, msg)
     except Exception as ex:
         log_err(ex)
-
 
 
 # --- Chat Utilities ---
@@ -47,7 +53,9 @@ class CmdData:
     state: Dict
     cooldown: int
 
+
 class SingleWord(str): pass
+
 
 def fetch_cmd_data(self, message: dict, split_params: bool = False, arg_types: dict = None) -> CmdData:
     """
@@ -107,6 +115,7 @@ def fetch_cmd_data(self, message: dict, split_params: bool = False, arg_types: d
         cooldown=self.cooldown,
     )
 
+
 def check_cooldown(state: Dict[str, float], nick: str, cooldown: float) -> bool:
     """
     Returns True if the user is not in cooldown and updates their timestamp.
@@ -120,8 +129,9 @@ def check_cooldown(state: Dict[str, float], nick: str, cooldown: float) -> bool:
     if allowed:
         state[nick] = time.time()
         return True
-    
+
     return False
+
 
 def clean_str(text: str, remove: list[str] = None) -> str:
     """
@@ -135,7 +145,9 @@ def clean_str(text: str, remove: list[str] = None) -> str:
 def encode_str(input_text):
     return quote_plus(input_text)
 
+
 CHUNK_SIZE = 495
+
 
 def chunk_str(text: str, chunk_size: int = CHUNK_SIZE) -> list[str]:
     """
@@ -158,6 +170,7 @@ def chunk_str(text: str, chunk_size: int = CHUNK_SIZE) -> list[str]:
 
     return chunks
 
+
 def send_chunks(send_func: callable, channel, text: str, chunk_size: int = CHUNK_SIZE, delay: float = 1.2) -> None:
     """
     Send text in chunks of size chunk_size to channel, delay is in seconds.
@@ -167,7 +180,6 @@ def send_chunks(send_func: callable, channel, text: str, chunk_size: int = CHUNK
         send_func(channel, chunk)
         if idx < len(chunks) - 1:
             time.sleep(delay)
-
 
 
 # --- File Utilities ---
@@ -225,6 +237,7 @@ class GenericStorage:
     is_empty():
         Returns True if storage is empty (no keys), else False.
     """
+
     def __init__(self, filename, initial_data=None):
         self.folder = os.path.join(tempfile.gettempdir(), "generic_storage")
         os.makedirs(self.folder, exist_ok=True)
@@ -290,6 +303,7 @@ class GenericStorage:
     def is_empty(self):
         return not bool(self._read())
 
+
 DEFAULT_UPLOADER = "s-ul.eu"
 
 UPLOAD_SERVICES = {
@@ -318,6 +332,7 @@ UPLOAD_SERVICES = {
         "get_link": lambda r: r.json().get("url", None),
     }
 }
+
 
 def upload_file(service: str, filepath: str, ext: str, delete_file: bool = False, timeout: int = 60) -> dict:
     """
@@ -348,18 +363,18 @@ def upload_file(service: str, filepath: str, ext: str, delete_file: bool = False
 
     content_type = mime_map.get(ext.lower(), "application/octet-stream")
     filename = f"upload.{ext}"
-    
+
     for current_service in services_to_try:
         uploader = UPLOAD_SERVICES[current_service]
         print(f"Uploading {filename} as {content_type} to {current_service} from {filepath}...")
-        
+
         try:
             with open(filepath, "rb") as f:
                 files = {uploader["field"]: (filename, f, content_type)}
                 res = proxy_request("POST", uploader["url"], files=files, headers=uploader["headers"], timeout=timeout)
 
             res.raise_for_status()
-            
+
             if 'text/html' in res.headers.get('Content-Type', ''):
                 print(f"Unexpected HTML response from {current_service}")
                 continue
@@ -390,6 +405,7 @@ def upload_file(service: str, filepath: str, ext: str, delete_file: bool = False
 
     return {"success": False, "message": f"All upload services failed."}
 
+
 def download_bytes(file_url: str) -> str | None:
     """Download data from the given URL and return it base64-encoded as a string, or None on failure."""
     try:
@@ -404,12 +420,14 @@ def download_bytes(file_url: str) -> str | None:
         log_err(e)
         return None
 
+
 # --- Proxy HTTP Requests ---
 
 HEADERS = {'User-agent': 'BluePagmanBot'}
 TIMEOUT = 10
 
 proxy = getattr(config, 'PROXY', None)
+
 
 def proxy_rotator(proxy: list[str] | str, domain: str) -> str:
     """
@@ -432,7 +450,9 @@ def proxy_rotator(proxy: list[str] | str, domain: str) -> str:
 
     return proxy[data["idx"]]
 
-def proxy_request(method: str, url: str, headers=None, timeout=TIMEOUT, bypass_proxy=False, session=None, **kwargs) -> requests.Response:
+
+def proxy_request(method: str, url: str, headers=None, timeout=TIMEOUT, bypass_proxy=False, session=None,
+                  **kwargs) -> requests.Response:
     """
     Perform HTTP request with given method through proxy if configured.
     Supports additional requests parameters via kwargs.
@@ -442,7 +462,7 @@ def proxy_request(method: str, url: str, headers=None, timeout=TIMEOUT, bypass_p
         headers = HEADERS.copy()
     else:
         headers = headers.copy()
-    
+
     target_url = url
     if proxy and not bypass_proxy:
         domain = urlparse(url).netloc
@@ -453,8 +473,9 @@ def proxy_request(method: str, url: str, headers=None, timeout=TIMEOUT, bypass_p
 
     requester = session or requests
     res = requester.request(method, target_url, headers=headers, timeout=(timeout, timeout), **kwargs)
-    
+
     return res
+
 
 def fetch_firefox_cookies(domains: List[str] | None = None, as_netscape: bool = False) -> Union[str, Dict[str, str]]:
     """
@@ -507,6 +528,7 @@ def fetch_firefox_cookies(domains: List[str] | None = None, as_netscape: bool = 
     cookie_dict = {name: val for _, _, _, _, name, val in rows}
     return cookie_dict
 
+
 def parse_str(data: str, kind: str) -> Any:
     """
     Parse the input string as either JSON or HTML.
@@ -518,6 +540,7 @@ def parse_str(data: str, kind: str) -> Any:
         return BeautifulSoup(data, "lxml")
 
     raise ValueError("kind must be 'json' or 'html'")
+
 
 def is_url(url):
     """
@@ -567,7 +590,6 @@ def is_url(url):
     return tld in tlds
 
 
-
 # --- LLM Generation Utilities ---
 
 def gemini_generate(request: str | dict, model) -> str | list[str]:
@@ -607,9 +629,12 @@ def gemini_generate(request: str | dict, model) -> str | list[str]:
         log_err(e)
         return
 
+
 GEMINI_IMAGE_MODEL = "gemini-2.0-flash-exp-image-generation"
 
-def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None, temperature: float = 1, image_model: str = GEMINI_IMAGE_MODEL) -> str | None:
+
+def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None, temperature: float = 1,
+                          image_model: str = GEMINI_IMAGE_MODEL) -> str | None:
     """
     Generate an image from a text prompt and optional input images using Gemini model.
     Returns the file path of the saved image or None if generation fails.
@@ -642,16 +667,17 @@ def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None
 
     try:
         for chunk in client.models.generate_content_stream(
-            model=image_model,
-            contents=contents,
-            config=generate_config,
+                model=image_model,
+                contents=contents,
+                config=generate_config,
         ):
             c = chunk.candidates
             if not c or not c[0].content or not c[0].content.parts:
                 continue
             inline_data = c[0].content.parts[0].inline_data
             if inline_data and inline_data.data:
-                data_buffer = base64.b64decode(inline_data.data) if inline_data.data.startswith(b'iVBORw') else inline_data.data
+                data_buffer = base64.b64decode(inline_data.data) if inline_data.data.startswith(
+                    b'iVBORw') else inline_data.data
                 file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".png"
                 dir_path = os.path.join(tempfile.gettempdir(), "gemini_generated_images")
                 os.makedirs(dir_path, exist_ok=True)
@@ -669,6 +695,7 @@ def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None
     except Exception as e:
         log_err(e)
         return None
+
 
 def groq_generate(request: dict, client_opts: dict | None = None) -> str | None:
     """
@@ -735,5 +762,94 @@ def groq_generate(request: dict, client_opts: dict | None = None) -> str | None:
         return response_text
 
     except Exception as e:
+        log_err(e)
+        return None
+
+
+def format_time_ago(created_at: str) -> str:
+    """
+    Format a datetime string into a human-readable 'time ago' format.
+    Handles timezone-aware and naive datetime objects.
+
+    Args:
+        created_at_str: The ISO-formatted datetime string.
+    Returns:
+        str: A formatted string like "(posted 5h 10m ago)" or an empty string on error.
+    """
+    if not created_at:
+        return ""
+
+    try:
+        created_at = date_parse.parse(created_at)
+        now = datetime.now(timezone.utc)
+
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+
+        delta = now - created_at
+        if delta.total_seconds() < 0:
+            return "(posted in the future?)"
+
+        days = delta.days
+        hours, remainder = divmod(delta.seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+
+        parts = []
+        if days > 0:
+            parts.append(f"{days}d")
+        if hours > 0:
+            parts.append(f"{hours}h")
+        if days == 0 and minutes > 0:
+            parts.append(f"{minutes}m")
+
+        if not parts:
+            return "(posted just now)"
+
+        return f"(posted {' '.join(parts)} ago)"
+
+    except (date_parse.ParserError, TypeError, ValueError) as e:
+        log_err(e)
+        return ""
+
+
+def impersonated_request(method: cffi_requests.HttpMethod, url: str,
+                         impersonate: cffi_requests.BrowserTypeLiteral = "chrome123", **kwargs) -> \
+        Optional[cffi_requests.Response]:
+    """
+    Performs an HTTP request using curl_cffi to bypass advanced bot detection.
+
+    This function impersonates the TLS/JA3 fingerprint of a real web browser
+    (e.g., "chrome123"), which can defeat security measures like Cloudflare's
+    "I'm under attack mode" or other systems that block standard automation tools.
+
+    Args:
+        method (HttpMethod): The HTTP method (e.g., 'GET', 'POST').
+        url (str): The full URL to request.
+        impersonate (str): The browser version to impersonate.
+                           Defaults to "chrome123". Other examples: "safari17", "edge122".
+        **kwargs: Additional keyword arguments passed directly to the
+                  requests call (e.g., headers, params, json, data, timeout).
+
+    Returns:
+        Optional[cffi_requests.Response]: The curl_cffi Response object on success,
+                                         or None if a CurlError or other exception occurs.
+    """
+    try:
+        with cffi_requests.Session() as s:
+            res = s.request(
+                method=method,
+                url=url,
+                impersonate=impersonate,
+                **kwargs
+            )
+        return res
+
+    except curl_cffi.curl.CurlError as e:
+        print(f"A curl-cffi specific error occurred for URL: {url}")
+        log_err(e)
+        return None
+
+    except Exception as e:
+        print(f"An unexpected error occurred during the impersonated request to {url}")
         log_err(e)
         return None
