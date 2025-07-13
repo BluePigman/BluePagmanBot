@@ -33,7 +33,12 @@ def truthsocial(self, message):
             f"Failed to fetch the latest post from https://trumpstruth.org/feed. Status code {response.status_code}")
         return
 
-    root = ET.fromstring(response.content)
+    try:
+        root = ET.fromstring(response.content)
+    except ET.ParseError:
+        self.send_privmsg(message['command']['channel'], "Failed to parse RSS feed from https://trumpstruth.org/feed")
+        return
+    
     channel = root.find('channel')
     if channel is None:
         self.send_privmsg(message['command']['channel'], "No channel found in RSS feed. https://trumpstruth.org/feed")
@@ -46,13 +51,8 @@ def truthsocial(self, message):
 
     valid_item = None
     for item in items:
-        title_elem = item.find('title')
-        description_elem = item.find('description')
-        description_text = description_elem.text.strip() if description_elem is not None and description_elem.text else ""
-        # Skip placeholder titles and empty descriptions
-        if "[No Title]" in title_elem:
-            continue
-        if not description_text or "<p></p>" in description_text:
+        title = item.find('title').text
+        if "[No Title]" in title:
             continue
         valid_item = item
         break
@@ -61,7 +61,7 @@ def truthsocial(self, message):
         self.send_privmsg(message['command']['channel'], "No valid posts found in RSS feed.")
         return
 
-    clean_text = BeautifulSoup(description_text, "html.parser").get_text().strip()
+    clean_text = BeautifulSoup(title, "html.parser").get_text().strip()
     time_part = format_time_ago(valid_item.find('pubDate').text)
     max_content_len = CHUNK_SIZE - len("TRUTH ") - 1
     truncated_text = truncate_with_suffix(clean_text, time_part, max_length=max_content_len)
