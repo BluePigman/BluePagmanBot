@@ -1,8 +1,6 @@
 import xml.etree.ElementTree as ET
-
 import requests
 from bs4 import BeautifulSoup
-
 from Utils.utils import fetch_cmd_data, check_cooldown, CHUNK_SIZE, format_time_ago
 
 
@@ -60,10 +58,7 @@ def truthsocial(self, message):
         break
 
     if valid_item is None:
-        self.send_privmsg(
-            message['command']['channel'],
-            "No valid posts found in RSS feed."
-        )
+        self.send_privmsg(message['command']['channel'], "No valid posts found in RSS feed.")
         return
 
     clean_text = BeautifulSoup(description_text, "html.parser").get_text().strip()
