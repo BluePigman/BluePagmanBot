@@ -8,7 +8,7 @@ from pymongo.mongo_client import MongoClient
 from Commands import (bot_info, date, groq_command, help_ascii, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
                       news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2,
                       ascii, reloadglobals, reloadchannel, sparlerlink, suggest, poker, rm, olympics, summarize, describe, rottentomatoes, remind, eight_ball,
-                      guessgame, x, genius, generate_image, rrc, gemini3, nba)
+                      guessgame, x, genius, generate_image, rrc, gemini3, nba, truth)
 
 class Bot:
 
@@ -88,7 +88,8 @@ class Bot:
             'generate': generate_image.reply_with_generate,
             'rrc': rrc.reply_with_random_reddit_comment,
             'gemini3': gemini3.reply_with_grounded_gemini,
-            'nba': nba.reply_with_nba_scores
+            'nba': nba.reply_with_nba_scores,
+            "truth": truth.truthsocial
         }
 
         # only bot owner can use these commands
@@ -399,17 +400,17 @@ class Bot:
         while True:
             try:
                 received_msgs = self.irc.recv(8192).decode(errors='ignore')
-                buffer += received_msgs  
+                buffer += received_msgs
 
                 messages = buffer.split("\r\n")
                 buffer = messages.pop() if received_msgs[-2:] != "\r\n" else ""
 
                 for received_msg in messages:
                     self.handle_message(received_msg)
-                    
+
             except socket.timeout:
                 time_since_ping = time.time() - self.last_ping
-                
+
                 if time_since_ping > 1800:
                     print(f"No ping received for {time_since_ping:.1f} seconds. Reconnecting...")
                     self.reconnect()

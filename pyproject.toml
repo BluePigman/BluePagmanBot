@@ -23,6 +23,7 @@ dependencies = [
     "googlenewsdecoder>=0.1.7",
     "html2text>=2025.4.15",
     "lxml>=5.4.0",
+    "curl-cffi>=0.11.4",
 ]
 
 [tool.setuptools]

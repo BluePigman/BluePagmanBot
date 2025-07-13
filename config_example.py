@@ -9,6 +9,6 @@ user_access_token = "Your user access token"
 client_id = "Your client ID"
 githubToken = "Your Github Token"
 GOOGLE_API_KEY = "Your Google API Key"
-GROQ_API_KEY = "Your Groq API Key" 
+GROQ_API_KEY = "Your Groq API Key"
 PROXY = "Your service worker URL" # For rotating proxies use: ["worker_url_1", "worker_url_2", "worker_url_3", "etc"]
 FIREFOX_COOKIES_PATH = "~/.mozilla/firefox/xxxxxxxx.default-release/cookies.sqlite"
