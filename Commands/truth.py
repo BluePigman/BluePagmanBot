@@ -61,8 +61,12 @@ def truthsocial(self, message):
         self.send_privmsg(message['command']['channel'], "No valid posts found in RSS feed.")
         return
 
+    pub_date_elem = valid_item.find('pubDate')
+    if pub_date_elem is not None and pub_date_elem.text:
+       time_part = format_time_ago(pub_date_elem.text)
+    else:
+        time_part = ""
     clean_text = BeautifulSoup(title, "html.parser").get_text().strip()
-    time_part = format_time_ago(valid_item.find('pubDate').text)
     max_content_len = CHUNK_SIZE - len("TRUTH ") - 1
     truncated_text = truncate_with_suffix(clean_text, time_part, max_length=max_content_len)
     self.send_privmsg(cmd.channel, "TRUTH " + truncated_text)
