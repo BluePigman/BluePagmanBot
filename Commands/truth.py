@@ -32,8 +32,7 @@ def truthsocial(self, message):
     response = requests.get("https://trumpstruth.org/feed", timeout=5)
     if response.status_code != 200:
         self.send_privmsg(message['command']['channel'],
-                          "Failed to fetch the latest post from https://trumpstruth.org/feed. status code " + str(
-                              response.status_code))
+            f"Failed to fetch the latest post from https://trumpstruth.org/feed. Status code {response.status_code}")
         return
 
     root = ET.fromstring(response.content)
@@ -41,20 +40,34 @@ def truthsocial(self, message):
     if channel is None:
         self.send_privmsg(message['command']['channel'], "No channel found in RSS feed. https://trumpstruth.org/feed")
         return
+
     items = channel.findall('item')
     if not items:
         self.send_privmsg(message['command']['channel'], "No items found in RSS feed. https://trumpstruth.org/feed")
         return
 
-    latest_item = items[0]
-    description = latest_item.find('description').text if latest_item.find(
-        'description') is not None else ''
+    valid_item = None
+    for item in items:
+        title_elem = item.find('title')
+        description_elem = item.find('description')
+        description_text = description_elem.text.strip() if description_elem is not None and description_elem.text else ""
+        # Skip placeholder titles and empty descriptions
+        if "[No Title]" in title_elem:
+            continue
+        if not description_text or "<p></p>" in description_text:
+            continue
+        valid_item = item
+        break
 
-    soup = BeautifulSoup(description, "html.parser")
-    clean_text = soup.get_text().strip()
-    time_part = format_time_ago(latest_item.find('pubDate').text)
+    if valid_item is None:
+        self.send_privmsg(
+            message['command']['channel'],
+            "No valid posts found in RSS feed."
+        )
+        return
+
+    clean_text = BeautifulSoup(description_text, "html.parser").get_text().strip()
+    time_part = format_time_ago(valid_item.find('pubDate').text)
     max_content_len = CHUNK_SIZE - len("TRUTH ") - 1
-
     truncated_text = truncate_with_suffix(clean_text, time_part, max_length=max_content_len)
-    msg = "TRUTH " + truncated_text
-    self.send_privmsg(cmd.channel, msg)
+    self.send_privmsg(cmd.channel, "TRUTH " + truncated_text)
