@@ -25,9 +25,16 @@ model = genai.GenerativeModel(
     ]
 )
 
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    "Accept": "text/html,application/xhtml+xml",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://example.com",
+}
+
 def fetch_and_parse_html(url):
     try:
-        res = proxy_request("GET", url)
+        res = proxy_request("GET", url, headers=headers)
         if not res or not res.text:
             print(f"fetch_and_parse_html: Empty response from {url}")
             return None
