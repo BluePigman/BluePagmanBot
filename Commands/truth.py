@@ -26,27 +26,32 @@ def truthsocial(self, message):
     cmd = fetch_cmd_data(self, message)
     if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
         return
-
-    response = requests.get("https://trumpstruth.org/feed", timeout=5)
+    try:
+        response = requests.get("https://trumpstruth.org/feed", timeout=5)
+    except requests.exceptions.ReadTimeout:
+        self.send_privmsg(cmd.channel,
+            f"The server did not respond, please try again later.")
+        return
+    
     if response.status_code != 200:
-        self.send_privmsg(message['command']['channel'],
+        self.send_privmsg(cmd.channel,
             f"Failed to fetch the latest post from https://trumpstruth.org/feed. Status code {response.status_code}")
         return
 
     try:
         root = ET.fromstring(response.content)
     except ET.ParseError:
-        self.send_privmsg(message['command']['channel'], "Failed to parse RSS feed from https://trumpstruth.org/feed")
+        self.send_privmsg(cmd.channel, "Failed to parse RSS feed from https://trumpstruth.org/feed")
         return
     
     channel = root.find('channel')
     if channel is None:
-        self.send_privmsg(message['command']['channel'], "No channel found in RSS feed. https://trumpstruth.org/feed")
+        self.send_privmsg(cmd.channel, "No channel found in RSS feed. https://trumpstruth.org/feed")
         return
 
     items = channel.findall('item')
     if not items:
-        self.send_privmsg(message['command']['channel'], "No items found in RSS feed. https://trumpstruth.org/feed")
+        self.send_privmsg(cmd.channel, "No items found in RSS feed. https://trumpstruth.org/feed")
         return
 
     valid_item = None
@@ -58,7 +63,7 @@ def truthsocial(self, message):
         break
 
     if valid_item is None:
-        self.send_privmsg(message['command']['channel'], "No valid posts found in RSS feed.")
+        self.send_privmsg(cmd.channel, "No valid posts found in RSS feed.")
         return
 
     pub_date_elem = valid_item.find('pubDate')
