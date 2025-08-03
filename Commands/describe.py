@@ -179,10 +179,8 @@ def reply_with_describe(self, message):
 
         except Exception as e:
             print(e)
-            self.send_privmsg(message['command']['channel'], str(e)[0:400])
-            time.sleep(0.5)
             self.send_privmsg(
-                message['command']['channel'], "PDF could not be processed, check the link.")
+                message['command']['channel'], "PDF could not be processed.")
             return
     else:
         m = f"@{message['tags']['display-name']}, content type was found to be {content_type}. Please provide a valid emote name, or a link to an image or a .mp4 video."
