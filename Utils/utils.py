@@ -71,7 +71,7 @@ def fetch_cmd_data(self, message: dict, split_params: bool = False, arg_types: d
     """
     raw = message['command']['botCommandParams']
     if isinstance(raw, str):
-        raw = raw.replace('\U000E0000', '')
+        raw = raw.replace('\u034f', '')
     else:
         raw = ''
 

@@ -24,8 +24,8 @@ class ChessGame:
         add symbols representing check or checkmate, if they were missing.
         return True if move was success, False otherwise.
         """
-        if '\U000e0000' in move:
-            move = move.replace('\U000e0000', '')
+        if '\u034f' in move:
+            move = move.replace('\u034f', '')
 
         try:
             # Ensure the move is valid before trying to get SAN

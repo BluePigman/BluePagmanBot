@@ -109,7 +109,7 @@ class Bot:
 
     def send_privmsg(self, channel, text):
         if text == self.last_msg and (time.time() - self.last_msg_time) < 30:
-            text += ' \U000e0000'
+            text += ' \u034f'
         self.send_command(f'PRIVMSG #{channel} : {text}')
         self.last_msg_time, self.last_msg = time.time(), text
 
@@ -360,7 +360,7 @@ class Bot:
             
             # check for emotes when guess game active
             if self.guessGameActive:
-                guess = message['parameters'].replace('\U000e0000', '')
+                guess = message['parameters'].replace('\u034f', '')
                 currentRoundEmote = guessgame.get_current_emote(self)
                 if currentRoundEmote and guess == currentRoundEmote:
                     if self.guessGameRoundTimer:

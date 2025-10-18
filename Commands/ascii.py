@@ -83,8 +83,8 @@ def reply_with_ascii(self, message):
             m = f"@{message['tags']['display-name']}, please provide a URL of the image or a global emote name."
             self.send_privmsg(message['command']['channel'], m)
             return
-        if "\U000e0000" in message['command']['botCommandParams']:
-            message['command']['botCommandParams'].remove("\U000e0000")
+        if "\u034f" in message['command']['botCommandParams']:
+            message['command']['botCommandParams'].remove("\u034f")
         input_arg = message['command']['botCommandParams'].split()
         channel_id = message["tags"]["room-id"]
         user_display_name = message['tags']['display-name']
