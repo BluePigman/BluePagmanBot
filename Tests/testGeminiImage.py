@@ -5,11 +5,12 @@ from google import genai
 from google.genai import types
 import base64
 from config import GOOGLE_API_KEY
+from Utils.utils import GEMINI_IMAGE_MODEL
 
 def generate():
     client = genai.Client(api_key=GOOGLE_API_KEY)
 
-    model = "gemini-2.0-flash-exp-image-generation"
+    model = GEMINI_IMAGE_MODEL
     contents = [
         types.Content(
             role="user",

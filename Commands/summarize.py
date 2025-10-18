@@ -15,7 +15,7 @@ from Utils.utils import (
 SUMMARY_CHAR_LIMIT = 500
 
 model = genai.GenerativeModel(
-    model_name="gemini-2.0-flash-lite",
+    model_name="gemini-2.5-flash-lite",
     generation_config={
         "max_output_tokens": 400,
         "temperature": 0.5,
