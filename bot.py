@@ -40,6 +40,7 @@ class Bot:
         self.numRounds = 5
         self.guessGameRoundTimer = None
         self.hintTimer = None
+        self.irc = None 
 
         # anyone can use these
         self.custom_commands = {
@@ -360,9 +361,9 @@ class Bot:
             self.last_ping = time.time()
 
         if message['command']['command'] == 'RECONNECT':
-            print("The Twitch server needs to terminate the connection for maintenance. Reconnecting...")
-            self.reconnect()
-            print("Reconnected.")
+            print("The Twitch server signaled RECONNECT. Exiting message loop to reconnect.")
+            raise ConnectionResetError("Server requested reconnect")
+
 
         # # Follow 1s cooldown
         if message['command']['command'] == 'PRIVMSG':
