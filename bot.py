@@ -137,6 +137,7 @@ class Bot:
     def close_connection(self):
         if self.irc:
             try:
+                self.reset_games()
                 self.irc.shutdown(socket.SHUT_RDWR)
                 self.irc.close()
                 print("Socket closed.")
@@ -498,6 +499,18 @@ class Bot:
                 reloadglobals.delete_global_emotes(self, message)
             else:
                 reloadglobals.delete_emotes_from_database(self, message)
+
+    def reset_games(self):
+        self.pokerGameActive = False
+        self.pokerPlayers = {}
+        self.pokerGame = None
+        if self.pokerTimer:
+            self.pokerTimer.cancel()
+        self.guessGameActive = False
+        if self.guessGameRoundTimer:
+            self.guessGameRoundTimer.cancel()
+        if self.hintTimer:
+            self.hintTimer.cancel()
 
 def main():
     bot = Bot()
