@@ -125,10 +125,13 @@ class Bot:
                 print("Connecting to Twitch IRC...")
                 self.connect()
                 self.loop_for_messages()
+            except KeyboardInterrupt:
+                print("\nShutdown requested by user.")
+                self.close_connection()
+                sys.exit(0)
+
             except (ConnectionResetError, BrokenPipeError, OSError) as e:
                 print(f"Connection error: {e}. The connection was lost.")
-            except Exception as e:
-                print(f"An unexpected error occurred in the main run loop: {e}")
             
             print("Reconnecting in 10 seconds...")
             self.close_connection()
