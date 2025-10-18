@@ -40,6 +40,7 @@ class Bot:
         self.numRounds = 5
         self.guessGameRoundTimer = None
         self.hintTimer = None
+        self.irc = None 
 
         # anyone can use these
         self.custom_commands = {
@@ -118,6 +119,35 @@ class Bot:
             print(f'< {command}')
         self.irc.send((command + '\r\n').encode())
 
+    def run(self):
+        while True:
+            try:
+                print("Connecting to Twitch IRC...")
+                self.connect()
+                self.loop_for_messages()
+            except KeyboardInterrupt:
+                print("\nShutdown requested by user.")
+                self.close_connection()
+                sys.exit(0)
+
+            except (ConnectionResetError, BrokenPipeError, OSError) as e:
+                print(f"Connection error: {e}. The connection was lost.")
+            
+            print("Reconnecting in 10 seconds...")
+            self.close_connection()
+            time.sleep(10)
+
+    def close_connection(self):
+        if self.irc:
+            try:
+                self.reset_games()
+                self.irc.shutdown(socket.SHUT_RDWR)
+                self.irc.close()
+                print("Socket closed.")
+            except (OSError, socket.error):
+                pass
+        self.irc = None
+
     def connect(self):
         self.irc = ssl.create_default_context().wrap_socket(
             socket.socket(), server_hostname=self.irc_server)
@@ -130,7 +160,7 @@ class Bot:
             # self.send_privmsg(channel, config.initial_msg)
         self.start_time = time.time()
         self.last_ping = time.time()
-        self.loop_for_messages()
+        print("Connection successful.")
 
     def parse_message(self, message):
         parsed_message = {
@@ -335,9 +365,9 @@ class Bot:
             self.last_ping = time.time()
 
         if message['command']['command'] == 'RECONNECT':
-            print("The Twitch server needs to terminate the connection for maintenance. Reconnecting...")
-            self.reconnect()
-            print("Reconnected.")
+            print("The Twitch server signaled RECONNECT. Exiting message loop to reconnect.")
+            raise ConnectionResetError("Server requested reconnect")
+
 
         # # Follow 1s cooldown
         if message['command']['command'] == 'PRIVMSG':
@@ -384,36 +414,38 @@ class Bot:
                 else:
                     return
 
-    def reconnect(self):
-        self.irc.shutdown(socket.SHUT_RDWR)
-        try:
-            self.irc.close()
-        except OSError:
-            pass
-        time.sleep(1)
-        self.connect()
 
     def loop_for_messages(self):
         buffer = ""  # Store partial messages
         # Set socket timeout to check every minute
-        self.irc.settimeout(60)
+        self.irc.settimeout(240)
         while True:
             try:
-                received_msgs = self.irc.recv(8192).decode(errors='ignore')
-                buffer += received_msgs
+                received_bytes = self.irc.recv(8192)
+                if not received_bytes:
+                    print("Connection closed by server (received 0 bytes).")
+                    return
 
+                received_msgs = received_bytes.decode(errors='ignore')
+                buffer += received_msgs
                 messages = buffer.split("\r\n")
-                buffer = messages.pop() if received_msgs[-2:] != "\r\n" else ""
+                buffer = messages.pop()
 
                 for received_msg in messages:
                     self.handle_message(received_msg)
 
             except socket.timeout:
                 time_since_ping = time.time() - self.last_ping
-
-                if time_since_ping > 1800:
-                    print(f"No ping received for {time_since_ping:.1f} seconds. Reconnecting...")
-                    self.reconnect()
+                if time_since_ping > 600:
+                    print(f"No PING received for {time_since_ping:.1f} seconds. Connection is likely dead.")
+                    return
+                else:
+                    print("Socket timeout, but PING is recent. Connection is OK.")
+                    pass
+            
+            except (ConnectionResetError, BrokenPipeError, OSError) as e:
+                print(f"Socket error in message loop: {e}")
+                return
     
     """Private commands"""
 
@@ -471,9 +503,21 @@ class Bot:
             else:
                 reloadglobals.delete_emotes_from_database(self, message)
 
+    def reset_games(self):
+        self.pokerGameActive = False
+        self.pokerPlayers = {}
+        self.pokerGame = None
+        if self.pokerTimer:
+            self.pokerTimer.cancel()
+        self.guessGameActive = False
+        if self.guessGameRoundTimer:
+            self.guessGameRoundTimer.cancel()
+        if self.hintTimer:
+            self.hintTimer.cancel()
+
 def main():
     bot = Bot()
-    bot.connect()
+    bot.run()
 
 
 if __name__ == '__main__':
