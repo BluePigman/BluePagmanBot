@@ -10,11 +10,11 @@ genai.configure(api_key=config.GOOGLE_API_KEY)
 
 # Maximum file size in bytes (1 GB)
 MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024
-
+REQUEST_TIMEOUT_SECS = 30
 
 def get_file_size(url):
     try:
-        response = requests.head(url)
+        response = requests.head(url, timeout=REQUEST_TIMEOUT_SECS, allow_redirects=True)
         response.raise_for_status()
         content_length = response.headers.get('Content-Length')
         if content_length:
@@ -26,13 +26,23 @@ def get_file_size(url):
 
 def get_content_type(url):
     try:
-        response = requests.get(url)
+        # Try HEAD first
+        response = requests.head(url, timeout=REQUEST_TIMEOUT_SECS, allow_redirects=True)
+        response.raise_for_status()
+        ctype = response.headers.get('Content-Type')
+        if ctype:
+                return ctype
+        # Fallback to GET only if needed
+        response = requests.get(url, stream=True, timeout=REQUEST_TIMEOUT_SECS)
+        response.raise_for_status()
         return response.headers.get('Content-Type')
     except Exception as e:
         print(f"Error fetching content type: {e}")
         return None
 
 def generate_gemini_description(media, input_text):
+    if not media:
+        return ["Media failed to upload"]
     response = gemini.generate([media, input_text])
     return response
 
@@ -50,27 +60,23 @@ def gemini_for_video(media, input_text):
         return None
 
 
-def upload_img_gemini(media_url, content_type):
-    """Upload image to gemini to be used for prompts"""
-    # Download the image
-    image_response = requests.get(media_url, stream=True)
-    
-    extension_map = {
-        'image/jpeg': 'jpg',
-        'image/png': 'png',
-        'image/webp': 'webp',
-        'image/gif': 'gif'
-    }
-    extension = extension_map.get(content_type, 'jpg')
+def upload_file_gemini(media_url, content_type):
+    """Upload file to gemini to be used for prompts"""
+    try:
+        # Download the file
+        response = requests.get(media_url, stream=True, timeout=REQUEST_TIMEOUT_SECS)
 
-    image_file_name = f"temp_image.{extension}"
-    with open(image_file_name, 'wb') as image_file:
-        image_file.write(image_response.content)
-
-    image_file = genai.upload_file(image_file_name, mime_type=content_type)
-    time.sleep(1)
-    os.remove(image_file_name)
-    return image_file
+        # upload raw bytes
+        file = genai.protos.Part(
+            inline_data=genai.protos.Blob(
+                mime_type = content_type,
+                data = response.content
+            )
+        )
+        return file
+    except Exception as e:
+        print(f"Error uploading file: {e}")
+        return None
 
 def reply_with_describe(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown):
@@ -115,7 +121,7 @@ def reply_with_describe(self, message):
 
     if content_type in ['image/jpeg', 'image/png', 'image/webp', 'image/gif']:
         try:
-            image_file = upload_img_gemini(media_url, content_type)
+            image_file = upload_file_gemini(media_url, content_type)
             time.sleep(1)
             input_text = "Give me a concise description of this image/gif, ideally under 100 words, translating to English if needed."
             print("Getting description...")
@@ -136,9 +142,16 @@ def reply_with_describe(self, message):
                 m = f"@{message['tags']['display-name']}, the video is too large to process. Files are limited to 1 GB."
                 self.send_privmsg(message['command']['channel'], m)
                 return
-            video_response = requests.get(media_url)
             self.send_privmsg(message['command']
                               ['channel'], "Downloading video...")
+            video_file = upload_file_gemini(media_url, content_type)
+
+            self.send_privmsg(message['command']['channel'],
+                            "Video is being uploaded to Gemini, please wait 5 seconds.")
+            time.sleep(5)
+
+            input_text = "Describe the content of this video, in under 100 words, translating to English if needed."
+            description = gemini_for_video(video_file, input_text)
 
         except Exception as e:
             print(e)
@@ -148,34 +161,16 @@ def reply_with_describe(self, message):
                 message['command']['channel'], "Video could not be downloaded, check the link.")
             return
 
-        # Save video to a temporary file
-        video_file_name = "temp_video.mp4"
-        with open(video_file_name, 'wb') as video_file:
-            video_file.write(video_response.content)
-
-        video_file = genai.upload_file(video_file_name, mime_type="video/mp4")
-        self.send_privmsg(message['command']['channel'],
-                          "Video is being uploaded to Gemini, please wait 10 seconds.")
-        time.sleep(10)
-
-        input_text = "Describe the content of this video, in under 100 words, translating to English if needed."
-        description = gemini_for_video(video_file, input_text)
-
-        os.remove(video_file_name)
+        
 
     elif content_type == 'application/pdf':
         try:
-            pdf_file_name = "temp_pdf.pdf"
-            pdf_response = requests.get(media_url)
-            with open(pdf_file_name, 'wb') as pdf_file:
-                pdf_file.write(pdf_response.content)
-            pdf_file = genai.upload_file(pdf_file_name, mime_type="application/pdf")
             self.send_privmsg(message['command']['channel'], "Document is being uploaded to Gemini, please wait 10 seconds.")
+            pdf_file = upload_file_gemini(media_url, content_type)
             time.sleep(10)
 
             input_text = "Summarize this pdf, translating to English if needed."
             description = generate_gemini_description(pdf_file, input_text)
-            os.remove(pdf_file_name)
 
         except Exception as e:
             print(e)
