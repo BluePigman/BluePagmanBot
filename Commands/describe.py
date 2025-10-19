@@ -42,7 +42,7 @@ def get_content_type(url):
 
 def generate_gemini_description(media, input_text):
     if not media:
-        return "Media failed to upload"
+        return ["Media failed to upload"]
     response = gemini.generate([media, input_text])
     return response
 
@@ -64,7 +64,7 @@ def upload_file_gemini(media_url, content_type):
     """Upload file to gemini to be used for prompts"""
     try:
         # Download the file
-        response = requests.get(media_url, stream=True)
+        response = requests.get(media_url, stream=True, timeout=REQUEST_TIMEOUT_SECS)
 
         # upload raw bytes
         file = genai.protos.Part(
