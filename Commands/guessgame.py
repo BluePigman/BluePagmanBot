@@ -97,7 +97,7 @@ def start_new_round(self, channel):
     descr = "Give a description for this emote in 2 sentences. Start with 'This emote'"
     try:
         content_type = describe.get_content_type(emote_url)
-        image = describe.upload_img_gemini(emote_url, content_type)
+        image = describe.upload_file_gemini(emote_url, content_type)
         description = gemini.generate_emote_description([image, descr])
 
     except Exception as e:

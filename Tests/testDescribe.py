@@ -1,44 +1,28 @@
-import os
-import requests
+import config
 import google.generativeai as genai
-from Commands.describe import generate_gemini_description, get_content_type
+from Commands.describe import generate_gemini_description, get_content_type, upload_file_gemini
+
 
 def testDescribe(url):
-    media_url = url
-    content_type = get_content_type(media_url)
-    print("Content type: ", content_type)
+    try:
+        media_url = url
+        content_type = get_content_type(media_url)
+        print("Content type: ", content_type)
 
-    if content_type in ['image/jpeg', 'image/png', 'image/webp', 'image/gif']:
-        try:
-            # Download the image
-            image_response = requests.get(media_url, stream=True)
-            
-            # Determine file extension from content type
-            extension_map = {
-                'image/jpeg': 'jpg',
-                'image/png': 'png',
-                'image/webp': 'webp',
-                'image/gif': 'gif'
-            }
-            extension = extension_map.get(content_type, 'jpg')
-            
-            # Save image to a temporary file
-            image_file_name = f"temp_image.{extension}"
-            with open(image_file_name, 'wb') as image_file:
-                image_file.write(image_response.content)
+        image_file = upload_file_gemini(media_url, content_type)
+        
+        input_text = "Give me a concise description of this image/gif, ideally under 100 words, translating to English if needed."
+        print("Getting description...")
+        description = generate_gemini_description(image_file, input_text)
+        print(description)
 
-            # Upload the saved image to Gemini
-            image_file = genai.upload_file(image_file_name, mime_type=content_type)
-            
-            input_text = "Give me a concise description of this image/gif, ideally under 100 words, translating to English if needed."
-            print("Getting description...")
-            description = generate_gemini_description(image_file, input_text)
+    except Exception as e:
+        print(f"Error: {e}")
+        return
 
-            # Clean up - delete the temporary file
-            os.remove(image_file_name)
-            
-            print(description)
 
-        except Exception as e:
-            print(f"Error: {e}")
-            return
+if __name__ == "__main__":
+
+    testDescribe("https://cdn.7tv.app/emote/01HBKZWPS8000ECTPKPBM8A7MH/4x.webp") # test image
+    testDescribe("https://kappa.lol/EHwzUG") # test video
+    testDescribe("https://www.adobe.com/support/products/enterprise/knowledgecenter/media/c4611_sample_explain.pdf") # test pdf
