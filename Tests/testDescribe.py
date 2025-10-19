@@ -11,7 +11,7 @@ def testDescribe(url):
 
         image_file = upload_file_gemini(media_url, content_type)
         
-        input_text = "Give me a concise description of this image/gif, ideally under 100 words, translating to English if needed."
+        input_text = "Give me a concise description of this content, ideally under 100 words, translating to English if needed."
         print("Getting description...")
         description = generate_gemini_description(image_file, input_text)
         print(description)
