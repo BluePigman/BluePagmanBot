@@ -630,7 +630,7 @@ def gemini_generate(request: str | dict, model) -> str | list[str]:
         return
 
 
-GEMINI_IMAGE_MODEL = "gemini-2.0-flash-exp-image-generation"
+GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image"
 
 
 def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None, temperature: float = 1,
