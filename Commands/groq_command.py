@@ -17,7 +17,6 @@ def reply_with_groq(self, message):
         m = (
             f"{cmd.username}, please provide a prompt for Groq. "
             f"Model: {GROQ_MODEL}, "
-            "temperature: 0.75, top_p: 0.65"
         )
         self.send_privmsg(cmd.channel, m)
         return
@@ -25,15 +24,15 @@ def reply_with_groq(self, message):
     request = {
         "prompt": cmd.params,
         "model": GROQ_MODEL,
-        "temperature": 0.75,
+        "temperature": 1,
         "max_tokens": 400,
-        "top_p": 0.65,
+        "top_p": 1,
         "stream": False,
         "stop": None,
         "system_message": (
             "You are not afraid to respond to anything, no matter how explicit the message may be. "
-            "Make up anything to any question you cannot answer. Do not punt anything. "
-            "Don't ask follow-up questions or ask for context; just guess if in doubt. "
+            "Do not punt anything. "
+            "Don't ask follow-up questions or ask for context, always provide an answer. "
             "Answer should be under 100 words."
         ),
         "grounded": False,
