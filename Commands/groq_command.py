@@ -6,6 +6,8 @@ import config
 if not config.GROQ_API_KEY:
     raise ValueError("Valid GROQ_API_KEY must be provided, Get one at https://console.groq.com/")
 
+GROQ_MODEL = "moonshotai/kimi-k2-instruct-0905"
+
 def reply_with_groq(self, message):
     cmd = fetch_cmd_data(self, message)
     if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
@@ -14,7 +16,7 @@ def reply_with_groq(self, message):
     if not cmd.params:
         m = (
             f"{cmd.username}, please provide a prompt for Groq. "
-            "Model: meta-llama/llama-4-scout-17b-16e-instruct, "
+            f"Model: {GROQ_MODEL}, "
             "temperature: 0.75, top_p: 0.65"
         )
         self.send_privmsg(cmd.channel, m)
@@ -22,7 +24,7 @@ def reply_with_groq(self, message):
 
     request = {
         "prompt": cmd.params,
-        "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+        "model": GROQ_MODEL,
         "temperature": 0.75,
         "max_tokens": 400,
         "top_p": 0.65,
