@@ -35,6 +35,15 @@ def get_lyrics(song_url: str):
     lyrics = " ".join([container.get_text() for container in lyrics_containers])
     lyrics = re.sub(r'\s+\n', '\n', lyrics)
     lyrics = re.sub(r'\n\s+', '\n', lyrics)
+    
+    if not lyrics.strip():
+        # Check if song is instrumental or unreleased
+        placeholder = html.find(class_=lambda x: x and x.startswith("LyricsPlaceholder"))
+        if placeholder:
+            return placeholder.get_text().strip()
+
+        return "No lyrics found."
+            
     return lyrics.strip().replace("\n", " ")
 
 

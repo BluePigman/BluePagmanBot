@@ -1,21 +1,32 @@
 from Commands import genius
-import re
+import time
 
-query = "motion sickness"
-request = genius.search(query)
+def run_test(query, description=""):
+    print(f"\n--- Testing {description} (Query: '{query}') ---")
+    request = genius.search(query)
 
-if not request["hits"]:
-    print("No results found. Try a different search.")
-else:
-    song_url = request["hits"][0]["result"]["url"]
-    lyrics = genius.get_lyrics(song_url)
-
-    if lyrics is None:
-        print("Couldn't extract lyrics. The Genius HTML structure may have changed.")
+    if not request["hits"]:
+        print("No hits found.")
     else:
-        lyrics = re.sub(r'\s+', ' ', lyrics).strip()
+        song_url = request["hits"][0]["result"]["url"]
+        print(f"URL: {song_url}")
+        lyrics = genius.get_lyrics(song_url)
 
-        chunks = [lyrics[i:i+495] for i in range(0, len(lyrics), 495)]
+        if lyrics is None:
+            print("Couldn't extract lyrics. The Genius HTML structure may have changed.")
+        else:
+            lyrics_short = lyrics[:100]
+            msg = f"Lyrics found (first 100 chars): {lyrics_short}"
+            if len(lyrics) > 100:
+                msg +=  f"...  \nTotal length: {len(lyrics)}"
+            print(msg)
+    time.sleep(1)
 
-        for i, chunk in enumerate(chunks, 1):
-            print(f"--- Chunk {i} ---\n{chunk}\n")
+# Test Case 1: Regular Lyrics
+run_test("motion sickness", "Regular Lyrics")
+
+# Test Case 2: Instrumental
+run_test("aria math c418", "Instrumental")
+
+# Test Case 3: Unreleased
+run_test("To be announced midwxst", "Unreleased")
