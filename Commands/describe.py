@@ -50,7 +50,7 @@ def generate_gemini_description(media, input_text):
 def gemini_for_video(media, input_text):
     try:
         response = genai.GenerativeModel(
-            "gemini-2.5-flash-lite").generate_content([media, input_text])
+            "gemini-flash-lite-latest").generate_content([media, input_text])
         if response.prompt_feedback.block_reason:
             return None
         response = response.text.replace('\n', ' ')
