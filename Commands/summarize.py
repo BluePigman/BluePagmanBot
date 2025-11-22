@@ -28,17 +28,24 @@ def extract_youtube_id(text: str) -> Optional[str]:
     match = re.search(youtube_regex, text)
     return match.group(1) if match else None
 
-def get_transcript(video_id: str) -> str | None:
+def get_transcript(video_id: str) -> tuple[str | None, str | None]:
     base = "https://inv.nadeko.net"
     try:
-        res = proxy_request("GET", f"{base}/api/v1/captions/{video_id}")
+        res = proxy_request("GET", f"{base}/api/v1/captions/{video_id}", timeout=10)
         if res.status_code != 200:
-            return
+            print(f"Failed to fetch captions list: Status {res.status_code}")
+            return None, f"Failed to fetch captions list (Status {res.status_code})"
 
-        data = json.loads(res.text)
+        try:
+            data = json.loads(res.text)
+        except json.JSONDecodeError:
+            print("Failed to parse captions JSON")
+            return None, "Failed to parse captions JSON"
+
         captions = data.get("captions", [])
         if not captions:
-            return
+            print("No captions found in response")
+            return None, "No captions found"
 
         preferred = [
             "English (United States)",
@@ -59,20 +66,21 @@ def get_transcript(video_id: str) -> str | None:
             selected = captions[0]
 
         if not selected or not selected.get("url"):
-            return
+            print("No suitable caption URL found")
+            return None, "No suitable caption URL found"
 
         full_url = urljoin(base, selected["url"])
-        transcript_res = proxy_request("GET", full_url)
+        transcript_res = proxy_request("GET", full_url, timeout=10)
         if transcript_res.status_code != 200:
-            return
+            print(f"Failed to fetch transcript content: Status {transcript_res.status_code}")
+            return None, f"Failed to fetch transcript content (Status {transcript_res.status_code})"
 
         transcript = transcript_res.text
-        print(f"Excerpt:\n{transcript[:300]}")
-        return transcript
+        return transcript, None
 
     except Exception as e:
-        print(f"Error: {e}")
-        return
+        print(f"Error fetching transcript: {e}")
+        return None, f"Error fetching transcript: {str(e)}"
 
 def reply_with_summarize(self, message):
     try:
@@ -95,9 +103,12 @@ def reply_with_summarize(self, message):
             self.send_privmsg(cmd.channel, f"{cmd.username}, unable to extract a video ID from that link.")
             return
 
-        transcript = get_transcript(video_id)
+        transcript, error = get_transcript(video_id)
         if not transcript:
-            self.send_privmsg(cmd.channel, f"{cmd.username}, no transcript available for that video.")
+            if error == "No captions found":
+                self.send_privmsg(cmd.channel, f"{cmd.username}, no transcript available for that video.")
+            else:
+                self.send_privmsg(cmd.channel, f"{cmd.username}, failed to retrieve transcript: {error}")
             return
 
         prompt = {
