@@ -2,6 +2,7 @@ import re
 import json
 from typing import Optional
 from urllib.parse import urljoin
+import time
 import google.generativeai as genai
 from Utils.utils import (
     fetch_cmd_data,
@@ -30,57 +31,79 @@ def extract_youtube_id(text: str) -> Optional[str]:
 
 def get_transcript(video_id: str) -> tuple[str | None, str | None]:
     base = "https://inv.nadeko.net"
-    try:
-        res = proxy_request("GET", f"{base}/api/v1/captions/{video_id}", timeout=10)
-        if res.status_code != 200:
-            print(f"Failed to fetch captions list: Status {res.status_code}")
-            return None, f"Failed to fetch captions list (Status {res.status_code})"
-
+    MAX_RETRIES = 3
+    
+    res = None
+    for attempt in range(MAX_RETRIES):
         try:
-            data = json.loads(res.text)
-        except json.JSONDecodeError:
-            print("Failed to parse captions JSON")
-            return None, "Failed to parse captions JSON"
-
-        captions = data.get("captions", [])
-        if not captions:
-            print("No captions found in response")
-            return None, "No captions found"
-
-        preferred = [
-            "English (United States)",
-            "English (United Kingdom)",
-            "English (auto-generated)",
-        ]
-
-        selected = None
-        for label in preferred:
-            for caption in captions:
-                if caption.get("label") == label:
-                    selected = caption
-                    break
-            if selected:
+            res = proxy_request("GET", f"{base}/api/v1/captions/{video_id}", timeout=10)
+            if res.status_code == 200:
                 break
+            print(f"Attempt {attempt + 1} failed to fetch captions list: Status {res.status_code}")
+        except Exception as e:
+            print(f"Attempt {attempt + 1} failed with exception: {e}")
+        
+        if attempt < MAX_RETRIES - 1:
+            time.sleep(1)
+    else:
+        status = res.status_code if res else "Unknown"
+        print(f"Failed to fetch captions list after {MAX_RETRIES} attempts")
+        return None, f"Failed to fetch captions list (Status {status})"
 
-        if not selected and captions:
-            selected = captions[0]
+    try:
+        data = json.loads(res.text)
+    except json.JSONDecodeError:
+        print("Failed to parse captions JSON")
+        return None, "Failed to parse captions JSON"
 
-        if not selected or not selected.get("url"):
-            print("No suitable caption URL found")
-            return None, "No suitable caption URL found"
+    captions = data.get("captions", [])
+    if not captions:
+        print("No captions found in response")
+        return None, "No captions found"
 
-        full_url = urljoin(base, selected["url"])
-        transcript_res = proxy_request("GET", full_url, timeout=10)
-        if transcript_res.status_code != 200:
-            print(f"Failed to fetch transcript content: Status {transcript_res.status_code}")
-            return None, f"Failed to fetch transcript content (Status {transcript_res.status_code})"
+    preferred = [
+        "English (United States)",
+        "English (United Kingdom)",
+        "English (auto-generated)",
+    ]
 
-        transcript = transcript_res.text
-        return transcript, None
+    selected = None
+    for label in preferred:
+        for caption in captions:
+            if caption.get("label") == label:
+                selected = caption
+                break
+        if selected:
+            break
 
-    except Exception as e:
-        print(f"Error fetching transcript: {e}")
-        return None, f"Error fetching transcript: {str(e)}"
+    if not selected and captions:
+        selected = captions[0]
+
+    if not selected or not selected.get("url"):
+        print("No suitable caption URL found")
+        return None, "No suitable caption URL found"
+
+    full_url = urljoin(base, selected["url"])
+    
+    transcript_res = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            transcript_res = proxy_request("GET", full_url, timeout=10)
+            if transcript_res.status_code == 200:
+                break
+            print(f"Attempt {attempt + 1} failed to fetch transcript content: Status {transcript_res.status_code}")
+        except Exception as e:
+            print(f"Attempt {attempt + 1} failed with exception: {e}")
+            
+        if attempt < MAX_RETRIES - 1:
+            time.sleep(1)
+    else:
+        status = transcript_res.status_code if transcript_res else "Unknown"
+        print(f"Failed to fetch transcript content after {MAX_RETRIES} attempts")
+        return None, f"Failed to fetch transcript content (Status {status})"
+
+    transcript = transcript_res.text
+    return transcript, None
 
 def reply_with_summarize(self, message):
     try:
