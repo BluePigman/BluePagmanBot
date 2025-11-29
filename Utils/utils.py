@@ -178,7 +178,7 @@ def send_chunks(send_func: callable, channel, text: str, chunk_size: int = CHUNK
     chunks = chunk_str(text, chunk_size)
     for idx, chunk in enumerate(chunks):
         send_func(channel, chunk)
-        if idx < len(chunks) - 1:
+        if idx < len(chunks):
             time.sleep(delay)
 
 
