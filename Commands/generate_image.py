@@ -9,7 +9,8 @@ from Utils.utils import (
     check_cooldown,
     download_bytes,
     is_url,
-    log_err
+    log_err,
+    send_chunks
 )
 
 def reply_with_generate(self, message):
@@ -76,7 +77,7 @@ def reply_with_generate(self, message):
             return
 
         if not is_image:
-            self.send_privmsg(cmd.channel, f"{cmd.username}, {image_path}")
+            send_chunks(self.send_privmsg, cmd.channel, image_path)
             return
 
         upload_service = args.get("uploader", DEFAULT_UPLOADER)
