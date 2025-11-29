@@ -670,6 +670,7 @@ def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None
     generate_config = types.GenerateContentConfig(
         response_modalities=["image", "text"],
         response_mime_type="text/plain",
+        system_instruction=[types.Part.from_text(text="Text output should be a maximum of 100 words."),],
         temperature=temperature,
     )
 
