@@ -65,13 +65,18 @@ def reply_with_generate(self, message):
         except Exception:
             temperature = 1
             
-        image_path = gemini_generate_image(
+        image_path, is_image = gemini_generate_image(
             prompt,
             input_images_b64 if input_images_b64 else None,
             temperature=temperature
         )
+        
         if not image_path:
             self.send_privmsg(cmd.channel, f"{cmd.username}, Image generation failed.")
+            return
+
+        if not is_image:
+            self.send_privmsg(cmd.channel, f"{cmd.username}, {image_path}")
             return
 
         upload_service = args.get("uploader", DEFAULT_UPLOADER)

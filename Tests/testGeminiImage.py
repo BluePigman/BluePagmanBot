@@ -1,72 +1,31 @@
-import time
-import requests
-import mimetypes
-from google import genai
-from google.genai import types
-import base64
-from config import GOOGLE_API_KEY
-from Utils.utils import GEMINI_IMAGE_MODEL
+from Utils.utils import gemini_generate_image, upload_file
 
 def generate():
-    client = genai.Client(api_key=GOOGLE_API_KEY)
+    print("Generating image...")
+    prompt = "beautiful image of night skyline in Toronto"
+    
+    result, is_image = gemini_generate_image(prompt)
+    
+    if not result:
+        print("Generation failed completely (None returned).")
+        return
 
-    model = GEMINI_IMAGE_MODEL
-    contents = [
-        types.Content(
-            role="user",
-            parts=[types.Part.from_text(text="beautiful image of night skyline in Toronto")],
-        )
-    ]
-    generate_content_config = types.GenerateContentConfig(
-        response_modalities=["image", "text"],
-        response_mime_type="text/plain",
-    )
-    try:
-        
-        for chunk in client.models.generate_content_stream(
-        model=model,
-        contents=contents,
-        config=generate_content_config,
-        ):
-            if (
-                chunk.candidates is None
-                or chunk.candidates[0].content is None
-                or chunk.candidates[0].content.parts is None
-                or chunk.candidates[0].content.parts[0].inline_data is None
-            ):
-                continue
-            result = chunk.candidates
+    if not is_image:
+        print(f"Generation failed to produce image. Text response:\n{result}")
+        return
 
-            inline_data = result[0].content.parts[0].inline_data
-            image_bytes = base64.b64decode(inline_data.data) if inline_data.data.startswith(b'iVBORw') else inline_data.data
-            
-            file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".png"
-            files = {
-                'file': ('generated_image' + file_extension, image_bytes, inline_data.mime_type)
-            }
-
-            # 🔥 Log request details
-            with requests.Session() as session:
-                request = requests.Request("POST", "https://kappa.lol/api/upload", files=files)
-                prepared = session.prepare_request(request)
-                
-                print("\n🔹 Request Headers:")
-                print(prepared.headers)
-
-                print("\n🔹 Request Body (First 500 bytes):")
-                print(prepared.body[:500] if prepared.body else "No Body")
-
-                response = session.send(prepared)  # Actually send the request
-
-            response_json = response.json()
-            print("\n🔹 Response:")
-            print(response_json)
-            print(f"Image Link: {response_json.get('link')}")
-            print(f"Delete Link: {response_json.get('delete')}")
-                
-    except Exception as e:
-        print(f"Error: {e}")
-        return None
+    print(f"Image generated at: {result}")
+    
+    print("Uploading image...")
+    upload_result = upload_file("kappa.lol", result, "png", delete_file=True)
+    
+    if upload_result["success"]:
+        print(f"Upload successful: {upload_result['message']}")
+        data = upload_result.get("data")
+        if isinstance(data, dict):
+            print(f"Delete Link: {data.get('delete')}")
+    else:
+        print(f"Upload failed: {upload_result['message']}")
 
 if __name__ == "__main__":
     generate()

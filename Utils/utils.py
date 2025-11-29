@@ -340,7 +340,7 @@ def upload_file(service: str, filepath: str, ext: str, delete_file: bool = False
     If the specified service fails, tries all other available services.
 
     Returns:
-        dict: {success: bool, message: str}
+        dict: {success: bool, message: str, data: dict}
     """
     service = service or DEFAULT_UPLOADER
 
@@ -380,6 +380,12 @@ def upload_file(service: str, filepath: str, ext: str, delete_file: bool = False
                 continue
 
             link = uploader["get_link"](res)
+            
+            try:
+                response_data = res.json()
+            except Exception:
+                response_data = res.text
+
             if link:
                 if current_service == "imgur.com" and "i.imgur.com" in link:
                     imgur_id = link.split('/')[-1]
@@ -388,7 +394,7 @@ def upload_file(service: str, filepath: str, ext: str, delete_file: bool = False
                 if delete_file:
                     os.remove(filepath)
                 print(f"Upload successful to {current_service}: {link}")
-                return {"success": True, "message": link}
+                return {"success": True, "message": link, "data": response_data}
             else:
                 print(f"Failed to extract link from {current_service} response")
                 continue
@@ -396,14 +402,14 @@ def upload_file(service: str, filepath: str, ext: str, delete_file: bool = False
         except FileNotFoundError:
             msg = f"Upload error: File not found."
             print(msg)
-            return {"success": False, "message": msg}
+            return {"success": False, "message": msg, "data": None}
 
         except Exception as e:
             print(f"Upload to {current_service} failed: {str(e)}")
             log_err(e)
             continue
 
-    return {"success": False, "message": f"All upload services failed."}
+    return {"success": False, "message": f"All upload services failed.", "data": None}
 
 
 def download_bytes(file_url: str) -> str | None:
@@ -634,10 +640,12 @@ GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image"
 
 
 def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None, temperature: float = 1,
-                          image_model: str = GEMINI_IMAGE_MODEL) -> str | None:
+                          image_model: str = GEMINI_IMAGE_MODEL) -> tuple[str | None, bool]:
     """
     Generate an image from a text prompt and optional input images using Gemini model.
-    Returns the file path of the saved image or None if generation fails.
+    Returns a tuple: (result, is_image)
+    - result: file path of the saved image OR text response (if generation failed but text was returned) OR None
+    - is_image: True if result is a file path, False otherwise
     """
     client = genai_image.Client(api_key=config.GOOGLE_API_KEY)
 
@@ -666,6 +674,7 @@ def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None
     )
 
     try:
+        text_accumulator = []
         for chunk in client.models.generate_content_stream(
                 model=image_model,
                 contents=contents,
@@ -674,27 +683,37 @@ def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None
             c = chunk.candidates
             if not c or not c[0].content or not c[0].content.parts:
                 continue
-            inline_data = c[0].content.parts[0].inline_data
-            if inline_data and inline_data.data:
-                data_buffer = base64.b64decode(inline_data.data) if inline_data.data.startswith(
-                    b'iVBORw') else inline_data.data
-                file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".png"
-                dir_path = os.path.join(tempfile.gettempdir(), "gemini_generated_images")
-                os.makedirs(dir_path, exist_ok=True)
-                file_name = os.path.join(dir_path, f"generated_image_{uuid.uuid4().hex}{file_extension}")
-                with open(file_name, "wb") as f:
-                    f.write(data_buffer)
+            
+            # Check for image data
+            for part in c[0].content.parts:
+                inline_data = part.inline_data
+                if inline_data and inline_data.data:
+                    data_buffer = base64.b64decode(inline_data.data) if inline_data.data.startswith(
+                        b'iVBORw') else inline_data.data
+                    file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".png"
+                    dir_path = os.path.join(tempfile.gettempdir(), "gemini_generated_images")
+                    os.makedirs(dir_path, exist_ok=True)
+                    file_name = os.path.join(dir_path, f"generated_image_{uuid.uuid4().hex}{file_extension}")
+                    with open(file_name, "wb") as f:
+                        f.write(data_buffer)
 
-                return file_name
+                    return file_name, True
 
-            elif chunk.text:
-                print(chunk.text)
+            # Check for text
+            if chunk.text:
+                print(chunk.text, end="", flush=True)
+                text_accumulator.append(chunk.text)
 
-        return None
+        # If we get here, no image was generated
+        full_text = "".join(text_accumulator).strip()
+        if full_text:
+            return full_text, False
+        
+        return None, False
 
     except Exception as e:
         log_err(e)
-        return None
+        return None, False
 
 
 def groq_generate(request: dict, client_opts: dict | None = None) -> str | None:
