@@ -13,8 +13,8 @@ from Utils.utils import (
 MAX_COMMENTS = 300
 
 base_urls = {
-    "hot_posts": "https://www.reddit.com/r/{subreddit}/hot.json?limit=60",
-    "comments": "https://www.reddit.com/comments/{post_id}.json?depth=10&limit={MAX_COMMENTS}"
+    "hot_posts": "https://en.reddit.com/r/{subreddit}/hot.json?limit=60",
+    "comments": "https://en.reddit.com/comments/{post_id}.json?depth=10&limit={MAX_COMMENTS}"
 }
 
 def get_posts(subreddit, max_comments=MAX_COMMENTS):
@@ -119,9 +119,9 @@ def get_random_comment(posts, subreddit, min_words=15):
 
     random_comment = random.choices(filtered_comments, weights=weights, k=1)[0]
 
-    post_link = f"https://www.reddit.com{random_post['permalink']}"
-    comment_link = f"https://www.reddit.com/r/{subreddit}/comments/{post_id}/comment/{random_comment['id']}"
-    alt_comment_link = f"https://www.reddit.com{random_comment['permalink']}"
+    post_link = f"https://en.reddit.com{random_post['permalink']}"
+    comment_link = f"https://en.reddit.com/r/{subreddit}/comments/{post_id}/comment/{random_comment['id']}"
+    alt_comment_link = f"https://en.reddit.com{random_comment['permalink']}"
     comment_body_html = html.unescape(random_comment['body_html'])
 
     soup = parse_str(comment_body_html, "html")
