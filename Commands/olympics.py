@@ -33,7 +33,7 @@ def reply_with_olympics(self, message):
         silvers = medals["silver"]
         bronzes = medals["bronze"]
         total = medals["total"]
-        flag = country_code_to_flag(response["results"][0]["country"]["iso_alpha_2"])
+        flag = country_code_to_flag(response["results"][0]["country"].get("iso_alpha_2", ""))
         
         rank = response["results"][0]["rank"]
         country = response["results"][0]["country"]["name"]
@@ -52,7 +52,7 @@ def reply_with_olympics(self, message):
         silvers = medals["silver"]
         bronzes = medals["bronze"]
         total = medals["total"]
-        flag = country_code_to_flag(country["country"]["iso_alpha_2"])
+        flag = country_code_to_flag(country["country"].get("iso_alpha_2", ""))
         
         text = f"{flag} {countryName} has {golds} gold, {silvers} silver, and {bronzes} bronze medals, for a total of {total}."
         self.send_privmsg(cmd.channel, text)
@@ -69,7 +69,7 @@ def reply_with_olympics(self, message):
             silvers = medals["silver"]
             bronzes = medals["bronze"]
             total = medals["total"]
-            flag = country_code_to_flag(country["country"]["iso_alpha_2"])
+            flag = country_code_to_flag(country["country"].get("iso_alpha_2", ""))
             
             text = f"{flag} {countryName} has {golds} gold, {silvers} silver, and {bronzes} bronze medals, for a total of {total}. Their overall rank is {rank}."
             self.send_privmsg(cmd.channel, text)
