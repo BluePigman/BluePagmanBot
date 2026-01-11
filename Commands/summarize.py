@@ -1,7 +1,7 @@
 import html
 import re
 from typing import Optional, List
-from xml.etree import ElementTree
+from lxml import etree
 
 import google.generativeai as genai
 
@@ -60,7 +60,7 @@ def get_transcript(video_id: str, language: str = "en") -> Optional[str]:
             "context": {
                 "client": {
                     "clientName": "ANDROID",
-                    "clientVersion": "20.10.38"
+                    "clientVersion": "21.02.33"
                 }
             },
             "videoId": video_id
@@ -118,11 +118,12 @@ def get_transcript(video_id: str, language: str = "en") -> Optional[str]:
             print(f"Failed to fetch captions: {caption_res.status_code}")
             return None
 
-        xml_content = caption_res.text
-        root = ElementTree.fromstring(xml_content)
+        # Use a secure XML parser configuration
+        parser = etree.XMLParser(resolve_entities=False, no_network=True, recover=True)
+        root = etree.fromstring(caption_res.content, parser=parser)
 
         captions: List[str] = []
-        for text_elem in root.findall('text'):
+        for text_elem in root.xpath("//text"):
             if text_elem.text:
                 decoded_text = html.unescape(text_elem.text)
                 captions.append(decoded_text)
@@ -131,12 +132,12 @@ def get_transcript(video_id: str, language: str = "en") -> Optional[str]:
             print("No caption text found in XML")
             return None
 
-        transcript = " ".join(captions)
-        return transcript
+        return " ".join(captions)
 
     except Exception as e:
         log_err(e)
         return None
+
 
 
 def reply_with_summarize(self, message):
