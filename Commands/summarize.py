@@ -1,16 +1,18 @@
+import html
 import re
-import json
-from typing import Optional
-from urllib.parse import urljoin
-import time
+from typing import Optional, List
+from xml.etree import ElementTree
+
 import google.generativeai as genai
+
 from Utils.utils import (
     fetch_cmd_data,
     check_cooldown,
     send_chunks,
     clean_str,
     gemini_generate,
-    proxy_request
+    proxy_request,
+    log_err
 )
 
 SUMMARY_CHAR_LIMIT = 500
@@ -24,86 +26,118 @@ model = genai.GenerativeModel(
     }
 )
 
+
 def extract_youtube_id(text: str) -> Optional[str]:
     youtube_regex = r"(?:youtu\.be/|youtube\.com/(?:watch\?v=|shorts/))([A-Za-z0-9_-]{11})"
     match = re.search(youtube_regex, text)
     return match.group(1) if match else None
 
-def get_transcript(video_id: str) -> tuple[str | None, str | None]:
-    base = "https://inv.nadeko.net"
-    MAX_RETRIES = 3
-    
-    res = None
-    for attempt in range(MAX_RETRIES):
-        try:
-            res = proxy_request("GET", f"{base}/api/v1/captions/{video_id}", timeout=10)
-            if res.status_code == 200:
-                break
-            print(f"Attempt {attempt + 1} failed to fetch captions list: Status {res.status_code}")
-        except Exception as e:
-            print(f"Attempt {attempt + 1} failed with exception: {e}")
-        
-        if attempt < MAX_RETRIES - 1:
-            time.sleep(1)
-    else:
-        status = res.status_code if res else "Unknown"
-        print(f"Failed to fetch captions list after {MAX_RETRIES} attempts")
-        return None, f"Failed to fetch captions list (Status {status})"
+
+def get_transcript(video_id: str, language: str = "en") -> Optional[str]:
+    """
+    Get captions for a given YouTube video using the Innertube API.
+    Returns the transcript as a single string, or None on failure.
+    """
+    video_url = f"https://www.youtube.com/watch?v={video_id}"
 
     try:
-        data = json.loads(res.text)
-    except json.JSONDecodeError:
-        print("Failed to parse captions JSON")
-        return None, "Failed to parse captions JSON"
+        # Step 1: Fetch the INNERTUBE_API_KEY from the video page
+        res = proxy_request("GET", video_url)
+        if res.status_code != 200:
+            print(f"Failed to fetch video page: {res.status_code}")
+            return None
 
-    captions = data.get("captions", [])
-    if not captions:
-        print("No captions found in response")
-        return None, "No captions found"
+        html_content = res.text
+        api_key_match = re.search(r'"INNERTUBE_API_KEY":"([^"]+)"', html_content)
+        if not api_key_match:
+            print("INNERTUBE_API_KEY not found in page")
+            return None
+        api_key = api_key_match.group(1)
 
-    preferred = [
-        "English (United States)",
-        "English (United Kingdom)",
-        "English (auto-generated)",
-    ]
+        # Step 2: Call the Innertube player API as Android client
+        player_endpoint = f"https://www.youtube.com/youtubei/v1/player?key={api_key}"
+        player_body = {
+            "context": {
+                "client": {
+                    "clientName": "ANDROID",
+                    "clientVersion": "20.10.38"
+                }
+            },
+            "videoId": video_id
+        }
 
-    selected = None
-    for label in preferred:
-        for caption in captions:
-            if caption.get("label") == label:
-                selected = caption
+        player_res = proxy_request(
+            "POST",
+            player_endpoint,
+            headers={"Content-Type": "application/json"},
+            json=player_body,
+            bypass_proxy=True
+        )
+        if player_res.status_code != 200:
+            print(f"Failed to fetch player data: {player_res.status_code}")
+            return None
+
+        player_data = player_res.json()
+
+        # Step 3: Extract the caption track URL
+        tracks = player_data.get("captions", {}).get("playerCaptionsTracklistRenderer", {}).get("captionTracks")
+        if not tracks:
+            print("No caption tracks found")
+            return None
+
+        # Try to find the requested language, fall back to first available
+        track = None
+        for t in tracks:
+            if t.get("languageCode") == language:
+                track = t
                 break
-        if selected:
-            break
 
-    if not selected and captions:
-        selected = captions[0]
+        if not track:
+            # Try English variants
+            for t in tracks:
+                if t.get("languageCode", "").startswith("en"):
+                    track = t
+                    break
 
-    if not selected or not selected.get("url"):
-        print("No suitable caption URL found")
-        return None, "No suitable caption URL found"
+        if not track:
+            # Use first available track
+            track = tracks[0]
+            print(f"Using fallback language: {track.get('languageCode')}")
 
-    full_url = urljoin(base, selected["url"])
-    
-    transcript_res = None
-    for attempt in range(MAX_RETRIES):
-        try:
-            transcript_res = proxy_request("GET", full_url, timeout=10)
-            if transcript_res.status_code == 200:
-                break
-            print(f"Attempt {attempt + 1} failed to fetch transcript content: Status {transcript_res.status_code}")
-        except Exception as e:
-            print(f"Attempt {attempt + 1} failed with exception: {e}")
-            
-        if attempt < MAX_RETRIES - 1:
-            time.sleep(1)
-    else:
-        status = transcript_res.status_code if transcript_res else "Unknown"
-        print(f"Failed to fetch transcript content after {MAX_RETRIES} attempts")
-        return None, f"Failed to fetch transcript content (Status {status})"
+        base_url = track.get("baseUrl")
+        if not base_url:
+            print("No baseUrl in caption track")
+            return None
 
-    transcript = transcript_res.text
-    return transcript, None
+        # Remove format parameter if present to get plain XML
+        base_url = re.sub(r'&fmt=\w+$', '', base_url)
+
+        # Step 4: Fetch and parse captions XML
+        caption_res = proxy_request("GET", base_url)
+        if caption_res.status_code != 200:
+            print(f"Failed to fetch captions: {caption_res.status_code}")
+            return None
+
+        xml_content = caption_res.text
+        root = ElementTree.fromstring(xml_content)
+
+        captions: List[str] = []
+        for text_elem in root.findall('text'):
+            if text_elem.text:
+                decoded_text = html.unescape(text_elem.text)
+                captions.append(decoded_text)
+
+        if not captions:
+            print("No caption text found in XML")
+            return None
+
+        transcript = " ".join(captions)
+        return transcript
+
+    except Exception as e:
+        log_err(e)
+        return None
+
 
 def reply_with_summarize(self, message):
     try:
@@ -126,12 +160,9 @@ def reply_with_summarize(self, message):
             self.send_privmsg(cmd.channel, f"{cmd.username}, unable to extract a video ID from that link.")
             return
 
-        transcript, error = get_transcript(video_id)
+        transcript = get_transcript(video_id)
         if not transcript:
-            if error == "No captions found":
-                self.send_privmsg(cmd.channel, f"{cmd.username}, no transcript available for that video.")
-            else:
-                self.send_privmsg(cmd.channel, f"{cmd.username}, failed to retrieve transcript: {error}")
+            self.send_privmsg(cmd.channel, f"{cmd.username}, no transcript available for that video.")
             return
 
         prompt = {
