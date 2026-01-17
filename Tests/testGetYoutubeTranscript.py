@@ -1,14 +1,15 @@
-from Commands.summarize import get_transcript, model, SUMMARY_CHAR_LIMIT
+from Commands.summarize import get_transcript, model, SUMMARY_CHAR_LIMIT, TranscriptError, TranscriptUnavailableError
 from Utils.utils import gemini_generate, clean_str
+
 
 def run_test(video_id, description="Video"):
     print(f"\n--- Testing {description} (Video ID: {video_id}) ---")
-    transcript, error = get_transcript(video_id)
 
-    if transcript:
+    try:
+        transcript = get_transcript(video_id)
         print(f"Success! Transcript excerpt (first 200 chars): {transcript[:200]}...")
         print(f"Total transcript length: {len(transcript)} characters")
-        
+
         print("\nGenerating summary...")
         prompt = {
             "prompt": (
@@ -19,11 +20,17 @@ def run_test(video_id, description="Video"):
             "grounded": True,
             "grounding_text": clean_str(transcript),
         }
+        print(transcript)
+        #summary = gemini_generate(prompt, model)
+        #print(f"\nSummary:\n{summary}")
 
-        summary = gemini_generate(prompt, model)
-        print(f"\nSummary:\n{summary}")
-    else:
-        print(f"Expected failure or error: {error}")
+    except TranscriptUnavailableError as e:
+        print(f"Expected failure (No Captions): {e}")
+    except TranscriptError as e:
+        print(f"Error: {e}")
+    except Exception as e:
+        print(f"Unexpected Error: {e}")
+
 
 # Test Case 1: Success
 run_test("-wa2JEYl9jU", "Valid Video with Captions")
