@@ -1,6 +1,7 @@
 import html
 import re
 from typing import Optional, List
+
 from lxml import etree
 
 import google.generativeai as genai
@@ -16,6 +17,17 @@ from Utils.utils import (
 )
 
 SUMMARY_CHAR_LIMIT = 500
+
+
+class TranscriptError(Exception):
+    """Base exception for transcript retrieval errors."""
+    pass
+
+
+class TranscriptUnavailableError(TranscriptError):
+    """Raised when no captions are found."""
+    pass
+
 
 model = genai.GenerativeModel(
     model_name="gemini-flash-lite-latest",
@@ -33,10 +45,11 @@ def extract_youtube_id(text: str) -> Optional[str]:
     return match.group(1) if match else None
 
 
-def get_transcript(video_id: str, language: str = "en") -> Optional[str]:
+def get_transcript(video_id: str, language: str = "en") -> str:
     """
     Get captions for a given YouTube video using the Innertube API.
-    Returns the transcript as a single string, or None on failure.
+    Returns the transcript as a single string.
+    Raises TranscriptError or TranscriptUnavailableError on failure.
     """
     video_url = f"https://www.youtube.com/watch?v={video_id}"
 
@@ -45,13 +58,13 @@ def get_transcript(video_id: str, language: str = "en") -> Optional[str]:
         res = proxy_request("GET", video_url)
         if res.status_code != 200:
             print(f"Failed to fetch video page: {res.status_code}")
-            return None
+            raise TranscriptError(f"Failed to fetch video page: {res.status_code}")
 
         html_content = res.text
         api_key_match = re.search(r'"INNERTUBE_API_KEY":"([^"]+)"', html_content)
         if not api_key_match:
             print("INNERTUBE_API_KEY not found in page")
-            return None
+            raise TranscriptError("INNERTUBE_API_KEY not found in page")
         api_key = api_key_match.group(1)
 
         # Step 2: Call the Innertube player API as Android client
@@ -69,13 +82,14 @@ def get_transcript(video_id: str, language: str = "en") -> Optional[str]:
         player_res = proxy_request(
             "POST",
             player_endpoint,
-            headers={"Content-Type": "application/json"},
-            json=player_body,
-            bypass_proxy=True
+            headers={"Content-Type": "application/json",
+                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"},
+            json=player_body
         )
         if player_res.status_code != 200:
-            print(f"Failed to fetch player data: {player_res.status_code}")
-            return None
+            err = f"Failed to fetch player data: {player_res.status_code}"
+            print(err)
+            raise TranscriptError(err)
 
         player_data = player_res.json()
 
@@ -83,7 +97,7 @@ def get_transcript(video_id: str, language: str = "en") -> Optional[str]:
         tracks = player_data.get("captions", {}).get("playerCaptionsTracklistRenderer", {}).get("captionTracks")
         if not tracks:
             print("No caption tracks found")
-            return None
+            raise TranscriptUnavailableError("No caption tracks found")
 
         # Try to find the requested language, fall back to first available
         track = None
@@ -107,7 +121,7 @@ def get_transcript(video_id: str, language: str = "en") -> Optional[str]:
         base_url = track.get("baseUrl")
         if not base_url:
             print("No baseUrl in caption track")
-            return None
+            raise TranscriptError("No baseUrl in caption track")
 
         # Remove format parameter if present to get plain XML
         base_url = re.sub(r'&fmt=\w+$', '', base_url)
@@ -116,7 +130,7 @@ def get_transcript(video_id: str, language: str = "en") -> Optional[str]:
         caption_res = proxy_request("GET", base_url)
         if caption_res.status_code != 200:
             print(f"Failed to fetch captions: {caption_res.status_code}")
-            return None
+            raise TranscriptError(f"Failed to fetch captions: {caption_res.status_code}")
 
         # Use a secure XML parser configuration
         parser = etree.XMLParser(resolve_entities=False, no_network=True, recover=True)
@@ -130,14 +144,15 @@ def get_transcript(video_id: str, language: str = "en") -> Optional[str]:
 
         if not captions:
             print("No caption text found in XML")
-            return None
+            raise TranscriptUnavailableError("No caption text found in XML")
 
         return " ".join(captions)
 
+    except (TranscriptError, TranscriptUnavailableError):
+        raise
     except Exception as e:
         log_err(e)
-        return None
-
+        raise TranscriptError(f"Unexpected error: {e}")
 
 
 def reply_with_summarize(self, message):
@@ -161,9 +176,13 @@ def reply_with_summarize(self, message):
             self.send_privmsg(cmd.channel, f"{cmd.username}, unable to extract a video ID from that link.")
             return
 
-        transcript = get_transcript(video_id)
-        if not transcript:
+        try:
+            transcript = get_transcript(video_id)
+        except TranscriptUnavailableError:
             self.send_privmsg(cmd.channel, f"{cmd.username}, no transcript available for that video.")
+            return
+        except TranscriptError as e:
+            self.send_privmsg(cmd.channel, f"{cmd.username}, failed to retrieve transcript: {e}")
             return
 
         prompt = {
