@@ -56,7 +56,7 @@ def test_truth_social_api():
             posts = data["items"]
         else:
             posts = list(data.values()) if data else []
-            print(f"Using dict values as posts")
+            print("Using dict values as posts")
     else:
         posts = data
     
