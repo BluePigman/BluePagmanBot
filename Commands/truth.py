@@ -20,8 +20,13 @@ def truncate_with_suffix(text: str, suffix: str, max_length: int = CHUNK_SIZE) -
 
 
 def is_valid_post(item: dict) -> bool:
-    text = item.get("text", "")
-    social = item.get("social", {})
+    if not isinstance(item, dict):
+        return False
+    raw_text = item.get("text")
+    text = raw_text if isinstance(raw_text, str) else ""
+    social = item.get("social") or {}
+    if not isinstance(social, dict):
+        social = {}
     
     if text.startswith("RT:"):
         return False
