@@ -12,10 +12,10 @@ def is_valid_post(item: dict) -> bool:
         return False
     if social.get("repost_flag", False):
         return False
-    if text.strip() == "[Video]":
-        return False
-    if not text.strip():
-        return False
+    
+    # Allow [Video] and [Image] posts only if they have a post_url or image_url
+    if text.strip() in ["[Video]", "[Image]"]:
+        return bool(item.get("post_url") or item.get("image_url"))
     
     return True
 
@@ -76,20 +76,42 @@ def test_truth_social_api():
     print("FIRST VALID POST (not a retweet):")
     print("=" * 60)
     
+    valid_item = None
+    clean_text = ""
+    
     for item in posts:
-        if is_valid_post(item):
-            post_html = item.get("social", {}).get("post_html", "")
-            if post_html:
-                clean_text = BeautifulSoup(post_html, "html.parser").get_text().strip()
+        if not is_valid_post(item):
+            continue
+            
+        social = item.get("social") or {}
+        if not isinstance(social, dict):
+            social = {}
+            
+        post_html = social.get("post_html", "")
+        if post_html:
+            extracted_text = BeautifulSoup(post_html, "html.parser").get_text().strip()
+        else:
+            extracted_text = item.get("text", "").strip()
+            
+        extracted_text = " ".join(extracted_text.split())
+        
+        # If text is a placeholder, try to use the post URL or image URL
+        if not extracted_text or extracted_text in ["[Video]", "[Image]"]:
+            # Priority: post_url > image_url
+            fallback_url = item.get("post_url") or item.get("image_url")
+            if fallback_url:
+                extracted_text = fallback_url
             else:
-                clean_text = item.get("text", "").strip()
+                continue
             
-            clean_text = " ".join(clean_text.split())
-            
-            print(f"\nDate: {item.get('date', 'N/A')}")
-            print(f"Post URL: {item.get('post_url', 'N/A')}")
-            print(f"\nContent:\n{clean_text}")
-            break
+        valid_item = item
+        clean_text = extracted_text
+        break
+        
+    if valid_item:
+        print(f"\nDate: {valid_item.get('date', 'N/A')}")
+        print(f"Post URL: {valid_item.get('post_url', 'N/A')}")
+        print(f"\nContent:\n{clean_text}")
     else:
         print("No valid posts found!")
 

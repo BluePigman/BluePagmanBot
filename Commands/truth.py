@@ -37,11 +37,9 @@ def is_valid_post(item: dict) -> bool:
     if social.get("repost_flag", False):
         return False
     
-    if text.strip() == "[Video]":
-        return False
-    
-    if not text.strip():
-        return False
+    # Allow [Video] and [Image] posts only if they have a post_url or image_url
+    if text.strip() in ["[Video]", "[Image]"]:
+        return bool(item.get("post_url") or item.get("image_url"))
     
     return True
 
@@ -103,29 +101,44 @@ def truthsocial(self, message):
         return
 
     valid_item = None
+    clean_text = ""
+    time_part = ""
+
     for item in posts:
-        if is_valid_post(item):
-            valid_item = item
-            break
+        if not is_valid_post(item):
+            continue
+        
+        social = item.get("social") or {}
+        if not isinstance(social, dict):
+            social = {}
+            
+        post_html = social.get("post_html", "")
+        if post_html:
+            extracted_text = BeautifulSoup(post_html, "html.parser").get_text().strip()
+        else:
+            extracted_text = item.get("text", "").strip()
+        
+        extracted_text = " ".join(extracted_text.split())
+        
+        # If text is a placeholder, try to use the post URL or image URL
+        if not extracted_text or extracted_text in ["[Video]", "[Image]"]:
+            # Priority: post_url > image_url
+            fallback_url = item.get("post_url") or item.get("image_url")
+            if fallback_url:
+                extracted_text = fallback_url
+            else:
+                continue # Skip if no usable text and no fallback URL
+            
+        valid_item = item
+        clean_text = extracted_text
+        post_date = valid_item.get("date", "")
+        time_part = format_time_ago(post_date) if post_date else ""
+        break
 
     if valid_item is None:
         self.send_privmsg(cmd.channel, "No valid posts found.")
         return
 
-    post_date = valid_item.get("date", "")
-    if post_date:
-        time_part = format_time_ago(post_date)
-    else:
-        time_part = ""
-    
-    post_html = valid_item.get("social", {}).get("post_html", "")
-    if post_html:
-        clean_text = BeautifulSoup(post_html, "html.parser").get_text().strip()
-    else:
-        clean_text = valid_item.get("text", "").strip()
-    
-    clean_text = " ".join(clean_text.split())
-    
     max_content_len = CHUNK_SIZE - len("TRUTH ") - 1
     truncated_text = truncate_with_suffix(clean_text, time_part, max_length=max_content_len)
     self.send_privmsg(cmd.channel, "TRUTH " + truncated_text)
