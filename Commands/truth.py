@@ -37,6 +37,10 @@ def is_valid_post(item: dict) -> bool:
     if social.get("repost_flag", False):
         return False
     
+    # Allow [Video] and [Image] posts only if they have a post_url or image_url
+    if text.strip() in ["[Video]", "[Image]"]:
+        return bool(item.get("post_url") or item.get("image_url"))
+    
     return True
 
 
@@ -118,12 +122,12 @@ def truthsocial(self, message):
         
         # If text is a placeholder, try to use the post URL or image URL
         if not extracted_text or extracted_text in ["[Video]", "[Image]"]:
-            # Priority: post_url > image_url > placeholder text
+            # Priority: post_url > image_url
             fallback_url = item.get("post_url") or item.get("image_url")
             if fallback_url:
                 extracted_text = fallback_url
-            elif not extracted_text:
-                continue # Skip if absolutely no text and no URL
+            else:
+                continue # Skip if no usable text and no fallback URL
             
         valid_item = item
         clean_text = extracted_text
