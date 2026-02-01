@@ -37,8 +37,9 @@ def is_valid_post(item: dict) -> bool:
     if social.get("repost_flag", False):
         return False
     
+    # Allow [Video] and [Image] posts if they have a post_url or image_url
     if text.strip() in ["[Video]", "[Image]"]:
-        return False
+        return True
     
     if not text.strip():
         return False
@@ -113,6 +114,7 @@ def truthsocial(self, message):
         social = item.get("social") or {}
         if not isinstance(social, dict):
             social = {}
+            
         post_html = social.get("post_html", "")
         if post_html:
             extracted_text = BeautifulSoup(post_html, "html.parser").get_text().strip()
@@ -121,8 +123,14 @@ def truthsocial(self, message):
         
         extracted_text = " ".join(extracted_text.split())
         
+        # If text is a placeholder, try to use the post URL or image URL
         if not extracted_text or extracted_text in ["[Video]", "[Image]"]:
-            continue
+            # Priority: post_url > image_url > placeholder text
+            fallback_url = item.get("post_url") or item.get("image_url")
+            if fallback_url:
+                extracted_text = fallback_url
+            elif not extracted_text:
+                continue # Skip if absolutely no text and no URL
             
         valid_item = item
         clean_text = extracted_text

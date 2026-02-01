@@ -86,6 +86,7 @@ def test_truth_social_api():
         social = item.get("social") or {}
         if not isinstance(social, dict):
             social = {}
+            
         post_html = social.get("post_html", "")
         if post_html:
             extracted_text = BeautifulSoup(post_html, "html.parser").get_text().strip()
@@ -94,8 +95,14 @@ def test_truth_social_api():
             
         extracted_text = " ".join(extracted_text.split())
         
+        # If text is a placeholder, try to use the post URL or image URL
         if not extracted_text or extracted_text in ["[Video]", "[Image]"]:
-            continue
+            # Priority: post_url > image_url > placeholder text
+            fallback_url = item.get("post_url") or item.get("image_url")
+            if fallback_url:
+                extracted_text = fallback_url
+            elif not extracted_text:
+                continue
             
         valid_item = item
         clean_text = extracted_text
