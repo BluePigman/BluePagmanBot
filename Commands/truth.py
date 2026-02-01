@@ -37,7 +37,7 @@ def is_valid_post(item: dict) -> bool:
     if social.get("repost_flag", False):
         return False
     
-    if text.strip() == "[Video]":
+    if text.strip() in ["[Video]", "[Image]"]:
         return False
     
     if not text.strip():
@@ -103,29 +103,34 @@ def truthsocial(self, message):
         return
 
     valid_item = None
+    clean_text = ""
+    time_part = ""
+
     for item in posts:
-        if is_valid_post(item):
-            valid_item = item
-            break
+        if not is_valid_post(item):
+            continue
+        
+        post_html = item.get("social", {}).get("post_html", "")
+        if post_html:
+            extracted_text = BeautifulSoup(post_html, "html.parser").get_text().strip()
+        else:
+            extracted_text = item.get("text", "").strip()
+        
+        extracted_text = " ".join(extracted_text.split())
+        
+        if not extracted_text or extracted_text in ["[Video]", "[Image]"]:
+            continue
+            
+        valid_item = item
+        clean_text = extracted_text
+        post_date = valid_item.get("date", "")
+        time_part = format_time_ago(post_date) if post_date else ""
+        break
 
     if valid_item is None:
         self.send_privmsg(cmd.channel, "No valid posts found.")
         return
 
-    post_date = valid_item.get("date", "")
-    if post_date:
-        time_part = format_time_ago(post_date)
-    else:
-        time_part = ""
-    
-    post_html = valid_item.get("social", {}).get("post_html", "")
-    if post_html:
-        clean_text = BeautifulSoup(post_html, "html.parser").get_text().strip()
-    else:
-        clean_text = valid_item.get("text", "").strip()
-    
-    clean_text = " ".join(clean_text.split())
-    
     max_content_len = CHUNK_SIZE - len("TRUTH ") - 1
     truncated_text = truncate_with_suffix(clean_text, time_part, max_length=max_content_len)
     self.send_privmsg(cmd.channel, "TRUTH " + truncated_text)

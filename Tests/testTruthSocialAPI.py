@@ -12,7 +12,7 @@ def is_valid_post(item: dict) -> bool:
         return False
     if social.get("repost_flag", False):
         return False
-    if text.strip() == "[Video]":
+    if text.strip() in ["[Video]", "[Image]"]:
         return False
     if not text.strip():
         return False
@@ -76,20 +76,32 @@ def test_truth_social_api():
     print("FIRST VALID POST (not a retweet):")
     print("=" * 60)
     
+    valid_item = None
+    clean_text = ""
+    
     for item in posts:
-        if is_valid_post(item):
-            post_html = item.get("social", {}).get("post_html", "")
-            if post_html:
-                clean_text = BeautifulSoup(post_html, "html.parser").get_text().strip()
-            else:
-                clean_text = item.get("text", "").strip()
+        if not is_valid_post(item):
+            continue
             
-            clean_text = " ".join(clean_text.split())
+        post_html = item.get("social", {}).get("post_html", "")
+        if post_html:
+            extracted_text = BeautifulSoup(post_html, "html.parser").get_text().strip()
+        else:
+            extracted_text = item.get("text", "").strip()
             
-            print(f"\nDate: {item.get('date', 'N/A')}")
-            print(f"Post URL: {item.get('post_url', 'N/A')}")
-            print(f"\nContent:\n{clean_text}")
-            break
+        extracted_text = " ".join(extracted_text.split())
+        
+        if not extracted_text or extracted_text in ["[Video]", "[Image]"]:
+            continue
+            
+        valid_item = item
+        clean_text = extracted_text
+        break
+        
+    if valid_item:
+        print(f"\nDate: {valid_item.get('date', 'N/A')}")
+        print(f"Post URL: {valid_item.get('post_url', 'N/A')}")
+        print(f"\nContent:\n{clean_text}")
     else:
         print("No valid posts found!")
 
