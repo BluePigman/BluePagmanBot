@@ -110,7 +110,10 @@ def truthsocial(self, message):
         if not is_valid_post(item):
             continue
         
-        post_html = item.get("social", {}).get("post_html", "")
+        social = item.get("social") or {}
+        if not isinstance(social, dict):
+            social = {}
+        post_html = social.get("post_html", "")
         if post_html:
             extracted_text = BeautifulSoup(post_html, "html.parser").get_text().strip()
         else:
