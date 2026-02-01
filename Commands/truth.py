@@ -37,13 +37,6 @@ def is_valid_post(item: dict) -> bool:
     if social.get("repost_flag", False):
         return False
     
-    # Allow [Video] and [Image] posts if they have a post_url or image_url
-    if text.strip() in ["[Video]", "[Image]"]:
-        return True
-    
-    if not text.strip():
-        return False
-    
     return True
 
 

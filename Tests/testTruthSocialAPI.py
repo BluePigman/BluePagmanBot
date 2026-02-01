@@ -12,10 +12,6 @@ def is_valid_post(item: dict) -> bool:
         return False
     if social.get("repost_flag", False):
         return False
-    if text.strip() in ["[Video]", "[Image]"]:
-        return False
-    if not text.strip():
-        return False
     
     return True
 
