@@ -20,14 +20,15 @@ A Twitch chatbot running in Python.
 ## How to use: 
 
 1. Fork or clone this repository.
-2. Create a [python virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#create-and-use-virtual-environments) and run `pip install -e .` in the project's directory. (The `-e` flag installs the package in editable mode, which is useful for development.)
+2. Create a virtual environment for Python, recommended [uv](https://docs.astral.sh/uv/getting-started/installation/)
 3. Get an OAuth token of the Twitch account for the bot. I used [this](https://twitchapps.com/tmi/) to generate one, but the site has now shut down, so please find another way to get one. You can get the access token and Client ID [here](http://twitchtokengenerator.com/)
 5. Rename `config_example.py` to `config.py`, and fill in the details.
 6. Set up a Mongo database, add a database named "test" and a collection named "Users". Then add the connection string into `config.py` in db_uri.
 7. Run `bot.py`. The bot will now join the channels you put in `config.py`.
 
-## Maintenance:
-`uv add` to add packages. Then `pip install -e .` to update.
+## Maintenance (uv):
+`uv add` to add packages.
+`uv sync` to sync packages with the project dependencies.
 
 ## Video Demo:
 https://github.com/BluePigman/BluePagmanBot/assets/82780692/6cab58f2-3a63-4344-9456-abce8bc93851
