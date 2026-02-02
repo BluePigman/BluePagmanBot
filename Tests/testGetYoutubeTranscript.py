@@ -21,8 +21,8 @@ def run_test(video_id, description="Video"):
             "grounding_text": clean_str(transcript),
         }
         print(transcript)
-        #summary = gemini_generate(prompt, model)
-        #print(f"\nSummary:\n{summary}")
+        summary = gemini_generate(prompt, model)
+        print(f"\nSummary:\n{summary}")
 
     except TranscriptUnavailableError as e:
         print(f"Expected failure (No Captions): {e}")
