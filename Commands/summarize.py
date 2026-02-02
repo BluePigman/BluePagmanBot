@@ -1,8 +1,14 @@
-import html
-import re
-from typing import Optional, List
+import random
+import time
+from typing import Iterable
 
-from lxml import etree
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound, InvalidVideoId, \
+    VideoUnavailable, IpBlocked, YouTubeRequestFailed, RequestBlocked
+from youtube_transcript_api.proxies import WebshareProxyConfig
+
+from config import YT_PROXY_PASSWORD, YT_PROXY_USERNAME
+import re
+from typing import Optional
 
 import google.generativeai as genai
 
@@ -12,7 +18,6 @@ from Utils.utils import (
     send_chunks,
     clean_str,
     gemini_generate,
-    proxy_request,
     log_err
 )
 
@@ -39,120 +44,95 @@ model = genai.GenerativeModel(
 )
 
 
+def build_ytt_api():
+    if YT_PROXY_USERNAME and YT_PROXY_PASSWORD:
+        return YouTubeTranscriptApi(
+            proxy_config=WebshareProxyConfig(
+                proxy_username=YT_PROXY_USERNAME,
+                proxy_password=YT_PROXY_PASSWORD,
+            )
+        )
+    else:
+        # No proxy configured
+        return YouTubeTranscriptApi()
+
+
+ytt_api = build_ytt_api()
+
+
 def extract_youtube_id(text: str) -> Optional[str]:
     youtube_regex = r"(?:youtu\.be/|youtube\.com/(?:watch\?v=|shorts/))([A-Za-z0-9_-]{11})"
     match = re.search(youtube_regex, text)
     return match.group(1) if match else None
 
 
-def get_transcript(video_id: str, language: str = "en") -> str:
+def _join_fetched_transcript(transcript) -> str:
     """
-    Get captions for a given YouTube video using the Innertube API.
+    transcript is a FetchedTranscript (iterable of FetchedTranscriptSnippet)
+    """
+    return " ".join(
+        s.text.strip()
+        for s in transcript
+        if getattr(s, "text", None) and s.text.strip()
+    )
+
+
+def get_transcript(video_id: str, languages: Iterable[str] = ("en",)) -> str:
+    """
+    Get captions for a given YouTube video using youtube_transcript_api fetch().
     Returns the transcript as a single string.
     Raises TranscriptError or TranscriptUnavailableError on failure.
     """
-    video_url = f"https://www.youtube.com/watch?v={video_id}"
 
-    try:
-        # Step 1: Fetch the INNERTUBE_API_KEY from the video page
-        res = proxy_request("GET", video_url)
-        if res.status_code != 200:
-            print(f"Failed to fetch video page: {res.status_code}")
-            raise TranscriptError(f"Failed to fetch video page: {res.status_code}")
+    # The library already retries internally for RequestBlocked according to:
+    # proxy_config.retries_when_blocked (Webshare defaults to 10).
+    #
+    # Outer retry here is mainly for things the internal retry usually won't cover:
+    # - IpBlocked (often 429)
+    # - YouTubeRequestFailed (proxy flakiness / 5xx / transient HTTP)
+    #
+    # If you want *zero* manual retry, set attempts=1.
+    attempts = 5
+    base_sleep = 1
 
-        html_content = res.text
-        api_key_match = re.search(r'"INNERTUBE_API_KEY":"([^"]+)"', html_content)
-        if not api_key_match:
-            print("INNERTUBE_API_KEY not found in page")
-            raise TranscriptError("INNERTUBE_API_KEY not found in page")
-        api_key = api_key_match.group(1)
+    last_err: Optional[Exception] = None
 
-        # Step 2: Call the Innertube player API as Android client
-        player_endpoint = f"https://www.youtube.com/youtubei/v1/player?key={api_key}"
-        player_body = {
-            "context": {
-                "client": {
-                    "clientName": "ANDROID",
-                    "clientVersion": "21.02.33"
-                }
-            },
-            "videoId": video_id
-        }
+    for i in range(attempts):
+        try:
+            fetched = ytt_api.fetch(video_id, languages=list(languages))
+            text = _join_fetched_transcript(fetched)
 
-        player_res = proxy_request(
-            "POST",
-            player_endpoint,
-            headers={"Content-Type": "application/json",
-                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"},
-            json=player_body
-        )
-        if player_res.status_code != 200:
-            err = f"Failed to fetch player data: {player_res.status_code}"
-            print(err)
-            raise TranscriptError(err)
+            if not text:
+                raise TranscriptUnavailableError("Transcript returned, but was empty.")
 
-        player_data = player_res.json()
+            return text
 
-        # Step 3: Extract the caption track URL
-        tracks = player_data.get("captions", {}).get("playerCaptionsTracklistRenderer", {}).get("captionTracks")
-        if not tracks:
-            print("No caption tracks found")
-            raise TranscriptUnavailableError("No caption tracks found")
+        except (NoTranscriptFound, TranscriptsDisabled) as e:
+            # No captions available -> don't retry
+            raise TranscriptUnavailableError(str(e)) from e
 
-        # Try to find the requested language, fall back to first available
-        track = None
-        for t in tracks:
-            if t.get("languageCode") == language:
-                track = t
+        except (InvalidVideoId, VideoUnavailable) as e:
+            # Hard failures -> don't retry
+            raise TranscriptError(str(e)) from e
+
+        except (IpBlocked, YouTubeRequestFailed) as e:
+            # Retryable-ish failures -> retry a few times with backoff
+            last_err = e
+            if i == attempts - 1:
                 break
 
-        if not track:
-            # Try English variants
-            for t in tracks:
-                if t.get("languageCode", "").startswith("en"):
-                    track = t
-                    break
+            sleep_s = base_sleep * (2 ** i) + random.random() * 0.5
+            time.sleep(sleep_s)
+            continue
 
-        if not track:
-            # Use first available track
-            track = tracks[0]
-            print(f"Using fallback language: {track.get('languageCode')}")
+        except RequestBlocked as e:
+            raise TranscriptError(str(e)) from e
 
-        base_url = track.get("baseUrl")
-        if not base_url:
-            print("No baseUrl in caption track")
-            raise TranscriptError("No baseUrl in caption track")
+        except Exception as e:
+            log_err(e)
+            raise TranscriptError(f"Unexpected error: {e}") from e
 
-        # Remove format parameter if present to get plain XML
-        base_url = re.sub(r'&fmt=\w+$', '', base_url)
-
-        # Step 4: Fetch and parse captions XML
-        caption_res = proxy_request("GET", base_url)
-        if caption_res.status_code != 200:
-            print(f"Failed to fetch captions: {caption_res.status_code}")
-            raise TranscriptError(f"Failed to fetch captions: {caption_res.status_code}")
-
-        # Use a secure XML parser configuration
-        parser = etree.XMLParser(resolve_entities=False, no_network=True, recover=True)
-        root = etree.fromstring(caption_res.content, parser=parser)
-
-        captions: List[str] = []
-        for text_elem in root.xpath("//text"):
-            if text_elem.text:
-                decoded_text = html.unescape(text_elem.text)
-                captions.append(decoded_text)
-
-        if not captions:
-            print("No caption text found in XML")
-            raise TranscriptUnavailableError("No caption text found in XML")
-
-        return " ".join(captions)
-
-    except (TranscriptError, TranscriptUnavailableError):
-        raise
-    except Exception as e:
-        log_err(e)
-        raise TranscriptError(f"Unexpected error: {e}")
+    raise TranscriptError(f"Failed to retrieve transcript after retries: {last_err}") from last_err
 
 
 def reply_with_summarize(self, message):
@@ -177,7 +157,7 @@ def reply_with_summarize(self, message):
             return
 
         try:
-            transcript = get_transcript(video_id)
+            transcript = get_transcript(video_id, languages=("en", "en-US", "en-GB"))
         except TranscriptUnavailableError:
             self.send_privmsg(cmd.channel, f"{cmd.username}, no transcript available for that video.")
             return
@@ -201,7 +181,6 @@ def reply_with_summarize(self, message):
             return
 
         send_chunks(self.send_privmsg, cmd.channel, clean_str(summary, ["`", "*"]))
-
     except Exception as e:
         print(f"[Error] {e}")
         self.send_privmsg(cmd.channel, "Failed to generate a summary. Please try again later.")

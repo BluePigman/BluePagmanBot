@@ -23,6 +23,7 @@ dependencies = [
     "html2text>=2025.4.15",
     "lxml>=5.4.0",
     "curl-cffi>=0.11.4",
+    "youtube-transcript-api>=1.2.4",
 ]
 
 [tool.setuptools]
