@@ -92,8 +92,7 @@ def get_transcript(video_id: str, languages: Iterable[str] = ("en",)) -> str:
     # - YouTubeRequestFailed (proxy flakiness / 5xx / transient HTTP)
     #
     # If you want *zero* manual retry, set attempts=1.
-    attempts = 5
-    base_sleep = 1
+    attempts = 10
 
     last_err: Optional[Exception] = None
 
@@ -121,7 +120,7 @@ def get_transcript(video_id: str, languages: Iterable[str] = ("en",)) -> str:
             if i == attempts - 1:
                 break
 
-            sleep_s = base_sleep * (2 ** i) + random.random() * 0.5
+            sleep_s = 1 + random.random() * 0.5
             time.sleep(sleep_s)
             continue
 
