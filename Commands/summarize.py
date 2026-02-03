@@ -117,7 +117,7 @@ def get_transcript(video_id: str, languages: Iterable[str] = ("en",)) -> str:
             if i == attempts - 1:
                 break
 
-            sleep_s = 1 + random.random() * 0.5
+            sleep_s = 2 + random.random() * 0.5
             time.sleep(sleep_s)
             continue
 
