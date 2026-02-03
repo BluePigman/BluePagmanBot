@@ -1,19 +1,35 @@
+import random
 import re
-import json
-from typing import Optional
-from urllib.parse import urljoin
 import time
+from typing import Iterable
+from typing import Optional
+
 import google.generativeai as genai
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound, InvalidVideoId, \
+    VideoUnavailable
+from youtube_transcript_api.proxies import WebshareProxyConfig
+
 from Utils.utils import (
     fetch_cmd_data,
     check_cooldown,
     send_chunks,
     clean_str,
-    gemini_generate,
-    proxy_request
+    gemini_generate
 )
+from config import YT_PROXY_PASSWORD, YT_PROXY_USERNAME
 
 SUMMARY_CHAR_LIMIT = 500
+
+
+class TranscriptError(Exception):
+    """Base exception for transcript retrieval errors."""
+    pass
+
+
+class TranscriptUnavailableError(TranscriptError):
+    """Raised when no captions are found."""
+    pass
+
 
 model = genai.GenerativeModel(
     model_name="gemini-flash-lite-latest",
@@ -24,86 +40,89 @@ model = genai.GenerativeModel(
     }
 )
 
+
+def build_ytt_api():
+    if YT_PROXY_USERNAME and YT_PROXY_PASSWORD:
+        return YouTubeTranscriptApi(
+            proxy_config=WebshareProxyConfig(
+                proxy_username=YT_PROXY_USERNAME,
+                proxy_password=YT_PROXY_PASSWORD,
+            )
+        )
+    else:
+        # No proxy configured
+        return YouTubeTranscriptApi()
+
+
+ytt_api = build_ytt_api()
+
+
 def extract_youtube_id(text: str) -> Optional[str]:
     youtube_regex = r"(?:youtu\.be/|youtube\.com/(?:watch\?v=|shorts/))([A-Za-z0-9_-]{11})"
     match = re.search(youtube_regex, text)
     return match.group(1) if match else None
 
-def get_transcript(video_id: str) -> tuple[str | None, str | None]:
-    base = "https://inv.nadeko.net"
-    MAX_RETRIES = 3
-    
-    res = None
-    for attempt in range(MAX_RETRIES):
+
+def _join_fetched_transcript(transcript) -> str:
+    """
+    transcript is a FetchedTranscript (iterable of FetchedTranscriptSnippet)
+    """
+    return " ".join(
+        s.text.strip()
+        for s in transcript
+        if getattr(s, "text", None) and s.text.strip()
+    )
+
+
+def get_transcript(video_id: str, languages: Iterable[str] = ("en",)) -> str:
+    """
+    Get captions for a given YouTube video using youtube_transcript_api fetch().
+    Returns the transcript as a single string.
+    Raises TranscriptError or TranscriptUnavailableError on failure.
+    """
+
+    # The library already retries internally for RequestBlocked according to:
+    # proxy_config.retries_when_blocked (Webshare defaults to 10).
+    #
+    # Outer retry here is mainly for things the internal retry usually won't cover:
+    # - IpBlocked (often 429)
+    # - YouTubeRequestFailed (proxy flakiness / 5xx / transient HTTP)
+    #
+    # If you want *zero* manual retry, set attempts=1.
+    attempts = 10
+
+    last_err: Optional[Exception] = None
+
+    for i in range(attempts):
         try:
-            res = proxy_request("GET", f"{base}/api/v1/captions/{video_id}", timeout=10)
-            if res.status_code == 200:
-                break
-            print(f"Attempt {attempt + 1} failed to fetch captions list: Status {res.status_code}")
+            fetched = ytt_api.fetch(video_id, languages=list(languages))
+            text = _join_fetched_transcript(fetched)
+
+            if not text:
+                raise TranscriptUnavailableError("Transcript returned, but was empty.")
+
+            return text
+
+        except (NoTranscriptFound, TranscriptsDisabled) as e:
+            # No captions available -> don't retry
+            raise TranscriptUnavailableError(str(e)) from e
+
+        except (InvalidVideoId, VideoUnavailable) as e:
+            # Hard failures -> don't retry
+            raise TranscriptError(str(e)) from e
+
         except Exception as e:
-            print(f"Attempt {attempt + 1} failed with exception: {e}")
-        
-        if attempt < MAX_RETRIES - 1:
-            time.sleep(1)
-    else:
-        status = res.status_code if res else "Unknown"
-        print(f"Failed to fetch captions list after {MAX_RETRIES} attempts")
-        return None, f"Failed to fetch captions list (Status {status})"
-
-    try:
-        data = json.loads(res.text)
-    except json.JSONDecodeError:
-        print("Failed to parse captions JSON")
-        return None, "Failed to parse captions JSON"
-
-    captions = data.get("captions", [])
-    if not captions:
-        print("No captions found in response")
-        return None, "No captions found"
-
-    preferred = [
-        "English (United States)",
-        "English (United Kingdom)",
-        "English (auto-generated)",
-    ]
-
-    selected = None
-    for label in preferred:
-        for caption in captions:
-            if caption.get("label") == label:
-                selected = caption
+            # Retryable-ish failures -> retry a few times with backoff
+            last_err = e
+            if i == attempts - 1:
                 break
-        if selected:
-            break
 
-    if not selected and captions:
-        selected = captions[0]
+            sleep_s = 2 + random.random() * 0.5
+            time.sleep(sleep_s)
+            continue
 
-    if not selected or not selected.get("url"):
-        print("No suitable caption URL found")
-        return None, "No suitable caption URL found"
+    raise TranscriptError(f"Failed to retrieve transcript after retries: {last_err}") from last_err
 
-    full_url = urljoin(base, selected["url"])
-    
-    transcript_res = None
-    for attempt in range(MAX_RETRIES):
-        try:
-            transcript_res = proxy_request("GET", full_url, timeout=10)
-            if transcript_res.status_code == 200:
-                break
-            print(f"Attempt {attempt + 1} failed to fetch transcript content: Status {transcript_res.status_code}")
-        except Exception as e:
-            print(f"Attempt {attempt + 1} failed with exception: {e}")
-            
-        if attempt < MAX_RETRIES - 1:
-            time.sleep(1)
-    else:
-        status = transcript_res.status_code if transcript_res else "Unknown"
-        print(f"Failed to fetch transcript content after {MAX_RETRIES} attempts")
-        return None, f"Failed to fetch transcript content (Status {status})"
-
-    transcript = transcript_res.text
-    return transcript, None
 
 def reply_with_summarize(self, message):
     try:
@@ -126,12 +145,13 @@ def reply_with_summarize(self, message):
             self.send_privmsg(cmd.channel, f"{cmd.username}, unable to extract a video ID from that link.")
             return
 
-        transcript, error = get_transcript(video_id)
-        if not transcript:
-            if error == "No captions found":
-                self.send_privmsg(cmd.channel, f"{cmd.username}, no transcript available for that video.")
-            else:
-                self.send_privmsg(cmd.channel, f"{cmd.username}, failed to retrieve transcript: {error}")
+        try:
+            transcript = get_transcript(video_id, languages=("en", "en-US", "en-GB"))
+        except TranscriptUnavailableError:
+            self.send_privmsg(cmd.channel, f"{cmd.username}, no transcript available for that video.")
+            return
+        except TranscriptError as e:
+            self.send_privmsg(cmd.channel, f"{cmd.username}, failed to retrieve transcript: {e}")
             return
 
         prompt = {
@@ -150,7 +170,6 @@ def reply_with_summarize(self, message):
             return
 
         send_chunks(self.send_privmsg, cmd.channel, clean_str(summary, ["`", "*"]))
-
     except Exception as e:
         print(f"[Error] {e}")
         self.send_privmsg(cmd.channel, "Failed to generate a summary. Please try again later.")
