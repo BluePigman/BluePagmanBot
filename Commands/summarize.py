@@ -1,25 +1,22 @@
 import random
+import re
 import time
 from typing import Iterable
-
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound, InvalidVideoId, \
-    VideoUnavailable, IpBlocked, YouTubeRequestFailed, RequestBlocked
-from youtube_transcript_api.proxies import WebshareProxyConfig
-
-from config import YT_PROXY_PASSWORD, YT_PROXY_USERNAME
-import re
 from typing import Optional
 
 import google.generativeai as genai
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound, InvalidVideoId, \
+    VideoUnavailable
+from youtube_transcript_api.proxies import WebshareProxyConfig
 
 from Utils.utils import (
     fetch_cmd_data,
     check_cooldown,
     send_chunks,
     clean_str,
-    gemini_generate,
-    log_err
+    gemini_generate
 )
+from config import YT_PROXY_PASSWORD, YT_PROXY_USERNAME
 
 SUMMARY_CHAR_LIMIT = 500
 
@@ -114,22 +111,15 @@ def get_transcript(video_id: str, languages: Iterable[str] = ("en",)) -> str:
             # Hard failures -> don't retry
             raise TranscriptError(str(e)) from e
 
-        except (IpBlocked, YouTubeRequestFailed) as e:
+        except Exception as e:
             # Retryable-ish failures -> retry a few times with backoff
             last_err = e
             if i == attempts - 1:
                 break
 
-            sleep_s = 1 + random.random() * 0.5
+            sleep_s = 3 + random.random() * 0.5
             time.sleep(sleep_s)
             continue
-
-        except RequestBlocked as e:
-            raise TranscriptError(str(e)) from e
-
-        except Exception as e:
-            log_err(e)
-            raise TranscriptError(f"Unexpected error: {e}") from e
 
     raise TranscriptError(f"Failed to retrieve transcript after retries: {last_err}") from last_err
 
