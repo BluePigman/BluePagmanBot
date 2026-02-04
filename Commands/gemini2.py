@@ -48,4 +48,4 @@ def generate(prompt) -> list[str]:
         return [response[i:i+n] for i in range(0, len(response), n)]
     except Exception as e:
         print(e)
-        return ["Error: ", str(e)]
+        return [f"Error: {str(e)}"]

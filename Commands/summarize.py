@@ -140,7 +140,7 @@ def reply_with_summarize(self, message):
             return
 
         try:
-            transcript = get_transcript(video_id, languages=("en"))
+            transcript = get_transcript(video_id, languages=("en",))
         except TranscriptUnavailableError:
             self.send_privmsg(cmd.channel, f"{cmd.username}, no transcript available for that video.")
             return

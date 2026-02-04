@@ -264,7 +264,7 @@ def reply_with_grounded_gemini(self, message):
             "grounding_text": grounding_text
         }, MODEL_NAME, GENERATION_CONFIG)
 
-        if "Error" in result[0]:
+        if not result or "Error" in result:
             self.send_privmsg(cmd.channel, "Failed to generate a response. Please try again later.")
             return
 
