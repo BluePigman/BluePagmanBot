@@ -3,10 +3,11 @@ import requests
 import time
 import re
 import config
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from Commands import gemini
 
-genai.configure(api_key=config.GOOGLE_API_KEY)
+client = genai.Client(api_key=config.GOOGLE_API_KEY)
 
 # Maximum file size in bytes (1 GB)
 MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024
@@ -49,33 +50,34 @@ def generate_gemini_description(media, input_text):
 
 def gemini_for_video(media, input_text):
     try:
-        response = genai.GenerativeModel(
-            "gemini-flash-lite-latest").generate_content([media, input_text])
-        if response.prompt_feedback.block_reason:
+        response = client.models.generate_content(
+            model="gemini-flash-lite-latest",
+            contents=[media, input_text]
+        )
+        if not response.text:
             return None
-        response = response.text.replace('\n', ' ')
-        return [response[i:i+495] for i in range(0, len(response), 495)]
+        response_text = response.text.replace('\n', ' ')
+        return [response_text[i:i+495] for i in range(0, len(response_text), 495)]
     except Exception as e:
         print(f"Error generating Gemini description: {e}")
         return None
 
 
 def upload_file_gemini(media_url, content_type):
-    """Upload file to gemini to be used for prompts"""
+    """Create a Part object for Gemini from media_url"""
     try:
         # Download the file
         response = requests.get(media_url, stream=True, timeout=REQUEST_TIMEOUT_SECS)
+        response.raise_for_status()
 
-        # upload raw bytes
-        file = genai.protos.Part(
-            inline_data=genai.protos.Blob(
-                mime_type = content_type,
-                data = response.content
-            )
+        # Create inline data part
+        file = types.Part.from_bytes(
+            data=response.content,
+            mime_type=content_type
         )
         return file
     except Exception as e:
-        print(f"Error uploading file: {e}")
+        print(f"Error creating file part: {e}")
         return None
 
 def reply_with_describe(self, message):
