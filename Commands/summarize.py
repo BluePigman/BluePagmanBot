@@ -16,7 +16,11 @@ from Utils.utils import (
     clean_str,
     gemini_generate
 )
-from config import YT_PROXY_PASSWORD, YT_PROXY_USERNAME
+try:
+    from config import YT_PROXY_PASSWORD, YT_PROXY_USERNAME
+except ImportError:
+    YT_PROXY_PASSWORD = None
+    YT_PROXY_USERNAME = None
 
 SUMMARY_CHAR_LIMIT = 500
 
