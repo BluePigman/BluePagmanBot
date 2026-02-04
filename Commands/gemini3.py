@@ -264,10 +264,10 @@ def reply_with_grounded_gemini(self, message):
             "grounding_text": grounding_text
         }, MODEL_NAME, GENERATION_CONFIG)
 
-        if not result or "Error" in result:
+        if not result:
             self.send_privmsg(cmd.channel, "Failed to generate a response. Please try again later.")
             return
-
+        
         clean_result = clean_str(result, ['`', '*'])
         send_chunks(self.send_privmsg, cmd.channel, clean_result)
         if valid_urls:
