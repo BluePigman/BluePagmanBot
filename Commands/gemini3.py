@@ -2,7 +2,8 @@ from datetime import datetime
 from urllib.parse import urlencode, unquote, urlparse
 from itertools import zip_longest
 import re, html2text
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from Utils.utils import (
     proxy_request,
     clean_str,
@@ -13,17 +14,15 @@ from Utils.utils import (
     parse_str
 )
 
-model = genai.GenerativeModel(
-    model_name="gemini-flash-lite-latest",
-    generation_config={
-        "max_output_tokens": 400,
-        "temperature": 0.3,
-        "top_p": 0.95,
-    },
-    system_instruction=[
-        "Please provide a short, concise response with enough detail. Do not ask the user follow up questions, because you are intended to provide a single response with no history and are not expected any follow up prompts. Answer should be at most 990 characters."
+MODEL_NAME = "gemini-flash-lite-latest"
+GENERATION_CONFIG = {
+    "max_output_tokens": 400,
+    "temperature": 0.3,
+    "top_p": 0.95,
+    "system_instruction": [
+        types.Part.from_text(text="Please provide a short, concise response with enough detail. Do not ask the user follow up questions, because you are intended to provide a single response with no history and are not expected any follow up prompts. Answer should be at most 990 characters.")
     ]
-)
+}
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
@@ -136,12 +135,10 @@ def get_wikipedia_snippet(query):
         return
 
 def querify(prompt):
-    gemma_model = genai.GenerativeModel(
-        model_name="gemma-3n-e4b-it",
-        generation_config={ "max_output_tokens": 400, "temperature": 0.3 }
-    )
+    model_name = "gemma-3n-e4b-it"
+    config = { "max_output_tokens": 400, "temperature": 0.3 }
     prompt = f"Convert into a keyword Google search query if needed. Return only the resulting query, without quotes or any extra text: {prompt}"
-    result = gemini_generate(prompt, gemma_model)
+    result = gemini_generate(prompt, model_name, config)
     if not result:
         return
     
@@ -235,8 +232,8 @@ def reply_with_grounded_gemini(self, message):
     if not cmd.params:
         m = (
             f"{cmd.username}, please provide a prompt for Gemini. "
-            f"Model: {model.model_name}, temperature: {model._generation_config['temperature']}, "
-            f"top_p: {model._generation_config['top_p']}"
+            f"Model: {MODEL_NAME}, temperature: {GENERATION_CONFIG['temperature']}, "
+            f"top_p: {GENERATION_CONFIG['top_p']}"
         )
         self.send_privmsg(cmd.channel, m)
         return
@@ -265,7 +262,7 @@ def reply_with_grounded_gemini(self, message):
             "prompt": prompt,
             "grounded": is_grounded,
             "grounding_text": grounding_text
-        }, model)
+        }, MODEL_NAME, GENERATION_CONFIG)
 
         if "Error" in result[0]:
             self.send_privmsg(cmd.channel, "Failed to generate a response. Please try again later.")

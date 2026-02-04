@@ -1,4 +1,4 @@
-from Commands.summarize import get_transcript, model, SUMMARY_CHAR_LIMIT, TranscriptError, TranscriptUnavailableError
+from Commands.summarize import get_transcript, MODEL_NAME, GENERATION_CONFIG, SUMMARY_CHAR_LIMIT, TranscriptError, TranscriptUnavailableError
 from Utils.utils import gemini_generate, clean_str
 
 
@@ -21,7 +21,7 @@ def run_test(video_id, description="Video"):
             "grounding_text": clean_str(transcript),
         }
         print(transcript)
-        summary = gemini_generate(prompt, model)
+        summary = gemini_generate(prompt, MODEL_NAME, GENERATION_CONFIG)
         print(f"\nSummary:\n{summary}")
 
     except TranscriptUnavailableError as e:

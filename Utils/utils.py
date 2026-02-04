@@ -5,8 +5,7 @@ import curl_cffi
 from bs4 import BeautifulSoup
 from urllib.parse import urlencode, urlparse, quote_plus
 from typing import Any, Dict, List, Union, Optional
-import google.generativeai as genai_text
-from google import genai as genai_image
+from google import genai
 from google.genai import types
 from groq import Groq
 from dataclasses import dataclass
@@ -598,19 +597,14 @@ def is_url(url):
 
 # --- LLM Generation Utilities ---
 
-def gemini_generate(request: str | dict, model) -> str | list[str]:
+def gemini_generate(request: str | dict, model_name: str = "gemini-2.0-flash", gen_config: dict = None) -> str | None:
     """
-    Generate content using the model with optional grounding.
-    Accepts request as either a string or dict with keys:
-    {
-        "prompt": str,
-        "grounded": bool,
-        "grounding_text": str or list[str]
-    }
-    model: object with generate_content method
-    Returns generated text.
+    Generate content using the google-genai SDK.
+    request: str or dict with 'prompt', 'grounded', 'grounding_text'
+    model_name: The Gemini model to use.
+    gen_config: Optional generation configuration.
     """
-    genai_text.configure(api_key=config.GOOGLE_API_KEY)
+    client = genai.Client(api_key=config.GOOGLE_API_KEY)
     try:
         if isinstance(request, str):
             prompt = request
@@ -628,8 +622,13 @@ def gemini_generate(request: str | dict, model) -> str | list[str]:
         else:
             full_prompt = prompt
 
-        response_text = model.generate_content(full_prompt, stream=False).text
-        return response_text
+        generate_config = types.GenerateContentConfig(**(gen_config or {}))
+        response = client.models.generate_content(
+            model=model_name,
+            contents=full_prompt,
+            config=generate_config
+        )
+        return response.text
 
     except Exception as e:
         log_err(e)
@@ -647,7 +646,7 @@ def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None
     - result: file path of the saved image OR text response (if generation failed but text was returned) OR None
     - is_image: True if result is a file path, False otherwise
     """
-    client = genai_image.Client(api_key=config.GOOGLE_API_KEY)
+    client = genai.Client(api_key=config.GOOGLE_API_KEY)
 
     contents_parts = []
     if input_images_b64:

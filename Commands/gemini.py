@@ -1,7 +1,9 @@
 import time
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import config
-genai.configure(api_key=config.GOOGLE_API_KEY)
+
+client = genai.Client(api_key=config.GOOGLE_API_KEY)
 
 def reply_with_gemini(self, message):
     if (message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] >
@@ -21,29 +23,24 @@ def reply_with_gemini(self, message):
         time.sleep(1)
 
 
-generation_config = {
-    "max_output_tokens": 400,
-    "temperature": 1.1,
-    "top_p": 0.95,
-}
-
-system_instruction=["""Please always provide a short and concise response. Do not ask the user follow up questions, 
+MODEL_NAME = "gemini-flash-lite-latest"
+GENERATION_CONFIG = types.GenerateContentConfig(
+    max_output_tokens=400,
+    temperature=1.1,
+    top_p=0.95,
+    system_instruction=[types.Part.from_text(text="""Please always provide a short and concise response. Do not ask the user follow up questions, 
                         because you are intended to provide a single response with no history and are not expected
-                        any follow up prompts. Answer should be at most 990 characters."""]
-
-model = genai.GenerativeModel(
-  model_name="gemini-flash-lite-latest",
-  generation_config=generation_config,
-  system_instruction=system_instruction
+                        any follow up prompts. Answer should be at most 990 characters.""")]
 )
 
 def generate(prompt) -> list[str]:
     try:
         if isinstance(prompt, str):
             prompt = [prompt]
-        response = model.generate_content(
-            prompt,
-            stream=False,
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=prompt,
+            config=GENERATION_CONFIG
         ).text.replace('\n', ' ').replace('*', ' ')
         n = 495
         return [response[i:i+n] for i in range(0, len(response), n)]
@@ -53,17 +50,17 @@ def generate(prompt) -> list[str]:
 
 
 def generate_emote_description(prompt):
-    system_instruction = [
-        "You don't need to say Here's a description, just say the result."]
     try:
-        model = genai.GenerativeModel(
-            "gemini-2.0-flash",
-            system_instruction=system_instruction
+        config = types.GenerateContentConfig(
+            system_instruction=[types.Part.from_text(text="You don't need to say Here's a description, just say the result.")],
+            max_output_tokens=400,
+            temperature=1.1,
+            top_p=0.95,
         )
-        response = model.generate_content(
-            prompt,
-            generation_config=generation_config,
-            stream=False,
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+            config=config,
         ).text.replace('\n', ' ')
         response = response.replace('*', ' ')
         response = response.replace(r'\&', '&')

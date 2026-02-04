@@ -4,7 +4,7 @@ import time
 from typing import Iterable
 from typing import Optional
 
-import google.generativeai as genai
+from google import genai
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound, InvalidVideoId, \
     VideoUnavailable
 from youtube_transcript_api.proxies import WebshareProxyConfig
@@ -31,14 +31,12 @@ class TranscriptUnavailableError(TranscriptError):
     pass
 
 
-model = genai.GenerativeModel(
-    model_name="gemini-flash-lite-latest",
-    generation_config={
-        "max_output_tokens": 400,
-        "temperature": 0.5,
-        "top_p": 0.95,
-    }
-)
+MODEL_NAME = "gemini-flash-lite-latest"
+GENERATION_CONFIG = {
+    "max_output_tokens": 400,
+    "temperature": 0.5,
+    "top_p": 0.95,
+}
 
 
 def build_ytt_api():
@@ -104,21 +102,17 @@ def get_transcript(video_id: str, languages: Iterable[str] = ("en",)) -> str:
             return text
 
         except (NoTranscriptFound, TranscriptsDisabled) as e:
-            # No captions available -> don't retry
             raise TranscriptUnavailableError(str(e)) from e
 
         except (InvalidVideoId, VideoUnavailable) as e:
-            # Hard failures -> don't retry
             raise TranscriptError(str(e)) from e
 
         except Exception as e:
-            # Retryable-ish failures -> retry a few times with backoff
             last_err = e
             if i == attempts - 1:
                 break
 
-            sleep_s = 2 + random.random() * 0.5
-            time.sleep(sleep_s)
+            time.sleep(0.75)
             continue
 
     raise TranscriptError(f"Failed to retrieve transcript after retries: {last_err}") from last_err
@@ -146,7 +140,7 @@ def reply_with_summarize(self, message):
             return
 
         try:
-            transcript = get_transcript(video_id, languages=("en", "en-US", "en-GB"))
+            transcript = get_transcript(video_id, languages=("en"))
         except TranscriptUnavailableError:
             self.send_privmsg(cmd.channel, f"{cmd.username}, no transcript available for that video.")
             return
@@ -164,7 +158,7 @@ def reply_with_summarize(self, message):
             "grounding_text": clean_str(transcript),
         }
 
-        summary = gemini_generate(prompt, model)
+        summary = gemini_generate(prompt, MODEL_NAME, GENERATION_CONFIG)
         if isinstance(summary, str) and summary.lower().startswith("error"):
             self.send_privmsg(cmd.channel, f"{cmd.username}, failed to generate a summary. Please try again later.")
             return
