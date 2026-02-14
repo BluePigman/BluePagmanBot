@@ -72,14 +72,74 @@ def get_google_lucky(query):
     query_string = urlencode(params)
     url = f"https://www.google.com/search?{query_string}"
 
-    soup = fetch_and_parse_html(url)
+    try:
+        res = proxy_request("GET", url, headers=headers)
+        if not res:
+            print("get_google_lucky: No response")
+            return None
 
-    if not soup:
-        return
-    
-    link = soup.find('a', href=True)
+        # Check for transparent redirect
+        final_url = getattr(res, 'url', '')
+        if final_url and "google.com" not in final_url:
+            print(f"get_google_lucky: Redirected to {final_url}")
+            return final_url
 
-    return link['href'] if link else None
+        # Check Location header (handles /url?q= redirect format)
+        location = res.headers.get("Location", "")
+        if location:
+            match = re.search(r'[?&]q=(https?://[^&]+)', location)
+            if match:
+                destination = unquote(match.group(1))
+                if "google.com" not in destination:
+                    print(f"get_google_lucky: Extracted URL from Location param: {destination}")
+                    return destination
+            if "google.com" not in location and location.startswith('http'):
+                print(f"get_google_lucky: Got redirect to {location}")
+                return location
+
+        # Parse HTML body for Redirect Notice links
+        body = res.text
+        if body:
+            soup = parse_str(body, "html")
+            if soup:
+                for link in soup.find_all('a', href=True):
+                    href = link['href']
+                    # Look for external URLs or Google-wrapped links
+                    if href.startswith('http') and 'google.com' not in href:
+                        print(f"get_google_lucky: Found link in HTML: {href}")
+                        return href
+                    if '/url?' in href or 'google.com/url?' in href:
+                        match = re.search(r'[?&]q=(https?://[^&]+)', href)
+                        if match:
+                            destination = unquote(match.group(1))
+                            if "google.com" not in destination:
+                                print(f"get_google_lucky: Extracted URL from link param: {destination}")
+                                return destination
+
+        # Direct fallback (bypass proxy) to capture raw redirect
+        try:
+            res_direct = proxy_request("GET", url, headers=headers, bypass_proxy=True, allow_redirects=False, timeout=5)
+            if res_direct:
+                loc = res_direct.headers.get("Location", "")
+                if loc:
+                    match = re.search(r'[?&]q=(https?://[^&]+)', loc)
+                    if match:
+                        destination = unquote(match.group(1))
+                        if "google.com" not in destination:
+                            print(f"get_google_lucky: Direct fallback extracted URL: {destination}")
+                            return destination
+                    if "google.com" not in loc and loc.startswith('http'):
+                        print(f"get_google_lucky: Direct fallback redirect to {loc}")
+                        return loc
+        except Exception as e:
+            print(f"get_google_lucky: Direct fallback failed: {e}")
+
+        print("get_google_lucky: Could not extract destination URL")
+        return None
+
+    except Exception as e:
+        print(f"get_google_lucky: Error: {e}")
+        return None
 
 def get_wikipedia_snippet(query):
     try:
