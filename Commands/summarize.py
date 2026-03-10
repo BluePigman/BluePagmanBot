@@ -1,9 +1,6 @@
-import re
-from typing import Iterable
-from typing import Optional
-
-import requests
-
+import re, requests
+from typing import Iterable, Optional
+from config import YT_CAPTION_API_TOKEN, YT_CAPTION_API_URL
 from Utils.utils import (
     fetch_cmd_data,
     check_cooldown,
@@ -11,7 +8,6 @@ from Utils.utils import (
     clean_str,
     gemini_generate
 )
-from config import YT_CAPTION_API_TOKEN, YT_CAPTION_API_URL
 
 SUMMARY_CHAR_LIMIT = 500
 
@@ -127,6 +123,7 @@ def reply_with_summarize(self, message):
 
         summary = gemini_generate(prompt, MODEL_NAME, GENERATION_CONFIG)
         if isinstance(summary, str) and summary.lower().startswith("error"):
+            print(summary)
             self.send_privmsg(cmd.channel, f"{cmd.username}, failed to generate a summary. Please try again later.")
             return
 
