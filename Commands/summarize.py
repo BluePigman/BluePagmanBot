@@ -52,7 +52,8 @@ def get_transcript(video_id: str, languages: Iterable[str] = ("en",)) -> str:
     try:
         response = requests.get(endpoint, headers=headers, params=params, timeout=30)
     except requests.RequestException as e:
-        raise TranscriptError(f"Failed to contact transcript API: {e}") from e
+        print(f"[summarize] Transcript API request exception for {video_id}: {e}")
+        raise TranscriptError("Failed to contact transcript API.") from e
 
     if response.status_code == 404:
         raise TranscriptUnavailableError("No transcript available for that video.")
@@ -65,11 +66,16 @@ def get_transcript(video_id: str, languages: Iterable[str] = ("en",)) -> str:
             detail = response.json().get("detail", response.text)
         except ValueError:
             detail = response.text
-        raise TranscriptError(f"Transcript API error: {detail}")
+        print(
+            f"[summarize] Transcript API error for {video_id}: "
+            f"status={response.status_code} detail={detail}"
+        )
+        raise TranscriptError("Transcript API request failed.")
 
     try:
         payload = response.json()
     except ValueError as e:
+        print(f"[summarize] Transcript API invalid JSON for {video_id}: {e}")
         raise TranscriptError("Transcript API returned invalid JSON.") from e
 
     transcript = payload.get("transcript", "").strip()
