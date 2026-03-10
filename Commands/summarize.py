@@ -1,13 +1,8 @@
-import random
 import re
-import time
 from typing import Iterable
 from typing import Optional
 
-from google import genai
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound, InvalidVideoId, \
-    VideoUnavailable
-from youtube_transcript_api.proxies import WebshareProxyConfig
+import requests
 
 from Utils.utils import (
     fetch_cmd_data,
@@ -16,11 +11,7 @@ from Utils.utils import (
     clean_str,
     gemini_generate
 )
-try:
-    from config import YT_PROXY_PASSWORD, YT_PROXY_USERNAME
-except ImportError:
-    YT_PROXY_PASSWORD = None
-    YT_PROXY_USERNAME = None
+from config import YT_CAPTION_API_TOKEN, YT_CAPTION_API_URL
 
 SUMMARY_CHAR_LIMIT = 500
 
@@ -43,83 +34,49 @@ GENERATION_CONFIG = {
 }
 
 
-def build_ytt_api():
-    if YT_PROXY_USERNAME and YT_PROXY_PASSWORD:
-        return YouTubeTranscriptApi(
-            proxy_config=WebshareProxyConfig(
-                proxy_username=YT_PROXY_USERNAME,
-                proxy_password=YT_PROXY_PASSWORD,
-            )
-        )
-    else:
-        # No proxy configured
-        return YouTubeTranscriptApi()
-
-
-ytt_api = build_ytt_api()
-
-
 def extract_youtube_id(text: str) -> Optional[str]:
     youtube_regex = r"(?:youtu\.be/|youtube\.com/(?:watch\?v=|shorts/))([A-Za-z0-9_-]{11})"
     match = re.search(youtube_regex, text)
     return match.group(1) if match else None
 
 
-def _join_fetched_transcript(transcript) -> str:
-    """
-    transcript is a FetchedTranscript (iterable of FetchedTranscriptSnippet)
-    """
-    return " ".join(
-        s.text.strip()
-        for s in transcript
-        if getattr(s, "text", None) and s.text.strip()
-    )
-
-
 def get_transcript(video_id: str, languages: Iterable[str] = ("en",)) -> str:
-    """
-    Get captions for a given YouTube video using youtube_transcript_api fetch().
-    Returns the transcript as a single string.
-    Raises TranscriptError or TranscriptUnavailableError on failure.
-    """
+    language = next(iter(languages), "en")
+    endpoint = f"{YT_CAPTION_API_URL.rstrip('/')}/transcript/{video_id}"
+    headers = {"X-AccessToken": YT_CAPTION_API_TOKEN}
+    params = {
+        "language": language,
+        "include_meta": "false",
+    }
 
-    # The library already retries internally for RequestBlocked according to:
-    # proxy_config.retries_when_blocked (Webshare defaults to 10).
-    #
-    # Outer retry here is mainly for things the internal retry usually won't cover:
-    # - IpBlocked (often 429)
-    # - YouTubeRequestFailed (proxy flakiness / 5xx / transient HTTP)
-    #
-    # If you want *zero* manual retry, set attempts=1.
-    attempts = 10
+    try:
+        response = requests.get(endpoint, headers=headers, params=params, timeout=30)
+    except requests.RequestException as e:
+        raise TranscriptError(f"Failed to contact transcript API: {e}") from e
 
-    last_err: Optional[Exception] = None
+    if response.status_code == 404:
+        raise TranscriptUnavailableError("No transcript available for that video.")
 
-    for i in range(attempts):
+    if response.status_code in {401, 403}:
+        raise TranscriptError("Transcript API authentication failed.")
+
+    if response.status_code >= 400:
         try:
-            fetched = ytt_api.fetch(video_id, languages=list(languages))
-            text = _join_fetched_transcript(fetched)
+            detail = response.json().get("detail", response.text)
+        except ValueError:
+            detail = response.text
+        raise TranscriptError(f"Transcript API error: {detail}")
 
-            if not text:
-                raise TranscriptUnavailableError("Transcript returned, but was empty.")
+    try:
+        payload = response.json()
+    except ValueError as e:
+        raise TranscriptError("Transcript API returned invalid JSON.") from e
 
-            return text
+    transcript = payload.get("transcript", "").strip()
+    if not transcript:
+        raise TranscriptUnavailableError("Transcript returned, but was empty.")
 
-        except (NoTranscriptFound, TranscriptsDisabled) as e:
-            raise TranscriptUnavailableError(str(e)) from e
-
-        except (InvalidVideoId, VideoUnavailable) as e:
-            raise TranscriptError(str(e)) from e
-
-        except Exception as e:
-            last_err = e
-            if i == attempts - 1:
-                break
-
-            time.sleep(0.75)
-            continue
-
-    raise TranscriptError(f"Failed to retrieve transcript after retries: {last_err}") from last_err
+    return transcript
 
 
 def reply_with_summarize(self, message):
