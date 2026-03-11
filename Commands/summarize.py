@@ -1,4 +1,4 @@
-import re, requests
+import re, time, requests
 from typing import Iterable, Optional
 from config import YT_CAPTION_API_TOKEN, YT_CAPTION_API_URL
 from Utils.utils import (
@@ -10,6 +10,8 @@ from Utils.utils import (
 )
 
 SUMMARY_CHAR_LIMIT = 500
+TRANSCRIPT_API_MAX_RETRIES = 5
+TRANSCRIPT_API_RETRY_DELAY_SECONDS = 1.5
 
 
 class TranscriptError(Exception):
@@ -45,17 +47,46 @@ def get_transcript(video_id: str, languages: Iterable[str] = ("en",)) -> str:
         "include_meta": "false",
     }
 
-    try:
-        response = requests.get(endpoint, headers=headers, params=params, timeout=30)
-    except requests.RequestException as e:
-        print(f"[summarize] Transcript API request exception for {video_id}: {e}")
-        raise TranscriptError("Failed to contact transcript API.") from e
+    last_exception: Exception | None = None
 
-    if response.status_code == 404:
-        raise TranscriptUnavailableError("No transcript available for that video.")
+    for attempt in range(1, TRANSCRIPT_API_MAX_RETRIES + 1):
+        try:
+            response = requests.get(endpoint, headers=headers, params=params, timeout=30)
+        except requests.RequestException as e:
+            print(
+                f"[summarize] Transcript API request exception for {video_id} "
+                f"(attempt {attempt}/{TRANSCRIPT_API_MAX_RETRIES}): {e}"
+            )
+            last_exception = e
+            if attempt == TRANSCRIPT_API_MAX_RETRIES:
+                raise TranscriptError("Failed to contact transcript API.") from e
+            time.sleep(TRANSCRIPT_API_RETRY_DELAY_SECONDS)
+            continue
 
-    if response.status_code in {401, 403}:
-        raise TranscriptError("Transcript API authentication failed.")
+        if response.status_code == 404:
+            raise TranscriptUnavailableError("No transcript available for that video.")
+
+        if response.status_code in {401, 403}:
+            raise TranscriptError("Transcript API authentication failed.")
+
+        if response.status_code in {429, 500, 502, 503, 504}:
+            try:
+                detail = response.json().get("detail", response.text)
+            except ValueError:
+                detail = response.text
+            print(
+                f"[summarize] Transcript API retryable error for {video_id}: "
+                f"status={response.status_code} attempt={attempt}/{TRANSCRIPT_API_MAX_RETRIES} "
+                f"detail={detail}"
+            )
+            if attempt == TRANSCRIPT_API_MAX_RETRIES:
+                raise TranscriptError("Transcript API request failed.")
+            time.sleep(TRANSCRIPT_API_RETRY_DELAY_SECONDS)
+            continue
+
+        break
+    else:
+        raise TranscriptError("Failed to contact transcript API.") from last_exception
 
     if response.status_code >= 400:
         try:
