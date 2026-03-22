@@ -20,7 +20,7 @@ GENERATION_CONFIG = {
     "temperature": 0.3,
     "top_p": 0.95,
     "system_instruction": [
-        types.Part.from_text(text="Please provide a short, concise response with enough detail. Do not ask the user follow up questions, because you are intended to provide a single response with no history and are not expected any follow up prompts. Answer should be at most 600 characters.")
+        types.Part.from_text(text="Please provide a short, concise response with enough detail. Do not use LaTeX or Markdown formatting in your response. Do not ask the user follow up questions, because you are intended to provide a single response with no history and are not expected any follow up prompts. Answer should be at most 600 characters.")
     ]
 }
 
@@ -67,84 +67,6 @@ def get_duckduckgo_results(query):
 
     return urls
 
-def get_google_lucky(query):
-    params = {'q': query, 'btnI': "I'm Feeling Lucky"}
-    query_string = urlencode(params)
-    url = f"https://www.google.com/search?{query_string}"
-
-    try:
-        res = proxy_request("GET", url, headers=headers)
-        if res is None:
-            print("get_google_lucky: No response object")
-            return None, "No response"
-
-        if res.status_code not in [200, 301, 302]:
-            print(f"get_google_lucky: Unexpected status {res.status_code} from {url}")
-            print(f"Response snippet: {res.text[:200] if res.text else 'Empty'}")
-            return None, res.status_code
-
-        # Check for transparent redirect
-        final_url = getattr(res, 'url', '')
-        if final_url and "google.com" not in final_url:
-            print(f"get_google_lucky: Redirected to {final_url}")
-            return final_url, None
-
-        # Check Location header (handles /url?q= redirect format)
-        location = res.headers.get("Location", "")
-        if location:
-            match = re.search(r'[?&]q=(https?://[^&]+)', location)
-            if match:
-                destination = unquote(match.group(1))
-                if "google.com" not in destination:
-                    print(f"get_google_lucky: Extracted URL from Location param: {destination}")
-                    return destination, None
-            if "google.com" not in location and location.startswith('http'):
-                print(f"get_google_lucky: Got redirect to {location}")
-                return location, None
-
-        # Parse HTML body for Redirect Notice links
-        body = res.text
-        if body:
-            soup = parse_str(body, "html")
-            if soup:
-                for link in soup.find_all('a', href=True):
-                    href = link['href']
-                    # Look for external URLs or Google-wrapped links
-                    if href.startswith('http') and 'google.com' not in href:
-                        print(f"get_google_lucky: Found link in HTML: {href}")
-                        return href, None
-                    if '/url?' in href or 'google.com/url?' in href:
-                        match = re.search(r'[?&]q=(https?://[^&]+)', href)
-                        if match:
-                            destination = unquote(match.group(1))
-                            if "google.com" not in destination:
-                                print(f"get_google_lucky: Extracted URL from link param: {destination}")
-                                return destination, None
-
-        # Direct fallback (bypass proxy) to capture raw redirect
-        try:
-            res_direct = proxy_request("GET", url, headers=headers, bypass_proxy=True, allow_redirects=False, timeout=5)
-            if res_direct:
-                loc = res_direct.headers.get("Location", "")
-                if loc:
-                    match = re.search(r'[?&]q=(https?://[^&]+)', loc)
-                    if match:
-                        destination = unquote(match.group(1))
-                        if "google.com" not in destination:
-                            print(f"get_google_lucky: Direct fallback extracted URL: {destination}")
-                            return destination, None
-                    if "google.com" not in loc and loc.startswith('http'):
-                        print(f"get_google_lucky: Direct fallback redirect to {loc}")
-                        return loc, None
-        except Exception as e:
-            print(f"get_google_lucky: Direct fallback failed: {e}")
-
-        print("get_google_lucky: Could not extract destination URL")
-        return None, None
-
-    except Exception as e:
-        print(f"get_google_lucky: Error: {e}")
-        return None, "Error"
 
 def get_wikipedia_snippet(query):
     try:
@@ -237,19 +159,11 @@ def get_grounding_data(prompt, count=2):
         if query_urls:
             print("Query URLs:", query_urls)
 
-    google_lucky_url, error_code = get_google_lucky(prompt)
-    google_urls = [google_lucky_url] if google_lucky_url else []
-    if google_lucky_url:
-        print("Google URL:", google_lucky_url)
-
-    if not (normal_urls or query_urls or google_urls) and not error_code:
-        return
-
     valid_urls = []
     contents = []
 
     seen = set()
-    for group_idx, group in enumerate(zip_longest(normal_urls, query_urls, google_urls)):
+    for group_idx, group in enumerate(zip_longest(normal_urls, query_urls)):
         print(f"Group {group_idx}: {group}")
         for url_idx, url in enumerate(group):
             print(f"  URL {url_idx}: {url}")
@@ -281,12 +195,15 @@ def get_grounding_data(prompt, count=2):
     wikipedia_snippet = get_wikipedia_snippet(prompt)
     if wikipedia_snippet:
         print(f"Wikipedia Snippet: {wikipedia_snippet[:300]}\n")
+
+    if not valid_urls and not wikipedia_snippet:
+        return None
+
     combined_content = "\n".join(contents)
     return {
         'body_content': combined_content,
         'wikipedia_snippet': wikipedia_snippet,
-        'valid_urls': valid_urls,
-        'error_code': error_code
+        'valid_urls': valid_urls
     }
 
 def reply_with_grounded_gemini(self, message):
@@ -314,17 +231,8 @@ def reply_with_grounded_gemini(self, message):
             self.send_privmsg(cmd.channel, "No results found for the query.")
             return
 
-        error_code = grounding_data.get('error_code')
-        valid_urls = grounding_data['valid_urls']
-
+        valid_urls = grounding_data.get('valid_urls', [])
         wikipedia_snippet = grounding_data.get('wikipedia_snippet')
-
-        if not valid_urls and not wikipedia_snippet and error_code:
-            if error_code == "No response":
-                self.send_privmsg(cmd.channel, f"{cmd.username}, search failed, try again later.")
-            else:
-                self.send_privmsg(cmd.channel, f"Error: Request failed with code {error_code}.")
-            return
 
         if not valid_urls and not wikipedia_snippet:
             self.send_privmsg(cmd.channel, "No results found for the query.")
