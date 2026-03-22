@@ -24,4 +24,4 @@ def test_search(prompt):
         print(f" 📝 Source(s): {' | '.join(duck_urls)}")
 
 if __name__ == "__main__":
-    test_search("Who is the current pope?")
+    test_search("What is the current price of the NASDAQ?")
