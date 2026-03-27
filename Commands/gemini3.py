@@ -34,6 +34,13 @@ headers = {
 def fetch_and_parse_html(url):
     try:
         res = proxy_request("GET", url, headers=headers)
+        if res:
+            print(f"fetch_and_parse_html: Status {res.status_code} for {url}")
+            if res.status_code == 429:
+                print(f"fetch_and_parse_html: RATE LIMIT (429) hit for {url}")
+        else:
+            print(f"fetch_and_parse_html: No response object returned for {url}")
+
         if not res or not res.text:
             print(f"fetch_and_parse_html: Empty response from {url}")
             return None
@@ -49,9 +56,14 @@ def get_duckduckgo_results(query):
 
     soup = fetch_and_parse_html(url)
     if not soup:
+        print(f"get_duckduckgo_results: No soup returned for query: {query}")
         return []
 
     a_elements = soup.select('.result-link')
+    if not a_elements:
+        print(f"get_duckduckgo_results: No target elements (.result-link) found in HTML for query: {query}")
+    else:
+        print(f"get_duckduckgo_results: Found {len(a_elements)} result links for query: {query}")
     urls = []
 
     for a in a_elements:
@@ -88,7 +100,15 @@ def get_wikipedia_snippet(query):
             "origin": "*"
         }
         res = proxy_request("GET", url, params=params)
+        if res:
+            print(f"get_wikipedia_snippet: Status {res.status_code} for {url}")
+            if res.status_code == 429:
+                print(f"get_wikipedia_snippet: RATE LIMIT (429) hit for {url}")
+        else:
+            print(f"get_wikipedia_snippet: No response object returned for {url}")
+
         if not res or res.status_code != 200:
+            print(f"get_wikipedia_snippet: Invalid response or status code != 200 for {url}")
             return
 
         json_data = res.json()
@@ -140,7 +160,20 @@ def get_body_content(url):
         print("get_body_content: <body> tag not found.")
         return ""
 
-    return soup.body.get_text(" ", strip=True)
+    text = soup.body.get_text(" ", strip=True)
+    
+    cf_messages = [
+        "JavaScript is disabled",
+        "verify that you're not a robot",
+        "Enable JavaScript and then reload",
+        "Checking your browser before accessing"
+    ]
+    
+    if any(msg in text for msg in cf_messages):
+        print(f"get_body_content: Bot protection detected for {url}, skipping")
+        return ""
+
+    return text
 
 def get_grounding_data(prompt, count=2):
     blocked_domains = {'facebook.com', 'youtube.com', 'reddit.com', 'instagram.com'}
