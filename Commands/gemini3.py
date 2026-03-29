@@ -258,28 +258,23 @@ def reply_with_grounded_gemini(self, message):
     try:
         utc_date_time = datetime.now().strftime("%A %d %B %Y %I:%M %p UTC")
         
-        grounding_data = get_grounding_data(prompt)
-
-        if not grounding_data:
-            self.send_privmsg(cmd.channel, "No results found for the query.")
-            return
+        grounding_data = get_grounding_data(prompt) or {}
 
         valid_urls = grounding_data.get('valid_urls', [])
         wikipedia_snippet = grounding_data.get('wikipedia_snippet')
 
-        if not valid_urls and not wikipedia_snippet:
-            self.send_privmsg(cmd.channel, "No results found for the query.")
-            return
+        is_grounded = bool(valid_urls) or bool(wikipedia_snippet)
             
-        grounding_text = f"""Today is {utc_date_time}.
+        if is_grounded:
+            grounding_text = f"""Today is {utc_date_time}.
         Use the provided information to help answer the prompt. 
         If you use this information, do so seamlessly as if it were your own knowledge. 
         Do not mention that you have been provided with any text or information and do not allude to it in any way.
         Just interpret the user's request and answer directly:
         {wikipedia_snippet or ''}
         {grounding_data.get('body_content', '')}"""
-
-        is_grounded = bool(valid_urls) or bool(wikipedia_snippet)
+        else:
+            grounding_text = None
 
         result = gemini_generate({
             "prompt": prompt,
