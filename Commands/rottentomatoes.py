@@ -42,10 +42,14 @@ def rottentomatoes(query, year=None):
     )
 
     target = sorted_results[0]
-    title = target['title']
-    release_year = target['releaseYear']
-    type_ = target['type']
-    vanity = target['vanity']
+    title = target.get('title', 'N/A')
+    release_year = target.get('releaseYear', 'N/A')
+    cast = ", ".join(target.get('castCrew', {}).get('cast', [])[:4]) or "N/A"
+    director = ", ".join(target.get('castCrew', {}).get('crew', {}).get('Director', [])) or "N/A"
+    genres = ", ".join(target.get('genres', [])[:4]) or "N/A"
+    runtime = f"{target['runTime']} min" if target.get('runTime') else "N/A"
+    type_ = target.get('type', 'N/A')
+    vanity = target.get('vanity', 'N/A')
     rotten_tomatoes = target.get('rottenTomatoes', {})
     certified_fresh = rotten_tomatoes.get('certifiedFresh')
     audience_score = rotten_tomatoes.get('audienceScore', "N/A")
@@ -59,8 +63,8 @@ def rottentomatoes(query, year=None):
     rating = "🍅" if certified_fresh else "🗑️" if critics_icon_url and "rotten" in critics_icon_url else "mid "
 
     return f"Rotten Tomatoes scores for {type_.capitalize()} {title} ({release_year}) - Rating: {rating}, \
-          Audience: {audience_score}, Critics: {critics_score}, {url}"
-
+            Audience: {audience_score}, Critics: {critics_score}, 🎬 Director: {director}, 👥 Cast: {cast}, \
+            🏷️ Genres: {genres}, ⏱️ Runtime: {runtime}, {url}"
 
 def reply_with_rottentomatoes(self, message):
     cmd = fetch_cmd_data(self, message)
