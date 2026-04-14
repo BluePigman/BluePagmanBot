@@ -6,7 +6,7 @@ import config
 if not config.GROQ_API_KEY:
     raise ValueError("Valid GROQ_API_KEY must be provided, Get one at https://console.groq.com/")
 
-GROQ_MODEL = "moonshotai/kimi-k2-instruct-0905"
+GROQ_MODEL = "openai/gpt-oss-120b"
 
 def reply_with_groq(self, message):
     cmd = fetch_cmd_data(self, message)
