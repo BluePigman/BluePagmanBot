@@ -11,12 +11,16 @@ SEARCH_PARAMS = {
 
 
 def _search_rt(query):
-    r = requests.post(
-        f"https://{APP_ID}-1.algolianet.com/1/indexes/*/queries",
-        params=SEARCH_PARAMS,
-        json={"requests": [{"indexName": "content_rt", "params": f"hitsPerPage={RESULTS_MAX}&query={query}"}]}
-    )
-    return r.json()['results'][0]['hits'] if r.ok else None
+    try:
+        r = requests.post(
+            f"https://{APP_ID}-1.algolianet.com/1/indexes/*/queries",
+            params=SEARCH_PARAMS,
+            json={"requests": [{"indexName": "content_rt", "params": f"hitsPerPage={RESULTS_MAX}&query={query}"}]},
+            timeout=5
+        )
+        return r.json()['results'][0]['hits'] if r.ok else None
+    except requests.RequestException:
+        return None
 
 
 def _format(t):
@@ -27,14 +31,17 @@ def _format(t):
     crt = f"{crt}%" if str(crt).isnumeric() else crt
     icon = rt.get('criticsIconUrl')
     rating = "🍅" if rt.get('certifiedFresh') else "🗑️" if icon and "rotten" in icon else "ok "
-    tp = t.get('type', 'N/A')
+    tp = t.get('type') or 'N/A'
+    tp_str = tp.capitalize()
     path = "m" if tp == "movie" else "tv"
-    cast = ", ".join(t.get('castCrew', {}).get('cast', [])[:4]) or "N/A"
-    director = ", ".join(t.get('castCrew', {}).get('crew', {}).get('Director', [])) or "N/A"
+    cast_crew = t.get('castCrew') or {}
+    crew = cast_crew.get('crew') or {}
+    director = ", ".join(crew.get('Director', [])) or "N/A"
+    cast = ", ".join((cast_crew.get('cast') or [])[:4]) or "N/A"
     genres = ", ".join(t.get('genres', [])[:4]) or "N/A"
     runtime = f"{t['runTime']} min" if t.get('runTime') else "N/A"
-    url = f"https://www.rottentomatoes.com/{path}/{t.get('vanity', '')}"
-    return (f"Rotten Tomatoes scores for {tp.capitalize()} {t.get('title', 'N/A')} ({t.get('releaseYear', 'N/A')}) "
+    url = f"https://www.rottentomatoes.com/{path}/{t.get('vanity') or ''}"
+    return (f"Rotten Tomatoes scores for {tp_str} {t.get('title', 'N/A')} ({t.get('releaseYear', 'N/A')}) "
             f"- Rating: {rating}, Audience: {aud}, Critics: {crt}, 🎬 Director: {director}, "
             f"👥 Cast: {cast}, 🏷️ Genres: {genres}, ⏱️ Runtime: {runtime}, {url}")
 
@@ -49,7 +56,7 @@ def rottentomatoes(query, year=None):
         results = _search_rt(query)
         if not results:
             return "No results found."
-        return _format(sorted(results, key=lambda x: abs(year - x.get('releaseYear', 0)))[0])
+        return _format(sorted(results, key=lambda x: abs(year - int(x.get('releaseYear') or 0)))[0])
 
     # Find 4-digit number in query
     match = re.search(r'\b(\d{4})\b', query)
@@ -74,7 +81,7 @@ def rottentomatoes(query, year=None):
     results = _search_rt(stripped)
     if not results:
         return "No results found."
-    return _format(sorted(results, key=lambda x: abs(num - x.get('releaseYear', 0)))[0])
+    return _format(sorted(results, key=lambda x: abs(num - int(x.get('releaseYear') or 0)))[0])
 
 
 def reply_with_rottentomatoes(self, message):
