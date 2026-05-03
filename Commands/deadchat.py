@@ -30,18 +30,18 @@ def _fetch_messages(channel, date):
         )
 
         if not r.ok:
-            return []
+            return None
 
         try:
             data = r.json()
         except Exception:
-            return []
+            return None
 
         msgs = data.get("messages")
-        return msgs if isinstance(msgs, list) else []
+        return msgs if isinstance(msgs, list) else None
 
     except Exception:
-        return []
+        return None
 
 
 def _parse_timestamp(ts):
@@ -54,24 +54,24 @@ def _parse_timestamp(ts):
 
 
 def _count_messages(messages, start, end):
-    try:
-        count = 0
+    count = 0
 
-        for msg in messages:
-            if not isinstance(msg, dict):
-                continue
+    for msg in messages:
+        if not isinstance(msg, dict):
+            continue
 
-            text = msg.get("text", "")
-            if EXCLUDE_TEXT in text:
-                continue
+        text = msg.get("text", "")
+        if not isinstance(text, str):
+            continue
 
-            t = _parse_timestamp(msg.get("timestamp"))
-            if t and start <= t < end:
-                count += 1
+        if EXCLUDE_TEXT in text:
+            continue
 
-        return count
-    except Exception:
-        return 0
+        t = _parse_timestamp(msg.get("timestamp"))
+        if t and start <= t < end:
+            count += 1
+
+    return count
 
 
 def _get_window():
@@ -88,6 +88,16 @@ def _get_activity(channel):
         start, end = _get_window()
 
         msgs = _fetch_messages(channel, end)
+
+        if msgs is None:
+            return None
+
+        if start.date() != end.date():
+            prev_msgs = _fetch_messages(channel, start)
+            if prev_msgs is None:
+                return None
+            msgs = prev_msgs + msgs
+
         count = _count_messages(msgs, start, end)
 
         return {
@@ -109,7 +119,7 @@ def reply_with_message_rate(self, message):
 
         data = _get_activity(cmd.channel)
 
-        if not data:
+        if data is None:
             self.send_privmsg(cmd.channel, "Failed to fetch message data!")
             return
 
