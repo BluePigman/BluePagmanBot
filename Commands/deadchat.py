@@ -9,9 +9,6 @@ SPAN = timedelta(minutes=5)
 # message threshold
 BASELINE = 6
 
-# exclude messages containing command name
-EXCLUDE_TEXT = "<deadchat"
-
 
 def _fetch_messages(channel, date):
     try:
@@ -53,7 +50,7 @@ def _parse_timestamp(ts):
         return None
 
 
-def _count_messages(messages, start, end):
+def _count_messages(messages, start, end, exclude_text):
     count = 0
 
     for msg in messages:
@@ -64,7 +61,7 @@ def _count_messages(messages, start, end):
         if not isinstance(text, str):
             continue
 
-        if EXCLUDE_TEXT in text:
+        if exclude_text in text:
             continue
 
         t = _parse_timestamp(msg.get("timestamp"))
@@ -83,7 +80,7 @@ def _classify(count):
     return "alive" if count >= BASELINE else "dead"
 
 
-def _get_activity(channel):
+def _get_activity(channel, exclude_text):
     try:
         start, end = _get_window()
 
@@ -98,7 +95,7 @@ def _get_activity(channel):
                 return None
             msgs = prev_msgs + msgs
 
-        count = _count_messages(msgs, start, end)
+        count = _count_messages(msgs, start, end, exclude_text)
 
         return {
             "count": int(count),
@@ -117,7 +114,7 @@ def reply_with_message_rate(self, message):
         if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
             return
 
-        data = _get_activity(cmd.channel)
+        data = _get_activity(cmd.channel, self.prefix)
 
         if data is None:
             self.send_privmsg(cmd.channel, "Failed to fetch message data!")
