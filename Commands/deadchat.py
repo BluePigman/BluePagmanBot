@@ -23,7 +23,10 @@ def _fetch_messages(channel, date):
         r = proxy_request(
             "GET",
             url,
-            params={"jsonBasic": 1}
+            params={
+                "jsonBasic": 1,
+                "rm_only": "true" # makes it faster according to the docs https://logs.zonian.dev/api
+            }
         )
 
         if not r.ok:
@@ -61,7 +64,7 @@ def _count_messages(messages, start, end, exclude_text):
         if not isinstance(text, str):
             continue
 
-        if exclude_text in text:
+        if text.startswith(exclude_text):
             continue
 
         t = _parse_timestamp(msg.get("timestamp"))
@@ -73,7 +76,7 @@ def _count_messages(messages, start, end, exclude_text):
 
 def _get_window():
     now = datetime.now(timezone.utc)
-    return now - SPAN, now
+    return {"start": now - SPAN, "end": now}
 
 
 def _classify(count):
@@ -82,18 +85,21 @@ def _classify(count):
 
 def _get_activity(channel, exclude_text):
     try:
-        start, end = _get_window()
+        window = _get_window()
+        start = window["start"]
+        end = window["end"]
 
         msgs = _fetch_messages(channel, end)
 
         if msgs is None:
             return None
 
+        # handle messages at midnight
         if start.date() != end.date():
-            prev_msgs = _fetch_messages(channel, start)
-            if prev_msgs is None:
+            prev_day_msgs = _fetch_messages(channel, start)
+            if prev_day_msgs is None:
                 return None
-            msgs = prev_msgs + msgs
+            msgs = prev_day_msgs + msgs
 
         count = _count_messages(msgs, start, end, exclude_text)
 
