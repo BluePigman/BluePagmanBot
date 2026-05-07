@@ -90,7 +90,8 @@ class Bot:
             'rrc': rrc.reply_with_random_reddit_comment,
             'gemini3': gemini3.reply_with_grounded_gemini,
             'nba': nba.reply_with_nba_scores,
-            "truth": truth.truthsocial
+            "truth": truth.truthsocial,
+            'deadchat': deadchat.reply_with_message_rate
         }
 
         # only bot owner can use these commands
