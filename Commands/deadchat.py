@@ -3,8 +3,8 @@ from Utils.utils import check_cooldown, fetch_cmd_data, proxy_request
 
 LOGS_API = "https://logs.zonian.dev/channel"
 
-# time span
-SPAN = timedelta(minutes=5)
+# default time span
+DEFAULT_SPAN_MINUTES = 5
 
 # message threshold
 BASELINE = 6
@@ -74,18 +74,18 @@ def _count_messages(messages, start, end, exclude_text):
     return count
 
 
-def _get_window():
+def _get_window(span):
     now = datetime.now(timezone.utc)
-    return {"start": now - SPAN, "end": now}
+    return {"start": now - span, "end": now}
 
 
 def _classify(count):
     return "alive" if count >= BASELINE else "dead"
 
 
-def _get_activity(channel, exclude_text):
+def _get_activity(channel, exclude_text, span):
     try:
-        window = _get_window()
+        window = _get_window(span)
         start = window["start"]
         end = window["end"]
 
@@ -105,7 +105,7 @@ def _get_activity(channel, exclude_text):
 
         return {
             "count": int(count),
-            "minutes": int(SPAN.total_seconds() / 60),
+            "minutes": int(span.total_seconds() / 60),
             "state": _classify(count)
         }
 
@@ -115,12 +115,20 @@ def _get_activity(channel, exclude_text):
 
 def reply_with_message_rate(self, message):
     try:
-        cmd = fetch_cmd_data(self, message)
+        cmd = fetch_cmd_data(self, message, arg_types={ "m": int })
 
         if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
             return
 
-        data = _get_activity(cmd.channel, self.prefix)
+        minutes = cmd.args.get("m", DEFAULT_SPAN_MINUTES)
+
+        if not (0 < minutes <= 1440): # 1 day (1440 minutes)
+            self.send_privmsg(cmd.channel, "Minutes must be between 1 and 1440 (1 day).")
+            return
+
+        span = timedelta(minutes=minutes)
+
+        data = _get_activity(cmd.channel, self.prefix, span)
 
         if data is None:
             self.send_privmsg(cmd.channel, "Failed to fetch message data!")
@@ -133,7 +141,7 @@ def reply_with_message_rate(self, message):
         prefix = f"Messages in the past {minutes} minutes: {count}"
 
         if state == "alive":
-            msg = f"{prefix} Alive chat Pog"
+            msg = f"{prefix} alive chat Pog"
         else:
             msg = f"{prefix} deadchatxd"
 
