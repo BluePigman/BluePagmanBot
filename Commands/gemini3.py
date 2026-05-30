@@ -4,8 +4,9 @@ from itertools import zip_longest
 import re, html2text
 from google import genai
 from google.genai import types
+
 from Utils.utils import (
-    proxy_request,
+    impersonated_request,
     clean_str,
     send_chunks,
     fetch_cmd_data,
@@ -25,15 +26,15 @@ GENERATION_CONFIG = {
 }
 
 headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-    "Accept": "text/html,application/xhtml+xml",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
-    "Referer": "https://example.com",
+    "Referer": "https://duckduckgo.com/",
+    "Upgrade-Insecure-Requests": "1"
 }
 
 def fetch_and_parse_html(url):
     try:
-        res = proxy_request("GET", url, headers=headers)
+        res = impersonated_request("GET", url, headers=headers)
         if res:
             print(f"fetch_and_parse_html: Status {res.status_code} for {url}")
             if res.status_code == 429:
@@ -79,7 +80,6 @@ def get_duckduckgo_results(query):
 
     return urls
 
-
 def get_wikipedia_snippet(query):
     try:
         ddg_results = get_duckduckgo_results(query + " site:wikipedia.org")
@@ -99,7 +99,8 @@ def get_wikipedia_snippet(query):
             "format": "json",
             "origin": "*"
         }
-        res = proxy_request("GET", url, params=params)
+        
+        res = impersonated_request("GET", url, params=params)
         if res:
             print(f"get_wikipedia_snippet: Status {res.status_code} for {url}")
             if res.status_code == 429:
@@ -142,7 +143,7 @@ def get_wikipedia_snippet(query):
         return
 
 def querify(prompt):
-    model_name = "gemma-3n-e4b-it"
+    model_name = "gemma-4-26b-a4b-it"
     config = { "max_output_tokens": 400, "temperature": 0.3 }
     prompt = f"Convert into a keyword Google search query if needed. Return only the resulting query, without quotes or any extra text: {prompt}"
     result = gemini_generate(prompt, model_name, config)
@@ -166,7 +167,8 @@ def get_body_content(url):
         "JavaScript is disabled",
         "verify that you're not a robot",
         "Enable JavaScript and then reload",
-        "Checking your browser before accessing"
+        "Checking your browser before accessing",
+        "Just a moment..."
     ]
     
     if any(msg in text for msg in cf_messages):
