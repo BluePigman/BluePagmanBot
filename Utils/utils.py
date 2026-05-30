@@ -832,7 +832,8 @@ def format_time_ago(created_at: str) -> str:
 
 
 def impersonated_request(method: cffi_requests.HttpMethod, url: str,
-                         impersonate: cffi_requests.BrowserTypeLiteral = "chrome123", **kwargs) -> \
+                         impersonate: cffi_requests.BrowserTypeLiteral = "chrome123",
+                         timeout: int = 30, **kwargs) -> \
         Optional[cffi_requests.Response]:
     """
     Performs an HTTP request using curl_cffi to bypass advanced bot detection.
@@ -846,8 +847,9 @@ def impersonated_request(method: cffi_requests.HttpMethod, url: str,
         url (str): The full URL to request.
         impersonate (str): The browser version to impersonate.
                            Defaults to "chrome123". Other examples: "safari17", "edge122".
+        timeout (int): The request timeout in seconds. Defaults to 30.
         **kwargs: Additional keyword arguments passed directly to the
-                  requests call (e.g., headers, params, json, data, timeout).
+                  requests call (e.g., headers, params, json, data).
 
     Returns:
         Optional[cffi_requests.Response]: The curl_cffi Response object on success,
@@ -859,6 +861,7 @@ def impersonated_request(method: cffi_requests.HttpMethod, url: str,
                 method=method,
                 url=url,
                 impersonate=impersonate,
+                timeout=timeout,
                 **kwargs
             )
         return res
