@@ -98,10 +98,7 @@ def _format(t):
 
 
 def extract_year(query):
-    # matches trailing year formats like:
-    # "Inception 2010"
-    # "Inception (2010)"
-    # "Inception [2010]"
+    # matches trailing year formats XXXX, (XXXX), or [XXXX]
     match = re.search(r'[\(\[]?(\d{4})[\)\]]?$', query)
 
     if not match:
@@ -124,13 +121,12 @@ def reply_with_rottentomatoes(self, message):
             return
 
         if not cmd.params:
-            self.send_privmsg(cmd.channel, f"{cmd.username}, please provide a movie/show name")
+            self.send_privmsg(cmd.channel, f"{cmd.username}, please provide a movie/show name.")
             return
 
         query = " ".join(cmd.params)
         year = cmd.args.get("year")
 
-        # only search query for the year when -year is not passed and query longer than one word
         if year is None and len(cmd.params) > 1:
             extracted = extract_year(query)
             query = extracted["cleaned_query"]
@@ -141,11 +137,8 @@ def reply_with_rottentomatoes(self, message):
         if not hits:
             self.send_privmsg(cmd.channel, "No results found.")
             return
-        
-        first_result = hits[0]
-        formatted_result = _format(first_result)
 
-        self.send_privmsg(cmd.channel, formatted_result)
+        self.send_privmsg(cmd.channel, _format(hits[0]))
 
     except Exception as e:
         self.send_privmsg(cmd.channel, "Unexpected error occurred.")
