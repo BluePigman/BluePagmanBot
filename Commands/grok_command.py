@@ -8,11 +8,12 @@ GROK_MODEL = "grok-4.3"
 
 def reply_with_grok(self, message):
 
+    cmd = fetch_cmd_data(self, message)
+    
     if not getattr(config, 'GROK_KEY', None):
         self.send_privmsg(cmd.channel, "Grok API key has not been set in config.py.")
         return
 
-    cmd = fetch_cmd_data(self, message)
     if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown):
         return
 
@@ -37,12 +38,13 @@ def reply_with_grok(self, message):
         chat.append(user(prompt))
         
         response = chat.sample()
-        result = cmd.username + ", " + response.content
+        result = response.content
         
         if not result:
             self.send_privmsg(cmd.channel, "Failed to generate a response. Please try again later.")
             return
 
+        result = cmd.username + ", " + result
         clean_result = clean_str(result, ['`', '*'])
         send_chunks(self.send_privmsg, cmd.channel, clean_result)
 
