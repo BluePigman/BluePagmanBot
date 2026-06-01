@@ -13,7 +13,7 @@ A Twitch chatbot running in Python.
 
 
 ## Prerequisites
-- [Python 3.9+](https://www.python.org/downloads/)
+- [Python 3.10+](https://www.python.org/downloads/)
 - MongoDB Server ([Atlas](https://www.mongodb.com/products/platform/atlas-database) is the easiest to set up)
 - Twitch Account
 
