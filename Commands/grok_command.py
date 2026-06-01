@@ -4,7 +4,7 @@ import config
 from xai_sdk import Client
 from xai_sdk.chat import user, system
 
-GROK_MODEL = "grok-4.3"
+GROK_MODEL = "grok-4-1-fast-non-reasoning"
 
 def reply_with_grok(self, message):
 
