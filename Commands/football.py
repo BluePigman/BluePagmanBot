@@ -93,9 +93,12 @@ def get_football_scores():
                     game_text = f"{away_display} vs {home_display} (Starting soon)"
                 else:
                     if hours > 0:
-                        time_until = f"{int(hours)}h {int(minutes)}m from now"
+                        if minutes > 0:
+                            time_until = f"in {int(hours)}h {int(minutes)}m"
+                        else:
+                            time_until = f"in {int(hours)}h"
                     else:
-                        time_until = f"{int(minutes)}m from now"
+                        time_until = f"in {int(minutes)}m"
                     game_text = f"{away_display} vs {home_display} ({est_time}, {time_until})"
                     
             elif game_status == 'in':
