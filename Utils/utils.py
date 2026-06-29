@@ -482,6 +482,25 @@ def proxy_request(method: str, url: str, headers=None, timeout=TIMEOUT, bypass_p
     return res
 
 
+def resolve_redirect_url(url: str, timeout: int = 5) -> str | None:
+    """
+    Resolves a redirect URL to its final destination URL.
+    """
+    try:
+        res = proxy_request("HEAD", url, timeout=timeout, allow_redirects=True, bypass_proxy=True)
+        return res.url
+
+    except Exception:
+        try:
+            res = proxy_request("GET", url, timeout=timeout, allow_redirects=True, stream=True, bypass_proxy=True)
+            res.close()
+            return res.url
+
+        except Exception as e:
+            log_err(e)
+            return None
+
+
 def fetch_firefox_cookies(domains: List[str] | None = None, as_netscape: bool = False) -> Union[str, Dict[str, str]]:
     """
     Fetch Firefox cookies for given domains. If no domains are provided, returns all cookies.
@@ -597,12 +616,31 @@ def is_url(url):
 
 # --- LLM Generation Utilities ---
 
-def gemini_generate(request: str | dict, model_name: str = "gemini-2.0-flash", gen_config: dict = None) -> str | None:
+def gemini_generate(
+    request: str | dict,
+    model_name: str = "gemini-flash-lite-latest",
+    gen_config: dict = None,
+    search_grounding: bool = False,
+    response_schema: dict = None,
+    thinking_level: str = None,
+    return_sources: bool = False,
+) -> str | None:
     """
     Generate content using the google-genai SDK.
-    request: str or dict with 'prompt', 'grounded', 'grounding_text'
-    model_name: The Gemini model to use.
-    gen_config: Optional generation configuration.
+    Supports search grounding, structured outputs, and thinking.
+    Args:
+        request: str or dict with 'prompt', 'grounded', 'grounding_text'.
+        model_name: The Gemini model to use.
+        gen_config: Optional dict merged into GenerateContentConfig.
+            Example: {"max_output_tokens": 400, "temperature": 0.3, "top_p": 0.95,
+            "system_instruction": "Keep responses short."}
+        search_grounding: If True, enables the Google Search grounding tool.
+        response_schema: Optional JSON schema dict for structured output
+            (sets response_mime_type to application/json).
+        thinking_level: Optional thinking level (e.g. "low", "high") to enable thinking.
+        return_sources: If True, also return the raw list of grounding source URLs.
+    Returns:
+        str | None, or (str | None, list[str]) if return_sources is True.
     """
     client = genai.Client(api_key=config.GOOGLE_API_KEY)
     try:
@@ -614,7 +652,6 @@ def gemini_generate(request: str | dict, model_name: str = "gemini-2.0-flash", g
             prompt = request.get("prompt", "")
             grounded = request.get("grounded", False)
             grounding_text = request.get("grounding_text", None)
-
         if grounded and grounding_text:
             if isinstance(grounding_text, list):
                 grounding_text = "\n\n".join(grounding_text)
@@ -622,17 +659,56 @@ def gemini_generate(request: str | dict, model_name: str = "gemini-2.0-flash", g
         else:
             full_prompt = prompt
 
-        generate_config = types.GenerateContentConfig(**(gen_config or {}))
+        contents = [
+            types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=full_prompt)],
+            ),
+        ]
+
+        config_kwargs = dict(gen_config or {})
+
+        tools = list(config_kwargs.pop("tools", []))
+        if search_grounding:
+            tools.append(types.Tool(googleSearch=types.GoogleSearch()))
+        if tools:
+            config_kwargs["tools"] = tools
+
+        if response_schema is not None:
+            config_kwargs["response_mime_type"] = "application/json"
+            config_kwargs["response_json_schema"] = response_schema
+
+        if thinking_level is not None:
+            config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_level=thinking_level)
+
+        generate_config = types.GenerateContentConfig(**config_kwargs)
+
         response = client.models.generate_content(
             model=model_name,
-            contents=full_prompt,
-            config=generate_config
+            contents=contents,
+            config=generate_config,
         )
-        return response.text
+
+        if not return_sources:
+            return response.text
+
+        sources = []
+        try:
+            candidates = response.candidates or []
+            grounding_metadata = candidates[0].grounding_metadata if candidates else None
+            chunks = grounding_metadata.grounding_chunks if grounding_metadata else None
+            for chunk in (chunks or []):
+                uri = getattr(getattr(chunk, "web", None), "uri", None)
+                if uri and uri not in sources:
+                    sources.append(uri)
+        except Exception as e:
+            log_err(e)
+
+        return response.text, sources
 
     except Exception as e:
         log_err(e)
-        return
+        return (None, []) if return_sources else None
 
 
 GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image"
