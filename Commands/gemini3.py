@@ -45,11 +45,10 @@ def reply_with_grounded_gemini(self, message):
 
         if raw_sources:
             sources = []
-            for uri in raw_sources:
+            for uri in raw_sources[:MAX_SOURCES]:
                 resolved = resolve_redirect_url(uri)
                 if resolved:
                     sources.append(resolved)
-                if len(sources) >= MAX_SOURCES:
                     break
 
             if sources:
