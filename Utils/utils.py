@@ -619,12 +619,12 @@ def is_url(url):
 def gemini_generate(
     request: str | dict,
     model_name: str = "gemini-flash-lite-latest",
-    gen_config: dict = None,
+    gen_config: dict | None = None,
     search_grounding: bool = False,
-    response_schema: dict = None,
-    thinking_level: str = None,
+    response_schema: dict | None = None,
+    thinking_level: str | None = None,
     return_sources: bool = False,
-) -> str | None:
+) -> str | tuple[str | None, list[str]] | None:
     """
     Generate content using the google-genai SDK.
     Supports search grounding, structured outputs, and thinking.
