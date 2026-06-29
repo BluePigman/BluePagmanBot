@@ -4,6 +4,7 @@ from pathlib import Path
 import curl_cffi
 from bs4 import BeautifulSoup
 from urllib.parse import urlencode, urlparse, quote_plus
+import ipaddress, socket
 from typing import Any, Dict, List, Union, Optional
 from google import genai
 from google.genai import types
@@ -486,6 +487,14 @@ def resolve_redirect_url(url: str, timeout: int = 5) -> str | None:
     """
     Resolves a redirect URL to its final destination URL.
     """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return None
+
+    ip = ipaddress.ip_address(socket.gethostbyname(parsed.hostname))
+    if not ip.is_global:
+        return None
+
     try:
         res = proxy_request("HEAD", url, timeout=timeout, allow_redirects=True, bypass_proxy=True)
         return res.url
@@ -495,7 +504,7 @@ def resolve_redirect_url(url: str, timeout: int = 5) -> str | None:
             res = proxy_request("GET", url, timeout=timeout, allow_redirects=True, stream=True, bypass_proxy=True)
             res.close()
             return res.url
-
+    
         except Exception as e:
             log_err(e)
             return None
