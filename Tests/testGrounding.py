@@ -1,27 +1,28 @@
-from Commands.gemini3 import get_grounding_data, MODEL_NAME, GENERATION_CONFIG
-from Utils.utils import gemini_generate
+from Commands.gemini3 import MODEL_NAME, GENERATION_CONFIG, MAX_SOURCES
+from Utils.utils import gemini_generate, resolve_redirect_url
 
 def test_search(prompt):
-    grounding_data = get_grounding_data(prompt)
-    if not grounding_data:
-        print("No grounding data found.")
-        return
-        
-    body_content = grounding_data.get('body_content')
-    duck_urls = grounding_data.get('valid_urls')
+    print("Prompt:", prompt)
+    try :
+        text, raw_sources = gemini_generate(prompt, MODEL_NAME, GENERATION_CONFIG,  search_grounding=True, return_sources=True)
 
-    request = {
-        "prompt": prompt,
-        "grounded": bool(body_content),
-        "grounding_text": body_content
-    }
+        if not text:
+            print("Text returned as empty.")
+            return
 
-    result = gemini_generate(request, MODEL_NAME, GENERATION_CONFIG)
-    
-    prefix = "🔎 Grounded: " if body_content else "Not Grounded: "
-    print(f"{prefix}{result}")
-    if duck_urls:
-        print(f" 📝 Source(s): {' | '.join(duck_urls)}")
+        print("Answer:",text)
+        if raw_sources:
+            sources = []
+            for uri in raw_sources[:MAX_SOURCES]:
+                resolved = resolve_redirect_url(uri)
+                if resolved:
+                    sources.append(resolved)
+                    break
+
+            if sources:
+                print(f"📝 Source(s): {' | '.join(sources)}")
+    except Exception as e:
+        print(e)
 
 if __name__ == "__main__":
     test_search("What is the current price of the NASDAQ?")
