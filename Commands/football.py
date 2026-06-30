@@ -106,13 +106,51 @@ def get_football_scores():
                 status_desc = competition['status']['type'].get('description', '')
                 
                 status = status_detail if status_detail else status_desc
-                game_text = f"{away_display} {away_score} - {home_score} {home_display} ({status})"
+                
+                home_shootout = home_competitor.get('shootoutScore')
+                away_shootout = away_competitor.get('shootoutScore')
+                
+                if home_shootout is not None and away_shootout is not None:
+                    game_text = f"{away_display} {away_score} - {home_score} {home_display} ({status}, {away_shootout}-{home_shootout} Pens)"
+                else:
+                    game_text = f"{away_display} {away_score} - {home_score} {home_display} ({status})"
                 
             elif game_status == 'post':
                 status_detail = competition['status']['type'].get('detail', 'FT')
                 
+                home_shootout = home_competitor.get('shootoutScore')
+                away_shootout = away_competitor.get('shootoutScore')
+                
                 if status_detail == 'FT':
                     status_display = 'FINAL'
+                elif status_detail == 'FT-Pens' or 'Pens' in status_detail or (home_shootout is not None and away_shootout is not None):
+                    if home_shootout is not None and away_shootout is not None:
+                        home_won = home_competitor.get('winner') is True
+                        away_won = away_competitor.get('winner') is True
+                        if home_won:
+                            winner_name = home_name
+                        elif away_won:
+                            winner_name = away_name
+                        else:
+                            try:
+                                home_sh = int(home_shootout)
+                                away_sh = int(away_shootout)
+                                winner_name = home_name if home_sh > away_sh else away_name
+                            except (ValueError, TypeError):
+                                winner_name = home_name if home_competitor.get('winner') is True or (home_competitor.get('advance') is True) else away_name
+                        
+                        try:
+                            home_sh = int(home_shootout)
+                            away_sh = int(away_shootout)
+                            high_score = max(home_sh, away_sh)
+                            low_score = min(home_sh, away_sh)
+                        except (ValueError, TypeError):
+                            high_score = home_shootout
+                            low_score = away_shootout
+                            
+                        status_display = f'FINAL ({status_detail}, {winner_name} wins {high_score}-{low_score})'
+                    else:
+                        status_display = f'FINAL ({status_detail})'
                 else:
                     status_display = f'FINAL ({status_detail})'
                     
