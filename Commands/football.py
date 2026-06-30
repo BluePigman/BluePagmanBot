@@ -2,7 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 import requests
 import pycountry
-from Utils.utils import check_cooldown, fetch_cmd_data
+from Utils.utils import check_cooldown, fetch_cmd_data, send_chunks
 
 
 def reply_with_football_scores(self, message):
@@ -11,7 +11,7 @@ def reply_with_football_scores(self, message):
         return
 
     football_scores = get_football_scores()
-    self.send_privmsg(cmd.channel, football_scores)
+    send_chunks(self.send_privmsg, cmd.channel, football_scores)
 
 
 def country_code_to_flag(country_code):
