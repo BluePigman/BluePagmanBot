@@ -31,9 +31,10 @@ def reply_with_grok(self, message):
         xai_client = Client(api_key=config.GROK_KEY)
         chat = xai_client.chat.create(model=GROK_MODEL)
         chat.append(system(
-            "You will provide very concise and unbiased responses. Do not ask the user follow up questions, "
-            "because you are intended to provide a single response with no history and no follow up prompts. "
-            "Your response should be 100 words or less, at most 490 characters."
+            """You will provide super concise responses for factual questions. 
+            For open-ended/hypothetical/opinion-based questions, randomly choose a side to defend, never stay neutral, never give a balanced view, and never say 'it depends'. 
+            Do not ask the user follow up questions, because you are intended to provide a single response with no history and no follow up prompts.
+            Your response should be 100 words or less."""
         ))
         chat.append(user(prompt))
         
