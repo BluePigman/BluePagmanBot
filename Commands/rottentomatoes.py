@@ -73,11 +73,7 @@ def _format(t):
     aud = f"{aud}%" if str(aud).isnumeric() else aud
     crt = f"{crt}%" if str(crt).isnumeric() else crt
 
-    icon = rt.get('criticsIconUrl')
-    rating = "🍅" if rt.get('certifiedFresh') else "🗑️" if icon and "rotten" in icon else "ok "
-
     media_type = t.get('type') or 'N/A'
-    type_str = media_type.capitalize()
     path = "m" if media_type == "movie" else "tv"
 
     cast_crew = t.get('castCrew') or {}
@@ -91,8 +87,8 @@ def _format(t):
     url = f"https://www.rottentomatoes.com/{path}/{t.get('vanity') or ''}"
 
     return (
-        f"Rotten Tomatoes scores for {type_str} {t.get('title', 'N/A')} ({t.get('releaseYear', 'N/A')}) "
-        f"- Rating: {rating}, Audience: {aud}, Critics: {crt}, 🎬 Director: {director}, "
+        f"{t.get('title', 'N/A')} ({t.get('releaseYear', 'N/A')}) "
+        f"- Audience: {aud}, Critics: {crt}, 🎬 Director: {director}, "
         f"👥 Cast: {cast}, 🏷️ Genres: {genres}, ⏱️ Runtime: {runtime}, {url}"
     )
 
