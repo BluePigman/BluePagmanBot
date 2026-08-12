@@ -6,7 +6,7 @@ import config
 from Classes.chess_game import ChessManager
 from pymongo.mongo_client import MongoClient
 from Commands import (bot_info, date, groq_command, help_ascii, ping, help_chess, source_code, play_chess, ro, r960, help_ro, pyramid, slow_pyramid,
-                      news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini, gemini2,
+                      news, help_news, daily, roulette, balance, leaderboard, help, shop, timeout, trophies, gemini,
                       ascii, reloadglobals, reloadchannel, sparlerlink, suggest, poker, rm, olympics, summarize, describe, rottentomatoes, remind, eight_ball,
                       guessgame, x, genius, generate_image, rrc, gemini3, nba, truth, grok_command, football)
 
@@ -66,7 +66,6 @@ class Bot:
             'timeout': timeout.reply_with_timeout,
             'trophies': trophies.reply_with_trophies,
             'gemini': gemini.reply_with_gemini,
-            'gemini2': gemini2.reply_with_gemini_experimental,
             'ascii': ascii.reply_with_ascii,
             'help_ascii': help_ascii.reply_with_help_ascii,
             'reload_globals': reloadglobals.reload_global_emotes,
