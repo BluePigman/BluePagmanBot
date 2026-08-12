@@ -4,7 +4,7 @@ import config
 from xai_sdk import Client
 from xai_sdk.chat import user, system
 
-GROK_MODEL = "grok-4.5"
+GROK_MODEL = "grok-4.20-0309-non-reasoning"
 
 def reply_with_grok(self, message):
 
@@ -29,7 +29,7 @@ def reply_with_grok(self, message):
     
     try:
         xai_client = Client(api_key=config.GROK_KEY)
-        chat = xai_client.chat.create(model=GROK_MODEL, reasoning_effort="low")
+        chat = xai_client.chat.create(model=GROK_MODEL)
         chat.append(system(
             """You will provide super concise responses for factual questions. 
             For open-ended/hypothetical/opinion-based questions, randomly choose a side to defend, never stay neutral, never give a balanced view, and never say 'it depends'. 
