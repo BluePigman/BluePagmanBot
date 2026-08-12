@@ -58,7 +58,7 @@ def generate_emote_description(prompt):
             top_p=0.95,
         )
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=MODEL_NAME,
             contents=prompt,
             config=config,
         ).text.replace('\n', ' ')
