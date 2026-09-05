@@ -298,7 +298,7 @@ class Bot:
         parsed_command = None
         command_parts = raw_command_component.split(' ')
 
-        if command_parts[0] in ['JOIN', 'PART', 'NOTICE', 'CLEARCHAT', 'HOSTTARGET', 'PRIVMSG']:
+        if command_parts[0] in ['JOIN', 'PART', 'NOTICE', 'CLEARCHAT', 'HOSTTARGET', 'PRIVMSG', 'USERNOTICE', 'WHISPER']:
             parsed_command = {
                 'command': command_parts[0],
                 'channel': command_parts[1][1:]
