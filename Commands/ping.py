@@ -1,5 +1,4 @@
 import time
-from threading import Timer
 from Utils.utils import check_cooldown, fetch_cmd_data
 
 
@@ -8,29 +7,27 @@ def calculate_uptime(bot):
     uptime_hours = uptime_seconds // 3600
     uptime_minutes = (uptime_seconds % 3600) // 60
     uptime_seconds %= 60
-    uptime_str = f"{int(uptime_hours)}h, {int(uptime_minutes)}m, {int(uptime_seconds)}s"
-    return uptime_str
+    return f"{int(uptime_hours)}h, {int(uptime_minutes)}m, {int(uptime_seconds)}s"
+
 
 def reply_to_ping(self, message):
     cmd = fetch_cmd_data(self, message)
     if not check_cooldown(cmd.state, cmd.nick, cmd.cooldown): 
         return
 
-    start_time = time.time()
-    timeout_timer = Timer(10, handle_timeout, args=[self, cmd.channel])
-    timeout_timer.start()
-    
-    self.send_command('PING :tmi.twitch.tv')
-    while True:
-        received_msgs = self.irc.recv(4096).decode(errors='ignore')
-        for received_msg in received_msgs.split('\r\n'):
-            if received_msg.startswith(':tmi.twitch.tv PONG'):
-                timeout_timer.cancel()
-                latency_time = (time.time() - start_time) * 1000  # Convert to milliseconds
-                uptime_str = calculate_uptime(self)
-                text = f"{cmd.username}, Pong! Latency: {latency_time:.2f} ms Uptime: {uptime_str}"
-                self.send_privmsg(cmd.channel, text)
-                return
+    uptime_str = calculate_uptime(self)
 
-def handle_timeout(bot, channel):
-    bot.send_privmsg(channel, 'monkaS Twitch did not send a PONG.')
+    # Calculate latency from Twitch's message timestamp
+    tags = message.get('tags') or {}
+    sent_ts = tags.get('tmi-sent-ts')
+
+    if sent_ts:
+        try:
+            latency_time = (time.time() * 1000) - float(sent_ts)
+            text = f"{cmd.username}, Pong! Latency: {latency_time:.2f} ms | Uptime: {uptime_str}"
+        except (ValueError, TypeError):
+            text = f"{cmd.username}, Pong! | Uptime: {uptime_str}"
+    else:
+        text = f"{cmd.username}, Pong! | Uptime: {uptime_str}"
+
+    self.send_privmsg(cmd.channel, text)
