@@ -162,6 +162,11 @@ class ChessManager:
     def gameTimeout(self, channel):
         self._send_message(channel, "No one accepted the challenge. :(")
         self.chessGameActive = False
+        self.gameAccepted = False
+        self.player1 = ''
+        self.player2 = ''
+        self.choseSidePlayer1 = False
+        self.currentGame = None
 
 
     def handle_command(self, command_name, message):
@@ -234,6 +239,13 @@ class ChessManager:
                      self._send_message(channel, part)
                      time.sleep(1)
         self.chessGameActive = False
+        self.gameAccepted = False
+        self.choseSidePlayer1 = False
+        self.player1 = ''
+        self.player2 = ''
+        self.currentGame = None
+
+    end_game = _end_game
 
 
     def resign(self, message):
