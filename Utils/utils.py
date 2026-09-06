@@ -720,7 +720,7 @@ def gemini_generate(
         return (None, []) if return_sources else None
 
 
-GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image"
+GEMINI_IMAGE_MODEL = "gemini-3.1-flash-lite-image"
 
 
 def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None, temperature: float = 1,
