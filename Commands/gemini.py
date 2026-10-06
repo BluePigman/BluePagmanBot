@@ -11,8 +11,7 @@ def reply_with_gemini(self, message):
         self.state[message['source']['nick']] = time.time()
 
     if not message['command']['botCommandParams']:
-        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-flash-lite-latest, \
-            temperature: 1.1, top_p: 0.95"
+        m = f"@{message['tags']['display-name']}, please provide a prompt for Gemini. Model: gemini-flash-lite-latest"
         self.send_privmsg(message['command']['channel'], m)
         return
 
@@ -26,8 +25,6 @@ def reply_with_gemini(self, message):
 MODEL_NAME = "gemini-flash-lite-latest"
 GENERATION_CONFIG = types.GenerateContentConfig(
     max_output_tokens=400,
-    temperature=1.1,
-    top_p=0.95,
     system_instruction=[types.Part.from_text(text="""Please always provide a short and concise response. Do not ask the user follow up questions, 
                         because you are intended to provide a single response with no history and are not expected
                         any follow up prompts. Answer should be at most 990 characters.""")]
@@ -54,8 +51,6 @@ def generate_emote_description(prompt):
         config = types.GenerateContentConfig(
             system_instruction=[types.Part.from_text(text="You don't need to say Here's a description, just say the result.")],
             max_output_tokens=400,
-            temperature=1.1,
-            top_p=0.95,
         )
         response = client.models.generate_content(
             model=MODEL_NAME,

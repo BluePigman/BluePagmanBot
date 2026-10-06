@@ -15,7 +15,6 @@ from Utils.utils import (
 
 def reply_with_generate(self, message):
     arg_types = {
-        ('temperature', 't'): float,
         ('uploader', 'u'): SingleWord
     }
     cmd = fetch_cmd_data(self, message, split_params=True, arg_types=arg_types)
@@ -59,17 +58,10 @@ def reply_with_generate(self, message):
             prompt_parts.append(url_map[param])
 
         prompt = ' '.join(prompt_parts).strip()
-
-        try:
-            temperature = args.get("temperature", 1)
-            temperature = max(0, min(temperature, 2))
-        except Exception:
-            temperature = 1
-            
+ 
         image_path, is_image = gemini_generate_image(
             prompt,
-            input_images_b64 if input_images_b64 else None,
-            temperature=temperature
+            input_images_b64 if input_images_b64 else None
         )
         
         if not image_path:
