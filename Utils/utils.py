@@ -677,6 +677,11 @@ def gemini_generate(
 
         config_kwargs = dict(gen_config or {})
 
+        config_kwargs.pop("temperature", None)
+        config_kwargs.pop("top_p", None)
+        config_kwargs.pop("top_k", None)
+        config_kwargs.pop("thinking_budget", None)
+
         tools = list(config_kwargs.pop("tools", []))
         if search_grounding:
             tools.append(types.Tool(googleSearch=types.GoogleSearch()))
