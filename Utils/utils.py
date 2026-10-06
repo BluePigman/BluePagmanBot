@@ -641,8 +641,7 @@ def gemini_generate(
         request: str or dict with 'prompt', 'grounded', 'grounding_text'.
         model_name: The Gemini model to use.
         gen_config: Optional dict merged into GenerateContentConfig.
-            Example: {"max_output_tokens": 400, "temperature": 0.3, "top_p": 0.95,
-            "system_instruction": "Keep responses short."}
+            Example: {"max_output_tokens": 400, "system_instruction": "Keep responses short."}
         search_grounding: If True, enables the Google Search grounding tool.
         response_schema: Optional JSON schema dict for structured output
             (sets response_mime_type to application/json).
@@ -723,7 +722,7 @@ def gemini_generate(
 GEMINI_IMAGE_MODEL = "gemini-3.1-flash-lite-image"
 
 
-def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None, temperature: float = 1,
+def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None,
                           image_model: str = GEMINI_IMAGE_MODEL) -> tuple[str | None, bool]:
     """
     Generate an image from a text prompt and optional input images using Gemini model.
@@ -755,7 +754,6 @@ def gemini_generate_image(prompt: str, input_images_b64: list[str] | None = None
         response_modalities=["image", "text"],
         response_mime_type="text/plain",
         system_instruction=[types.Part.from_text(text="Text output should be a maximum of 100 words."),],
-        temperature=temperature,
     )
 
     try:

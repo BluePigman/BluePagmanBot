@@ -24,9 +24,7 @@ class TranscriptUnavailableError(TranscriptError):
 
 MODEL_NAME = "gemini-flash-lite-latest"
 GENERATION_CONFIG = {
-    "max_output_tokens": 400,
-    "temperature": 0.5,
-    "top_p": 0.95,
+    "max_output_tokens": 400
 }
 
 
