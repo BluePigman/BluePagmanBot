@@ -11,8 +11,6 @@ from Utils.utils import (
 MODEL_NAME = "gemini-2.5-flash-lite"
 GENERATION_CONFIG = {
     "max_output_tokens": 400,
-    "temperature": 0.3,
-    "top_p": 0.95,
     "system_instruction": "Please provide a short, concise response with enough detail. Do not use LaTeX or Markdown formatting in your response. Do not ask the user follow up questions, because you are intended to provide a single response with no history and are not expected any follow up prompts. Answer should be at most 600 characters."
 }
 MAX_SOURCES = 2
@@ -26,8 +24,7 @@ def reply_with_grounded_gemini(self, message):
     if not cmd.params:
         m = (
             f"{cmd.username}, please provide a prompt for Gemini. "
-            f"Model: {MODEL_NAME}, temperature: {GENERATION_CONFIG['temperature']}, "
-            f"top_p: {GENERATION_CONFIG['top_p']}"
+            f"Model: {MODEL_NAME}"
         )
         self.send_privmsg(cmd.channel, m)
         return
