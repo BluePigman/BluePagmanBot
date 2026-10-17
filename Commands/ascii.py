@@ -75,8 +75,10 @@ def parse_custom_args(args):
         raise
 
 def reply_with_ascii(self, message):
-    if message['source']['nick'] not in self.state or time.time() - self.state[message['source']['nick']] > self.cooldown:
-        self.state[message['source']['nick']] = time.time()
+    state = self.state.setdefault(message['command']['channel'], {})
+    nick = message['source']['nick']
+    if nick not in state or time.time() - state[nick] > self.cooldown:
+        state[nick] = time.time()
 
         # Validate if the first argument is a URL or an emote name
         if not message['command']['botCommandParams']:

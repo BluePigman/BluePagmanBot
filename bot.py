@@ -20,9 +20,9 @@ class Bot:
         self.username = config.username
         self.channels = config.channels
         self.prefix = config.prefix
-        self.state = {}  # dictionary for cooldown
-        self.cooldown = 3  # default cooldown for commands
-        self.time = time.time()
+        self.state = {}  # channel -> {nick: last used timestamp} for cooldowns
+        self.cooldown = 2  # default cooldown for commands
+        self.last_command_time = {}  # channel -> timestamp of the last command
         self.last_msg = ''
         self.last_msg_time = time.time()
         self.last_ping = time.time()
@@ -370,24 +370,26 @@ class Bot:
             raise ConnectionResetError("Server requested reconnect")
 
 
-        # # Follow 1s cooldown
+        # # Follow 1s cooldown, per channel
         if message['command']['command'] == 'PRIVMSG':
             if not message['parameters']:
                 return
-    
-            if message['parameters'][0] == (self.prefix) and time.time() - self.time > 1:
+
+            channel = message['command']['channel']
+
+            if message['parameters'][0] == (self.prefix) and time.time() - self.last_command_time.get(channel, 0) > 1:
 
                 if message['command']['botCommand'].lower() in self.custom_commands:
                     self.custom_commands[message['command']['botCommand'].lower()](self, message)
-                    self.time = time.time()
+                    self.last_command_time[channel] = time.time()
 
                 if message['command']['botCommand'].lower() in self.private_commands:
                     self.private_commands[message['command']['botCommand'].lower()](message)
-                    self.time = time.time()
+                    self.last_command_time[channel] = time.time()
 
                 if message['command']['botCommand'].lower() in self.chess_manager.commands:
                     self.chess_manager.handle_command(message['command']['botCommand'].lower(), message)
-                    self.time = time.time()
+                    self.last_command_time[channel] = time.time()
             
             # check for emotes when guess game active
             if self.guessGameActive:

@@ -66,7 +66,7 @@ def fetch_cmd_data(self, message: dict, split_params: bool = False, arg_types: d
       - channel: str — channel name
       - params: list|str — full botCommandParams with all arguments removed (split into words if split_params=True)
       - args: dict — parsed arguments in -key value or -flag format according to arg_types
-      - state: dict — current cooldown state from self
+      - state: dict — cooldown state for the message's channel (nick -> timestamp)
       - cooldown: int — cooldown duration from self
     """
     raw = message['command']['botCommandParams']
@@ -105,13 +105,15 @@ def fetch_cmd_data(self, message: dict, split_params: bool = False, arg_types: d
 
     params = raw.split() if split_params else raw
 
+    channel = message['command']['channel']
+
     return CmdData(
         nick=message['source']['nick'],
         username=f"@{message['tags']['display-name']}",
-        channel=message['command']['channel'],
+        channel=channel,
         params=params,
         args=args,
-        state=self.state,
+        state=self.state.setdefault(channel, {}),
         cooldown=self.cooldown,
     )
 
