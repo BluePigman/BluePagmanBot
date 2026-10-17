@@ -22,26 +22,86 @@ def truncate_with_suffix(text: str, suffix: str, max_length: int = CHUNK_SIZE) -
 def is_valid_post(item: dict) -> bool:
     if not isinstance(item, dict):
         return False
+    
     raw_text = item.get("text")
     text = raw_text if isinstance(raw_text, str) else ""
-    social = item.get("social") or {}
-    if not isinstance(social, dict):
-        social = {}
     
-    if text.startswith("RT:"):
-        return False
-    
-    if social.get("quote_flag", False):
-        return False
-    
-    if social.get("repost_flag", False):
-        return False
-    
-    # Allow [Video] and [Image] posts only if they have a post_url or image_url
+    # We now allow retweets (RT:, repost_flag, quote_flag)
+    # Check if there is usable text or a fallback URL
     if text.strip() in ["[Video]", "[Image]"]:
         return bool(item.get("post_url") or item.get("image_url"))
     
-    return True
+    return bool(text or item.get("post_url") or item.get("image_url"))
+
+
+def format_truth_post(item: dict) -> str:
+    raw_text = (item.get("text") or "").strip()
+    social = item.get("social") or {}
+    if not isinstance(social, dict):
+        social = {}
+
+    is_rt = (
+        raw_text.startswith("RT:")
+        or raw_text.startswith("RT @")
+        or bool(social.get("repost_flag"))
+        or bool(social.get("quote_flag"))
+    )
+
+    post_html = social.get("post_html", "")
+    if post_html:
+        soup = BeautifulSoup(post_html, "html.parser")
+        quote_span = soup.find("span", class_="quote-inline")
+        if quote_span:
+            quote_span.decompose()
+        extracted_text = soup.get_text().strip()
+    else:
+        extracted_text = raw_text
+
+    # If raw text was used or quote URL remained in text, strip the quote URL prefix
+    if extracted_text.startswith("RT:"):
+        parts = extracted_text.split(None, 2)
+        if len(parts) >= 2 and (parts[1].startswith("http://") or parts[1].startswith("https://")):
+            extracted_text = parts[2].strip() if len(parts) == 3 else ""
+
+    extracted_text = " ".join(extracted_text.split())
+
+    prefix = "TRUTH RT: " if is_rt else "TRUTH "
+    post_date = item.get("date", "")
+    time_part = format_time_ago(post_date) if post_date else ""
+
+    is_video = (extracted_text == "[Video]" or raw_text == "[Video]")
+    is_image = (extracted_text == "[Image]" or raw_text == "[Image]")
+
+    post_url = item.get("post_url", "")
+    image_url = item.get("image_url", "")
+    media_count = social.get("media_count")
+
+    if is_video:
+        # Video post, no caption: post link
+        target_url = post_url or image_url
+        content = f"{target_url} {time_part}".strip()
+        return prefix + content
+    elif is_image or not extracted_text:
+        # Image post with no caption, or post with only media / empty text
+        target_url = image_url or post_url
+        content = f"{target_url} {time_part}".strip()
+        return prefix + content
+    elif media_count or is_rt:
+        # Image post with caption (or RT with attached image)
+        suffix_parts = []
+        if image_url:
+            suffix_parts.append(image_url)
+        if time_part:
+            suffix_parts.append(time_part)
+        suffix = " ".join(suffix_parts)
+        max_content_len = CHUNK_SIZE - len(prefix)
+        truncated = truncate_with_suffix(extracted_text, suffix, max_length=max_content_len)
+        return prefix + truncated
+    else:
+        # Text only post
+        max_content_len = CHUNK_SIZE - len(prefix)
+        truncated = truncate_with_suffix(extracted_text, time_part, max_length=max_content_len)
+        return prefix + truncated
 
 
 def truthsocial(self, message):
@@ -107,44 +167,14 @@ def truthsocial(self, message):
         return
 
     valid_item = None
-    clean_text = ""
-    time_part = ""
-
     for item in posts:
-        if not is_valid_post(item):
-            continue
-        
-        social = item.get("social") or {}
-        if not isinstance(social, dict):
-            social = {}
-            
-        post_html = social.get("post_html", "")
-        if post_html:
-            extracted_text = BeautifulSoup(post_html, "html.parser").get_text().strip()
-        else:
-            extracted_text = item.get("text", "").strip()
-        
-        extracted_text = " ".join(extracted_text.split())
-        
-        # If text is a placeholder, try to use the post URL or image URL
-        if not extracted_text or extracted_text in ["[Video]", "[Image]"]:
-            # Priority: post_url > image_url
-            fallback_url = item.get("post_url") or item.get("image_url")
-            if fallback_url:
-                extracted_text = fallback_url
-            else:
-                continue # Skip if no usable text and no fallback URL
-            
-        valid_item = item
-        clean_text = extracted_text
-        post_date = valid_item.get("date", "")
-        time_part = format_time_ago(post_date) if post_date else ""
-        break
+        if is_valid_post(item):
+            valid_item = item
+            break
 
     if valid_item is None:
         self.send_privmsg(cmd.channel, "No valid posts found.")
         return
 
-    max_content_len = CHUNK_SIZE - len("TRUTH ") - 1
-    truncated_text = truncate_with_suffix(clean_text, time_part, max_length=max_content_len)
-    self.send_privmsg(cmd.channel, "TRUTH " + truncated_text)
+    message_text = format_truth_post(valid_item)
+    self.send_privmsg(cmd.channel, message_text)
