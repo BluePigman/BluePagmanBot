@@ -48,7 +48,8 @@ def get_lyrics(song_url: str):
 
 
 def reply_with_genius(self, message, timeout=30):
-    last_call = self.state.get("genius-lyrics")
+    state = self.state.setdefault(message['command']['channel'], {})
+    last_call = state.get("genius-lyrics")
     if last_call and last_call > time.time() - timeout:
         return
     
@@ -74,7 +75,7 @@ def reply_with_genius(self, message, timeout=30):
             self.send_privmsg(cmd.channel, "Lyrics not found!")
             return
 
-        self.state["genius-lyrics"] = time.time()
+        state["genius-lyrics"] = time.time()
 
         title = first_hit["full_title"]
         lyrics = title + " " + lyrics
