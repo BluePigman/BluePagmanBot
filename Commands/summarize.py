@@ -6,7 +6,8 @@ from Utils.utils import (
     check_cooldown,
     send_chunks,
     clean_str,
-    gemini_generate
+    gemini_generate,
+    log_err
 )
 
 SUMMARY_CHAR_LIMIT = 500
@@ -120,13 +121,13 @@ def reply_with_summarize(self, message):
         }
 
         summary = gemini_generate(prompt, MODEL_NAME, GENERATION_CONFIG)
-        if isinstance(summary, str) and summary.lower().startswith("error"):
-            print(summary)
+        if not summary or (isinstance(summary, str) and summary.lower().startswith("error")):
             self.send_privmsg(cmd.channel, f"{cmd.username}, failed to generate a summary. Please try again later.")
             return
 
-        send_chunks(self.send_privmsg, cmd.channel, clean_str(summary, ["`", "*"]))
+        clean_result = clean_str(summary, ["`", "*"])
+        send_chunks(self.send_privmsg, cmd.channel, clean_result)
     except Exception as e:
-        print(f"[Error] {e}")
+        log_err(e)
         self.send_privmsg(cmd.channel, "Failed to generate a summary. Please try again later.")
         return

@@ -8,7 +8,7 @@ from Utils.utils import (
     log_err
 )
 
-MODEL_NAME = "gemini-2.5-flash-lite"
+MODEL_NAME = "gemini-flash-lite-latest"
 GENERATION_CONFIG = {
     "max_output_tokens": 400,
     "system_instruction": "Please provide a short, concise response with enough detail. Do not use LaTeX or Markdown formatting in your response. Do not ask the user follow up questions, because you are intended to provide a single response with no history and are not expected any follow up prompts. Answer should be at most 600 characters."
