@@ -1,4 +1,7 @@
+import re
+from typing import Optional, Dict, Any
 import requests
+import feedparser
 from bs4 import BeautifulSoup
 from Utils.utils import fetch_cmd_data, check_cooldown, CHUNK_SIZE, format_time_ago
 
@@ -29,9 +32,80 @@ def is_valid_post(item: dict) -> bool:
     # We now allow retweets (RT:, repost_flag, quote_flag)
     # Check if there is usable text or a fallback URL
     if text.strip() in ["[Video]", "[Image]"]:
-        return bool(item.get("post_url") or item.get("image_url"))
+        return bool(item.get("post_url") or item.get("image_url") or item.get("video_url"))
     
-    return bool(text or item.get("post_url") or item.get("image_url"))
+    return bool(text or item.get("post_url") or item.get("image_url") or item.get("video_url"))
+
+
+def fetch_trumpstruth_media_map(feed_url: str = "https://www.trumpstruth.org/feed", timeout: int = 5) -> Dict[str, Dict[str, Any]]:
+    """
+    Parses the trumpstruth.org RSS feed using feedparser to map Truth Social post IDs
+    to high-quality source media (direct attachment images and video URLs).
+    Returns a dict: { post_id: {"images": [...], "videos": [...]} }
+    """
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept": "application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8",
+    }
+    
+    try:
+        response = requests.get(feed_url, headers=headers, timeout=timeout)
+        if response.status_code != 200:
+            return {}
+        feed = feedparser.parse(response.text)
+    except Exception:
+        return {}
+
+    media_map: Dict[str, Dict[str, Any]] = {}
+    for entry in getattr(feed, "entries", []):
+        post_id = entry.get("truth_originalid")
+        if not post_id:
+            # Fallback to parsing ID from originalurl or link
+            raw_url = entry.get("truth_originalurl") or entry.get("link") or ""
+            match = re.search(r"/(\d+)$", raw_url)
+            if match:
+                post_id = match.group(1)
+
+        if not post_id:
+            continue
+
+        images = []
+        videos = []
+
+        # Parse media attachments from media_content (Media RSS tags)
+        for media in entry.get("media_content", []):
+            m_url = media.get("url")
+            m_type = media.get("medium")
+            if not m_url:
+                continue
+
+            if m_type == "video" or m_url.endswith((".mp4", ".mov", ".m4v")):
+                videos.append(m_url)
+            elif m_type == "image" or m_url.endswith((".jpg", ".jpeg", ".png", ".webp")):
+                images.append(m_url)
+
+        # Fallback to enclosures if media_content wasn't populated
+        if not images and not videos:
+            for enc in entry.get("enclosures", []):
+                e_url = enc.get("href") or enc.get("url")
+                e_type = enc.get("type", "")
+                if not e_url:
+                    continue
+                if "video" in e_type or e_url.endswith((".mp4", ".mov", ".m4v")):
+                    videos.append(e_url)
+                elif "image" in e_type or e_url.endswith((".jpg", ".jpeg", ".png", ".webp")):
+                    images.append(e_url)
+
+        media_map[post_id] = {
+            "images": images,
+            "videos": videos,
+        }
+
+    return media_map
 
 
 def format_truth_post(item: dict) -> str:
@@ -74,23 +148,27 @@ def format_truth_post(item: dict) -> str:
 
     post_url = item.get("post_url", "")
     image_url = item.get("image_url", "")
+    video_url = item.get("video_url", "")
     media_count = social.get("media_count")
 
+    # Determine primary media URL (prefer direct video, then image, then post link)
+    media_url = video_url or image_url
+
     if is_video:
-        # Video post, no caption: post link
-        target_url = post_url or image_url
+        # Video post, no caption: video link or post link
+        target_url = media_url or post_url
         content = f"{target_url} {time_part}".strip()
         return prefix + content
     elif is_image or not extracted_text:
         # Image post with no caption, or post with only media / empty text
-        target_url = image_url or post_url
+        target_url = media_url or post_url
         content = f"{target_url} {time_part}".strip()
         return prefix + content
-    elif media_count or is_rt:
-        # Image post with caption (or RT with attached image)
+    elif media_count or is_rt or video_url:
+        # Post with caption and attached media (or RT with attached media)
         suffix_parts = []
-        if image_url:
-            suffix_parts.append(image_url)
+        if media_url:
+            suffix_parts.append(media_url)
         if time_part:
             suffix_parts.append(time_part)
         suffix = " ".join(suffix_parts)
@@ -175,6 +253,25 @@ def truthsocial(self, message):
     if valid_item is None:
         self.send_privmsg(cmd.channel, "No valid posts found.")
         return
+
+    # Attempt to enrich valid_item with direct source image / video from trumpstruth.org
+    try:
+        post_id = str(valid_item.get("id") or "")
+        if not post_id and valid_item.get("post_url"):
+            match = re.search(r"/(\d+)$", valid_item["post_url"])
+            if match:
+                post_id = match.group(1)
+
+        trump_media = fetch_trumpstruth_media_map()
+        if post_id and post_id in trump_media:
+            post_media = trump_media[post_id]
+            if post_media.get("videos"):
+                valid_item["video_url"] = post_media["videos"][0]
+            if post_media.get("images"):
+                valid_item["image_url"] = post_media["images"][0]
+    except Exception:
+        # Fallback cleanly to rollcall image_url / post_url
+        pass
 
     message_text = format_truth_post(valid_item)
     self.send_privmsg(cmd.channel, message_text)
