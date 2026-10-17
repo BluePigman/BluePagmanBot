@@ -108,6 +108,31 @@ def fetch_trumpstruth_media_map(feed_url: str = "https://www.trumpstruth.org/fee
     return media_map
 
 
+def enrich_with_trumpstruth_media(item: dict) -> dict:
+    """
+    Enriches a post item with high-quality source image / video URLs
+    from trumpstruth.org if available. Returns the item (modified in-place or original).
+    """
+    try:
+        post_id = str(item.get("id") or "")
+        if not post_id and item.get("post_url"):
+            match = re.search(r"/(\d+)$", item["post_url"])
+            if match:
+                post_id = match.group(1)
+
+        trump_media = fetch_trumpstruth_media_map()
+        if post_id and post_id in trump_media:
+            post_media = trump_media[post_id]
+            if post_media.get("videos"):
+                item["video_url"] = post_media["videos"][0]
+            if post_media.get("images"):
+                item["image_url"] = post_media["images"][0]
+    except Exception:
+        pass
+
+    return item
+
+
 def fetch_latest_from_rss(feed_url: str = "https://www.trumpstruth.org/feed?limit=5", timeout: int = 5) -> Optional[dict]:
     """
     Parses the trumpstruth.org RSS feed to extract the latest valid post as a fallback
@@ -147,7 +172,7 @@ def fetch_latest_from_rss(feed_url: str = "https://www.trumpstruth.org/feed?limi
 
         for a in soup.find_all("a"):
             txt = a.get_text().strip()
-            if txt in ["View image", "View video"] or "View" in txt:
+            if txt in ["View image", "View video"]:
                 a.decompose()
 
         text = soup.get_text().strip()
@@ -279,6 +304,7 @@ def truthsocial(self, message):
     }
     
     valid_item = None
+    from_rss = False
     max_retries = 3
 
     # Primary attempt: Rollcall API with up to 3 retries
@@ -306,40 +332,27 @@ def truthsocial(self, message):
                         valid_item = item
                         break
 
-                if valid_item is not None:
-                    break
+                break
         except Exception:
             pass
 
         if attempt < max_retries - 1:
             time.sleep(0.5)
 
-    # Option C Fallback: If Rollcall failed or had no valid post, fetch from trumpstruth.org RSS
+    # If Rollcall failed or had no valid post, fetch from trumpstruth.org RSS
     if valid_item is None:
         valid_item = fetch_latest_from_rss()
+        if valid_item is not None:
+            from_rss = True
 
     if valid_item is None:
         self.send_privmsg(cmd.channel, "Failed to fetch the latest post, please try again later.")
         return
 
     # Attempt to enrich valid_item with direct source image / video from trumpstruth.org
-    try:
-        post_id = str(valid_item.get("id") or "")
-        if not post_id and valid_item.get("post_url"):
-            match = re.search(r"/(\d+)$", valid_item["post_url"])
-            if match:
-                post_id = match.group(1)
-
-        trump_media = fetch_trumpstruth_media_map()
-        if post_id and post_id in trump_media:
-            post_media = trump_media[post_id]
-            if post_media.get("videos"):
-                valid_item["video_url"] = post_media["videos"][0]
-            if post_media.get("images"):
-                valid_item["image_url"] = post_media["images"][0]
-    except Exception:
-        # Fallback cleanly to rollcall image_url / post_url
-        pass
+    # Skip enrichment if the item was already sourced directly from RSS (media already included)
+    if not from_rss:
+        enrich_with_trumpstruth_media(valid_item)
 
     message_text = format_truth_post(valid_item)
     self.send_privmsg(cmd.channel, message_text)

@@ -1,6 +1,5 @@
 import sys
 import os
-import re
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 import requests
@@ -9,7 +8,13 @@ import feedparser
 # Ensure repository root is on sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from Commands.truth import format_truth_post, is_valid_post, fetch_trumpstruth_media_map, fetch_latest_from_rss
+from Commands.truth import (
+    format_truth_post,
+    is_valid_post,
+    fetch_trumpstruth_media_map,
+    fetch_latest_from_rss,
+    enrich_with_trumpstruth_media,
+)
 
 
 def test_truth_social_api():
@@ -81,25 +86,7 @@ def test_truth_social_api():
         print(f"Post URL: {valid_item.get('post_url', 'N/A')}")
         print(f"\nFormatted Message (Rollcall only):\n{format_truth_post(valid_item)}")
         
-        # Test enrichment
-        import re
-        post_id = str(valid_item.get("id") or "")
-        if not post_id and valid_item.get("post_url"):
-            match = re.search(r"/(\d+)$", valid_item["post_url"])
-            if match:
-                post_id = match.group(1)
-        trump_media = fetch_trumpstruth_media_map()
-        enriched_item = dict(valid_item)
-        if post_id and post_id in trump_media:
-            post_media = trump_media[post_id]
-            if post_media.get("videos"):
-                enriched_item["video_url"] = post_media["videos"][0]
-            if post_media.get("images"):
-                enriched_item["image_url"] = post_media["images"][0]
-            print(f"\nEnriched with trumpstruth.org media: {post_media}")
-        else:
-            print(f"\nPost {post_id} not in trumpstruth.org top posts, kept rollcall fallback.")
-
+        enriched_item = enrich_with_trumpstruth_media(dict(valid_item))
         print(f"\nFormatted Message (With Enrichment/Fallback):\n{format_truth_post(enriched_item)}")
     else:
         print("No valid posts found!")
