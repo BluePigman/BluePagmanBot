@@ -626,9 +626,9 @@ def is_url(url):
 # --- LLM Generation Utilities ---
 
 def gemini_generate(
-    request: str | dict,
+    request: str | dict | list | types.Part | types.Content,
     model_name: str = "gemini-flash-lite-latest",
-    gen_config: dict | None = None,
+    gen_config: dict | types.GenerateContentConfig | None = None,
     search_grounding: bool = False,
     response_schema: dict | None = None,
     thinking_level: str | None = None,
@@ -636,11 +636,12 @@ def gemini_generate(
 ) -> str | tuple[str | None, list[str]] | None:
     """
     Generate content using the google-genai SDK.
-    Supports search grounding, structured outputs, and thinking.
+    Supports search grounding, structured outputs, thinking, and multimodal inputs.
     Args:
-        request: str or dict with 'prompt', 'grounded', 'grounding_text'.
+        request: str, dict (with 'prompt', 'grounded', 'grounding_text'), list of parts/strings,
+            Part, or Content object.
         model_name: The Gemini model to use.
-        gen_config: Optional dict merged into GenerateContentConfig.
+        gen_config: Optional dict or GenerateContentConfig merged into content generation.
             Example: {"max_output_tokens": 400, "system_instruction": "Keep responses short."}
         search_grounding: If True, enables the Google Search grounding tool.
         response_schema: Optional JSON schema dict for structured output
@@ -652,44 +653,70 @@ def gemini_generate(
     """
     client = genai.Client(api_key=config.GOOGLE_API_KEY)
     try:
-        if isinstance(request, str):
-            prompt = request
-            grounded = False
-            grounding_text = None
-        else:
+        if isinstance(request, types.Content):
+            contents = [request]
+        elif isinstance(request, types.Part):
+            contents = [types.Content(role="user", parts=[request])]
+        elif isinstance(request, list):
+            if all(isinstance(item, types.Content) for item in request):
+                contents = request
+            else:
+                parts = [
+                    types.Part.from_text(text=item) if isinstance(item, str) else item
+                    for item in request
+                ]
+                contents = [types.Content(role="user", parts=parts)]
+        elif isinstance(request, str):
+            contents = [
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text=request)],
+                ),
+            ]
+        elif isinstance(request, dict):
             prompt = request.get("prompt", "")
             grounded = request.get("grounded", False)
             grounding_text = request.get("grounding_text", None)
-        if grounded and grounding_text:
-            if isinstance(grounding_text, list):
-                grounding_text = "\n\n".join(grounding_text)
-            full_prompt = f"{prompt}\n\n{grounding_text}"
+            if grounded and grounding_text:
+                if isinstance(grounding_text, list):
+                    grounding_text = "\n\n".join(grounding_text)
+                full_prompt = f"{prompt}\n\n{grounding_text}"
+            else:
+                full_prompt = prompt
+
+            contents = [
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text=full_prompt)],
+                ),
+            ]
         else:
-            full_prompt = prompt
+            contents = [
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text=str(request))],
+                ),
+            ]
 
-        contents = [
-            types.Content(
-                role="user",
-                parts=[types.Part.from_text(text=full_prompt)],
-            ),
-        ]
+        if isinstance(gen_config, types.GenerateContentConfig):
+            generate_config = gen_config
+        else:
+            config_kwargs = dict(gen_config or {})
 
-        config_kwargs = dict(gen_config or {})
+            tools = list(config_kwargs.pop("tools", []))
+            if search_grounding:
+                tools.append(types.Tool(googleSearch=types.GoogleSearch()))
+            if tools:
+                config_kwargs["tools"] = tools
 
-        tools = list(config_kwargs.pop("tools", []))
-        if search_grounding:
-            tools.append(types.Tool(googleSearch=types.GoogleSearch()))
-        if tools:
-            config_kwargs["tools"] = tools
+            if response_schema is not None:
+                config_kwargs["response_mime_type"] = "application/json"
+                config_kwargs["response_json_schema"] = response_schema
 
-        if response_schema is not None:
-            config_kwargs["response_mime_type"] = "application/json"
-            config_kwargs["response_json_schema"] = response_schema
+            if thinking_level is not None:
+                config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_level=thinking_level)
 
-        if thinking_level is not None:
-            config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_level=thinking_level)
-
-        generate_config = types.GenerateContentConfig(**config_kwargs)
+            generate_config = types.GenerateContentConfig(**config_kwargs)
 
         response = client.models.generate_content(
             model=model_name,
