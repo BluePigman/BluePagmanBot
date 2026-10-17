@@ -1,5 +1,6 @@
 import re
-from typing import Optional, Dict, Any
+import time
+from typing import Optional, Dict, Any, List
 import requests
 import feedparser
 from bs4 import BeautifulSoup
@@ -28,8 +29,7 @@ def is_valid_post(item: dict) -> bool:
     
     raw_text = item.get("text")
     text = raw_text if isinstance(raw_text, str) else ""
-    
-    # We now allow retweets (RT:, repost_flag, quote_flag)
+
     # Check if there is usable text or a fallback URL
     if text.strip() in ["[Video]", "[Image]"]:
         return bool(item.get("post_url") or item.get("image_url") or item.get("video_url"))
@@ -37,7 +37,7 @@ def is_valid_post(item: dict) -> bool:
     return bool(text or item.get("post_url") or item.get("image_url") or item.get("video_url"))
 
 
-def fetch_trumpstruth_media_map(feed_url: str = "https://www.trumpstruth.org/feed", timeout: int = 5) -> Dict[str, Dict[str, Any]]:
+def fetch_trumpstruth_media_map(feed_url: str = "https://www.trumpstruth.org/feed?limit=5", timeout: int = 5) -> Dict[str, Dict[str, Any]]:
     """
     Parses the trumpstruth.org RSS feed using feedparser to map Truth Social post IDs
     to high-quality source media (direct attachment images and video URLs).
@@ -106,6 +106,82 @@ def fetch_trumpstruth_media_map(feed_url: str = "https://www.trumpstruth.org/fee
         }
 
     return media_map
+
+
+def fetch_latest_from_rss(feed_url: str = "https://www.trumpstruth.org/feed?limit=5", timeout: int = 5) -> Optional[dict]:
+    """
+    Parses the trumpstruth.org RSS feed to extract the latest valid post as a fallback
+    if the primary Rollcall API is unavailable.
+    """
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept": "application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8",
+    }
+    try:
+        response = requests.get(feed_url, headers=headers, timeout=timeout)
+        if response.status_code != 200:
+            return None
+        feed = feedparser.parse(response.text)
+    except Exception:
+        return None
+
+    for entry in getattr(feed, "entries", []):
+        post_id = entry.get("truth_originalid") or ""
+        post_url = entry.get("truth_originalurl") or entry.get("link") or ""
+        published = entry.get("published") or ""
+        post_type = entry.get("archive_posttype") or ""
+
+        desc = entry.get("summary") or entry.get("description") or ""
+        soup = BeautifulSoup(desc, "html.parser")
+
+        quote_span = soup.find("span", class_="quote-inline")
+        if quote_span:
+            quote_span.decompose()
+
+        for bq in soup.find_all("blockquote"):
+            bq.decompose()
+
+        for a in soup.find_all("a"):
+            txt = a.get_text().strip()
+            if txt in ["View image", "View video"] or "View" in txt:
+                a.decompose()
+
+        text = soup.get_text().strip()
+
+        images: List[str] = []
+        videos: List[str] = []
+        for media in entry.get("media_content", []):
+            url = media.get("url")
+            medium = media.get("medium")
+            if not url:
+                continue
+            if medium == "video" or url.endswith((".mp4", ".mov", ".m4v")):
+                videos.append(url)
+            elif medium == "image" or url.endswith((".jpg", ".jpeg", ".png", ".webp")):
+                images.append(url)
+
+        item = {
+            "id": post_id,
+            "date": published,
+            "text": text,
+            "post_url": post_url,
+            "image_url": images[0] if images else "",
+            "video_url": videos[0] if videos else "",
+            "social": {
+                "repost_flag": post_type == "repost",
+                "quote_flag": post_type == "quote",
+                "media_count": len(images) + len(videos),
+            },
+        }
+
+        if is_valid_post(item):
+            return item
+
+    return None
 
 
 def format_truth_post(item: dict) -> str:
@@ -202,56 +278,48 @@ def truthsocial(self, message):
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
     }
     
-    try:
-        response = requests.get(api_url, params=params, headers=headers, timeout=10)
-    except requests.exceptions.ReadTimeout:
-        self.send_privmsg(cmd.channel,
-            "The server did not respond, please try again later.")
-        return
-    except requests.exceptions.RequestException as e:
-        self.send_privmsg(cmd.channel,
-            f"Failed to connect to the server: {e}")
-        return
-    
-    if response.status_code != 200:
-        self.send_privmsg(cmd.channel,
-            f"Failed to fetch the latest post. Status code {response.status_code}")
-        return
-
-    try:
-        data = response.json()
-    except ValueError:
-        self.send_privmsg(cmd.channel, "Failed to parse response from server.")
-        return
-    
-    if isinstance(data, list):
-        posts = data
-    elif isinstance(data, dict):
-        if "results" in data and isinstance(data["results"], list):
-            posts = data["results"]
-        elif "data" in data and isinstance(data["data"], list):
-            posts = data["data"]
-        elif "items" in data and isinstance(data["items"], list):
-            posts = data["items"]
-        else:
-            self.send_privmsg(cmd.channel, "No posts found in the response.")
-            return
-    else:
-        self.send_privmsg(cmd.channel, "No posts found in the response.")
-        return
-    
-    if not posts:
-        self.send_privmsg(cmd.channel, "No posts found in the response.")
-        return
-
     valid_item = None
-    for item in posts:
-        if is_valid_post(item):
-            valid_item = item
-            break
+    max_retries = 3
+
+    # Primary attempt: Rollcall API with up to 3 retries
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(api_url, params=params, headers=headers, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list):
+                    posts = data
+                elif isinstance(data, dict):
+                    if "results" in data and isinstance(data["results"], list):
+                        posts = data["results"]
+                    elif "data" in data and isinstance(data["data"], list):
+                        posts = data["data"]
+                    elif "items" in data and isinstance(data["items"], list):
+                        posts = data["items"]
+                    else:
+                        posts = []
+                else:
+                    posts = []
+
+                for item in posts:
+                    if is_valid_post(item):
+                        valid_item = item
+                        break
+
+                if valid_item is not None:
+                    break
+        except Exception:
+            pass
+
+        if attempt < max_retries - 1:
+            time.sleep(0.5)
+
+    # Option C Fallback: If Rollcall failed or had no valid post, fetch from trumpstruth.org RSS
+    if valid_item is None:
+        valid_item = fetch_latest_from_rss()
 
     if valid_item is None:
-        self.send_privmsg(cmd.channel, "No valid posts found.")
+        self.send_privmsg(cmd.channel, "Failed to fetch the latest post, please try again later.")
         return
 
     # Attempt to enrich valid_item with direct source image / video from trumpstruth.org

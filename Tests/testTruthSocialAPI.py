@@ -9,7 +9,7 @@ import feedparser
 # Ensure repository root is on sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from Commands.truth import format_truth_post, is_valid_post, fetch_trumpstruth_media_map
+from Commands.truth import format_truth_post, is_valid_post, fetch_trumpstruth_media_map, fetch_latest_from_rss
 
 
 def test_truth_social_api():
@@ -142,6 +142,16 @@ def test_feedparser_trumpstruth_feed():
         sample_entries = list(media_map.items())[:5]
         for pid, data in sample_entries:
             print(f"  Post ID: {pid} | Images: {len(data['images'])} | Videos: {len(data['videos'])}")
+
+        print("\nTesting fetch_latest_from_rss() fallback:")
+        rss_fallback_item = fetch_latest_from_rss()
+        if rss_fallback_item:
+            print("Successfully extracted fallback item from RSS:")
+            print(f"  Post ID: {rss_fallback_item['id']}")
+            print(f"  Post URL: {rss_fallback_item['post_url']}")
+            print(f"  Formatted Output: {format_truth_post(rss_fallback_item)}")
+        else:
+            print("Failed to get fallback item from RSS.")
     except Exception as e:
         print(f"Error testing feedparser: {e}")
 
