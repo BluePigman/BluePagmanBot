@@ -172,11 +172,13 @@ def fetch_latest_from_rss(feed_url: str = "https://www.trumpstruth.org/feed?limi
             bq.decompose()
 
         for a in soup.find_all("a"):
-            txt = a.get_text().strip()
+            txt = a.get_text(separator=" ").strip()
             if txt in ["View image", "View video"]:
                 a.decompose()
+            elif a.get("href"):
+                a.replace_with(f" {a['href']} ")
 
-        text = soup.get_text().strip()
+        text = soup.get_text(separator=" ").strip()
 
         images: List[str] = []
         videos: List[str] = []
@@ -229,7 +231,12 @@ def format_truth_post(item: dict) -> str:
         quote_span = soup.find("span", class_="quote-inline")
         if quote_span:
             quote_span.decompose()
-        extracted_text = soup.get_text().strip()
+
+        for a in soup.find_all("a"):
+            if a.get("href"):
+                a.replace_with(f" {a['href']} ")
+
+        extracted_text = soup.get_text(separator=" ").strip()
     else:
         extracted_text = raw_text
 
