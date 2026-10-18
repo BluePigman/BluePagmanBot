@@ -9,11 +9,12 @@ from Utils.utils import fetch_cmd_data, check_cooldown, CHUNK_SIZE, format_time_
 
 def truncate_with_suffix(text: str, suffix: str, max_length: int = CHUNK_SIZE) -> str:
     ellipsis = "..."
-    space = " " if suffix else ""
-    total_suffix = ellipsis + space + suffix  # e.g. "... (posted 10m ago)"
+    suffix = suffix.strip()
+    separator = " " if suffix and text else ""
+    total_suffix = ellipsis + separator + suffix  # e.g. "... (posted 10m ago)"
 
-    if len(text) + len(space + suffix) <= max_length:
-        return text + space + suffix
+    if len(text) + len(separator + suffix) <= max_length:
+        return f"{text}{separator}{suffix}" if suffix else text
 
     max_text_len = max_length - len(total_suffix)
 
