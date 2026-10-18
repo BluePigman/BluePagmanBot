@@ -126,8 +126,13 @@ def enrich_with_trumpstruth_media(item: dict) -> dict:
             post_media = trump_media[post_id]
             if post_media.get("videos"):
                 item["video_url"] = post_media["videos"][0]
+            else:
+                item["video_url"] = ""
+
             if post_media.get("images"):
                 item["image_url"] = post_media["images"][0]
+            else:
+                item["image_url"] = ""
     except Exception:
         pass
 
@@ -168,8 +173,16 @@ def fetch_latest_from_rss(feed_url: str = "https://www.trumpstruth.org/feed?limi
         if quote_span:
             quote_span.decompose()
 
+        for s in soup.find_all("span"):
+            if "RT:" in s.get_text():
+                s.decompose()
+
         for bq in soup.find_all("blockquote"):
             bq.decompose()
+
+        for p in soup.find_all("p"):
+            if p.get_text().strip().startswith("Quoted "):
+                p.decompose()
 
         for a in soup.find_all("a"):
             txt = a.get_text(separator=" ").strip()
@@ -260,24 +273,28 @@ def format_truth_post(item: dict) -> str:
     video_url = item.get("video_url", "")
     media_count = social.get("media_count")
 
-    # Determine primary media URL (prefer direct video, then image, then post link)
-    media_url = video_url or image_url
+    # Determine primary media URLs (prefer direct video, then image, then post link)
+    media_urls = []
+    if video_url:
+        media_urls.append(video_url)
+    if image_url and image_url not in media_urls:
+        media_urls.append(image_url)
+
+    media_target = " ".join(media_urls) if media_urls else post_url
 
     if is_video:
-        # Video post, no caption: video link or post link
-        target_url = media_url or post_url
-        content = f"{target_url} {time_part}".strip()
+        # Video post, no caption: video link(s) or post link
+        content = f"{media_target} {time_part}".strip()
         return prefix + content
     elif is_image or not extracted_text:
         # Image post with no caption, or post with only media / empty text
-        target_url = media_url or post_url
-        content = f"{target_url} {time_part}".strip()
+        content = f"{media_target} {time_part}".strip()
         return prefix + content
     elif media_count or is_rt or video_url:
         # Post with caption and attached media (or RT with attached media)
         suffix_parts = []
-        if media_url:
-            suffix_parts.append(media_url)
+        if media_urls:
+            suffix_parts.extend(media_urls)
         if time_part:
             suffix_parts.append(time_part)
         suffix = " ".join(suffix_parts)
